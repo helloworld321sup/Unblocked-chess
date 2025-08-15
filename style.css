@@ -2,19 +2,15 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background: #ddd;
-  margin: 0;
+  min-height: 100vh;
+  background: #333;
 }
 
 .chess-board {
-  display: flex;
-  flex-direction: column;
-  border: 2px solid #333;
-}
-
-.row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(8, 60px);
+  grid-template-rows: repeat(8, 60px);
+  border: 2px solid #222;
 }
 
 .square {
@@ -25,16 +21,20 @@ body {
   align-items: center;
 }
 
-.square img {
-  width: 50px;
-  height: 50px;
-  object-fit: contain;
-}
-
 .white {
   background-color: #f0d9b5;
 }
 
 .black {
   background-color: #b58863;
+}
+
+.square img {
+  width: 48px;
+  height: 48px;
+  pointer-events: none;
+}
+
+.square.selected {
+  outline: 3px solid yellow;
 }
