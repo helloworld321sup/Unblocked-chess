@@ -7,97 +7,11 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="chess-board">
-    <!-- Row 8: Black major pieces -->
-    <div class="row">
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3400_black-rook.png" alt="Black Rook"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3402_black-knight.png" alt="Black Knight"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3401_black-bishop.png" alt="Black Bishop"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3399_black-queen.png" alt="Black Queen"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3398_black-king.png" alt="Black King"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3401_black-bishop.png" alt="Black Bishop"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3402_black-knight.png" alt="Black Knight"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3400_black-rook.png" alt="Black Rook"></div>
-    </div>
+  <div class="chess-board" id="board"></div>
 
-    <!-- Row 7: Black pawns -->
-    <div class="row">
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3403_black-pawn.png" alt="Black Pawn"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3403_black-pawn.png" alt="Black Pawn"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3403_black-pawn.png" alt="Black Pawn"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3403_black-pawn.png" alt="Black Pawn"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3403_black-pawn.png" alt="Black Pawn"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3403_black-pawn.png" alt="Black Pawn"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3403_black-pawn.png" alt="Black Pawn"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3403_black-pawn.png" alt="Black Pawn"></div>
-    </div>
-
-    <!-- Rows 6 to 3: Empty squares -->
-    <div class="row">
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-    </div>
-    <div class="row">
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-    </div>
-    <div class="row">
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-    </div>
-    <div class="row">
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-      <div class="square white"></div>
-      <div class="square black"></div>
-    </div>
-
-    <!-- Row 2: White pawns -->
-    <div class="row">
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3409_white-pawn.png" alt="White Pawn"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3409_white-pawn.png" alt="White Pawn"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3409_white-pawn.png" alt="White Pawn"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3409_white-pawn.png" alt="White Pawn"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3409_white-pawn.png" alt="White Pawn"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3409_white-pawn.png" alt="White Pawn"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3409_white-pawn.png" alt="White Pawn"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3409_white-pawn.png" alt="White Pawn"></div>
-    </div>
-
-    <!-- Row 1: White major pieces -->
-    <div class="row">
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3406_white-rook.png" alt="White Rook"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3408_white-knight.png" alt="White Knight"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3407_white-bishop.png" alt="White Bishop"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3405_white-queen.png" alt="White Queen"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3404_white-king.png" alt="White King"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3407_white-bishop.png" alt="White Bishop"></div>
-      <div class="square white"><img src="https://static.stands4.com/images/symbol/3408_white-knight.png" alt="White Knight"></div>
-      <div class="square black"><img src="https://static.stands4.com/images/symbol/3406_white-rook.png" alt="White Rook"></div>
-    </div>
-  </div>
-<script src="script.js"></script>
+  <!-- Load chess.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chess.js@1.0.0-beta.2/chess.js"></script>
+  <!-- Your logic -->
+  <script src="script.js"></script>
 </body>
 </html>
