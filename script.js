@@ -1,9 +1,7 @@
 const chess = new Chess();
-const boardElement = document.querySelector('.chess-board');
-
+const board = document.querySelector('.chess-board');
 let selectedSquare = null;
 
-// Piece image map
 const pieceImages = {
   wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
   wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
@@ -19,74 +17,67 @@ const pieceImages = {
   bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
 };
 
-// Renders the board based on current game state
+// Render board based on Chess.js state
 function renderBoard() {
-  const board = chess.board();
+  const positions = chess.board();
 
-  boardElement.querySelectorAll('.square').forEach(square => {
+  const squares = board.querySelectorAll('.square');
+  squares.forEach(square => {
     const squareName = square.getAttribute('data-square');
-    const file = squareName.charCodeAt(0) - 97;
-    const rank = 8 - parseInt(squareName[1]);
+    const file = squareName.charCodeAt(0) - 97; // 'a' → 0
+    const rank = 8 - parseInt(squareName[1]);  // '8' → 0
 
-    const piece = board[rank][file];
+    const piece = positions[rank][file];
     square.innerHTML = '';
 
     if (piece) {
-      const pieceKey = piece.color + piece.type.toUpperCase();
+      const key = piece.color + piece.type.toUpperCase();
       const img = document.createElement('img');
-      img.src = pieceImages[pieceKey];
-      img.alt = pieceKey;
+      img.src = pieceImages[key];
+      img.alt = key;
       square.appendChild(img);
     }
 
     square.classList.remove('selected', 'highlight');
   });
 
-  // Re-highlight selected square (if any)
   if (selectedSquare) {
-    const fromSquare = document.querySelector(`[data-square="${selectedSquare}"]`);
-    if (fromSquare) {
-      fromSquare.classList.add('selected');
-    }
+    const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
+    if (selectedEl) selectedEl.classList.add('selected');
 
-    const moves = chess.moves({ square: selectedSquare, verbose: true });
-    moves.forEach(move => {
+    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
+    legalMoves.forEach(move => {
       const target = document.querySelector(`[data-square="${move.to}"]`);
-      if (target) {
-        target.classList.add('highlight');
-      }
+      if (target) target.classList.add('highlight');
     });
   }
 }
 
-// Handle clicking on squares
-boardElement.addEventListener('click', e => {
-  const squareEl = e.target.closest('.square');
-  if (!squareEl) return;
+// Handle click events
+board.addEventListener('click', e => {
+  const targetSquare = e.target.closest('.square');
+  if (!targetSquare) return;
 
-  const clickedSquare = squareEl.getAttribute('data-square');
-  const piece = chess.get(clickedSquare);
+  const clicked = targetSquare.getAttribute('data-square');
+  const piece = chess.get(clicked);
 
   if (selectedSquare) {
-    // Try to move
-    const move = chess.move({ from: selectedSquare, to: clickedSquare, promotion: 'q' });
+    const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
 
     if (move) {
       selectedSquare = null;
     } else if (piece && piece.color === chess.turn()) {
-      selectedSquare = clickedSquare;
+      selectedSquare = clicked;
     } else {
       selectedSquare = null;
     }
   } else {
-    // First selection
     if (piece && piece.color === chess.turn()) {
-      selectedSquare = clickedSquare;
+      selectedSquare = clicked;
     }
   }
 
   renderBoard();
 });
 
-// Initial board render
 renderBoard();
