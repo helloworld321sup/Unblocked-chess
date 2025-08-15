@@ -24,17 +24,19 @@ function renderBoard() {
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const square = document.createElement("div");
-      const file = String.fromCharCode(97 + col); // 'a' to 'h'
+      const file = String.fromCharCode(97 + col);
       const rank = 8 - row;
       const squareId = file + rank;
+
       square.classList.add("square");
       square.classList.add((row + col) % 2 === 0 ? "white" : "black");
       square.dataset.square = squareId;
 
       const piece = position[row][col];
       if (piece) {
+        const key = piece.color === 'w' ? piece.type.toUpperCase() : piece.type;
         const img = document.createElement("img");
-        img.src = pieceImages[piece.color === 'w' ? piece.type.toUpperCase() : piece.type];
+        img.src = pieceImages[key];
         img.alt = piece.type;
         square.appendChild(img);
       }
