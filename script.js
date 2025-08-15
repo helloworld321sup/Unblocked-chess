@@ -1,83 +1,92 @@
-const chess = new Chess();
-const board = document.querySelector('.chess-board');
+const game = new Chess();
+
 let selectedSquare = null;
 
-const pieceImages = {
-  wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
-  wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
-  wN: "https://static.stands4.com/images/symbol/3408_white-knight.png",
-  wB: "https://static.stands4.com/images/symbol/3407_white-bishop.png",
-  wQ: "https://static.stands4.com/images/symbol/3405_white-queen.png",
-  wK: "https://static.stands4.com/images/symbol/3404_white-king.png",
-  bP: "https://static.stands4.com/images/symbol/3403_black-pawn.png",
-  bR: "https://static.stands4.com/images/symbol/3400_black-rook.png",
-  bN: "https://static.stands4.com/images/symbol/3402_black-knight.png",
-  bB: "https://static.stands4.com/images/symbol/3401_black-bishop.png",
-  bQ: "https://static.stands4.com/images/symbol/3399_black-queen.png",
-  bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
-};
-
-// Render board based on Chess.js state
 function renderBoard() {
-  const positions = chess.board();
-
+  const board = document.querySelector('.chess-board');
   const squares = board.querySelectorAll('.square');
+
+  // Clear all pieces
   squares.forEach(square => {
-    const squareName = square.getAttribute('data-square');
-    const file = squareName.charCodeAt(0) - 97; // 'a' → 0
-    const rank = 8 - parseInt(squareName[1]);  // '8' → 0
-
-    const piece = positions[rank][file];
     square.innerHTML = '';
-
-    if (piece) {
-      const key = piece.color + piece.type.toUpperCase();
-      const img = document.createElement('img');
-      img.src = pieceImages[key];
-      img.alt = key;
-      square.appendChild(img);
-    }
-
-    square.classList.remove('selected', 'highlight');
   });
 
-  if (selectedSquare) {
-    const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
-    if (selectedEl) selectedEl.classList.add('selected');
+  // Place pieces based on game state
+  const boardState = game.board();
+  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
-    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
-    legalMoves.forEach(move => {
-      const target = document.querySelector(`[data-square="${move.to}"]`);
-      if (target) target.classList.add('highlight');
-    });
+  for (let rank = 8; rank >= 1; rank--) {
+    for (let file = 0; file < 8; file++) {
+      const squareId = files[file] + rank;
+      const square = document.querySelector(`[data-square="${squareId}"]`);
+      const piece = boardState[8 - rank][file];
+
+      if (piece) {
+        const color = piece.color === 'w' ? 'white' : 'black';
+        const type = piece.type;
+
+        // Map to image URLs
+        const imgSrc = getPieceImage(color, type);
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.alt = `${color} ${type}`;
+        square.appendChild(img);
+      }
+    }
   }
 }
 
-// Handle click events
-board.addEventListener('click', e => {
-  const targetSquare = e.target.closest('.square');
-  if (!targetSquare) return;
+function getPieceImage(color, type) {
+  const base = 'https://static.stands4.com/images/symbol/';
+  const map = {
+    w: {
+      p: '3409_white-pawn.png',
+      r: '3406_white-rook.png',
+      n: '3408_white-knight.png',
+      b: '3407_white-bishop.png',
+      q: '3405_white-queen.png',
+      k: '3404_white-king.png',
+    },
+    b: {
+      p: '3403_black-pawn.png',
+      r: '3400_black-rook.png',
+      n: '3402_black-knight.png',
+      b: '3401_black-bishop.png',
+      q: '3399_black-queen.png',
+      k: '3398_black-king.png',
+    }
+  };
 
-  const clicked = targetSquare.getAttribute('data-square');
-  const piece = chess.get(clicked);
+  return base + map[color[0]][type];
+}
+
+function handleSquareClick(event) {
+  const squareElement = event.currentTarget;
+  const square = squareElement.getAttribute('data-square');
 
   if (selectedSquare) {
-    const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
+    const move = game.move({
+      from: selectedSquare,
+      to: square,
+      promotion: 'q' // always promote to queen for simplicity
+    });
 
     if (move) {
       selectedSquare = null;
-    } else if (piece && piece.color === chess.turn()) {
-      selectedSquare = clicked;
+      renderBoard();
     } else {
+      // Invalid move: deselect
       selectedSquare = null;
     }
   } else {
-    if (piece && piece.color === chess.turn()) {
-      selectedSquare = clicked;
-    }
+    selectedSquare = square;
   }
+}
 
-  renderBoard();
+// Attach click listeners
+document.querySelectorAll('.square').forEach(square => {
+  square.addEventListener('click', handleSquareClick);
 });
 
+// Initial render
 renderBoard();
