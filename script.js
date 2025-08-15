@@ -1,9 +1,9 @@
 const chess = new Chess();
-
 const boardElement = document.querySelector('.chess-board');
+
 let selectedSquare = null;
 
-// Maps chess.js piece notation to image URLs
+// Piece image map
 const pieceImages = {
   wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
   wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
@@ -19,103 +19,74 @@ const pieceImages = {
   bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
 };
 
-// Render the board pieces according to chess.js FEN
+// Renders the board based on current game state
 function renderBoard() {
-  const squares = boardElement.querySelectorAll('.square');
+  const board = chess.board();
 
-  // Get board state as a 2D array from chess.js
-  const boardState = chess.board();
-
-  // boardState is array of rows starting from 8th rank (top) to 1st rank (bottom)
-  // Rows: 0 is rank 8, 7 is rank 1
-  // Columns: 0 is file a, 7 is file h
-
-  squares.forEach(square => {
+  boardElement.querySelectorAll('.square').forEach(square => {
     const squareName = square.getAttribute('data-square');
-    const file = squareName.charCodeAt(0) - 'a'.charCodeAt(0); // 0-based file index
-    const rank = 8 - parseInt(squareName[1]); // 0-based rank index (top is 0)
+    const file = squareName.charCodeAt(0) - 97;
+    const rank = 8 - parseInt(squareName[1]);
 
-    const piece = boardState[rank][file]; // piece object or null
-    square.innerHTML = ''; // Clear square content
+    const piece = board[rank][file];
+    square.innerHTML = '';
 
     if (piece) {
-      const key = piece.color + piece.type.toUpperCase();
-      const imgSrc = pieceImages[key];
-      if (imgSrc) {
-        const img = document.createElement('img');
-        img.src = imgSrc;
-        img.alt = `${piece.color === 'w' ? 'White' : 'Black'} ${piece.type.toUpperCase()}`;
-        square.appendChild(img);
-      }
+      const pieceKey = piece.color + piece.type.toUpperCase();
+      const img = document.createElement('img');
+      img.src = pieceImages[pieceKey];
+      img.alt = pieceKey;
+      square.appendChild(img);
     }
 
-    // Remove highlight classes
     square.classList.remove('selected', 'highlight');
   });
-}
 
-// Highlight selected square and possible moves
-function highlightSquares(selected) {
-  // Clear all highlights
-  boardElement.querySelectorAll('.square').forEach(sq => {
-    sq.classList.remove('highlight');
-  });
-
-  if (!selected) return;
-
-  // Highlight selected
-  selected.classList.add('selected');
-
-  // Get possible moves from selected square
-  const from = selected.getAttribute('data-square');
-  const moves = chess.moves({ square: from, verbose: true });
-
-  moves.forEach(move => {
-    const targetSquare = boardElement.querySelector(`.square[data-square="${move.to}"]`);
-    if (targetSquare) {
-      targetSquare.classList.add('highlight');
+  // Re-highlight selected square (if any)
+  if (selectedSquare) {
+    const fromSquare = document.querySelector(`[data-square="${selectedSquare}"]`);
+    if (fromSquare) {
+      fromSquare.classList.add('selected');
     }
-  });
+
+    const moves = chess.moves({ square: selectedSquare, verbose: true });
+    moves.forEach(move => {
+      const target = document.querySelector(`[data-square="${move.to}"]`);
+      if (target) {
+        target.classList.add('highlight');
+      }
+    });
+  }
 }
 
-// Handle clicks on squares
-boardElement.addEventListener('click', (e) => {
-  const square = e.target.closest('.square');
-  if (!square) return;
+// Handle clicking on squares
+boardElement.addEventListener('click', e => {
+  const squareEl = e.target.closest('.square');
+  if (!squareEl) return;
 
-  const clickedSquare = square.getAttribute('data-square');
+  const clickedSquare = squareEl.getAttribute('data-square');
+  const piece = chess.get(clickedSquare);
 
   if (selectedSquare) {
-    // Try to make a move from selectedSquare to clickedSquare
-    const move = chess.move({ from: selectedSquare, to: clickedSquare, promotion: 'q' }); // Always promote to queen for simplicity
+    // Try to move
+    const move = chess.move({ from: selectedSquare, to: clickedSquare, promotion: 'q' });
 
     if (move) {
-      // Move successful
       selectedSquare = null;
-      renderBoard();
+    } else if (piece && piece.color === chess.turn()) {
+      selectedSquare = clickedSquare;
     } else {
-      // Invalid move, if clicked on a square with current player's piece, select that instead
-      const piece = chess.get(clickedSquare);
-      if (piece && piece.color === chess.turn()) {
-        selectedSquare = clickedSquare;
-        renderBoard();
-        highlightSquares(square);
-      } else {
-        // Deselect
-        selectedSquare = null;
-        renderBoard();
-      }
+      selectedSquare = null;
     }
   } else {
-    // No square selected yet, select if there is a piece of current player's color
-    const piece = chess.get(clickedSquare);
+    // First selection
     if (piece && piece.color === chess.turn()) {
       selectedSquare = clickedSquare;
-      renderBoard();
-      highlightSquares(square);
     }
   }
+
+  renderBoard();
 });
 
-// Initial render
+// Initial board render
 renderBoard();
