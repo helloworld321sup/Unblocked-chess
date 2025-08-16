@@ -64,11 +64,13 @@ function handleSquareClick(event) {
   const squareElement = event.currentTarget;
   const square = squareElement.getAttribute('data-square');
 
+  clearHighlights(); // 🔸 Clear previous highlights
+
   if (selectedSquare) {
     const move = game.move({
       from: selectedSquare,
       to: square,
-      promotion: 'q' // always promote to queen for simplicity
+      promotion: 'q'
     });
 
     if (move) {
@@ -79,14 +81,22 @@ function handleSquareClick(event) {
       selectedSquare = null;
     }
   } else {
-    selectedSquare = square;
+    const piece = game.get(square);
+    if (piece && piece.color === game.turn()) {
+      selectedSquare = square;
+      squareElement.classList.add('selected'); // 🔸 Add orange highlight
+
+      // 🔸 Highlight legal moves
+      const moves = game.moves({ square, verbose: true });
+      moves.forEach(move => {
+        const target = document.querySelector(`[data-square="${move.to}"]`);
+        if (target) {
+          target.classList.add('highlight'); // 🟡 Yellow highlight
+        }
+      });
+    }
   }
 }
-
-// Attach click listeners
-document.querySelectorAll('.square').forEach(square => {
-  square.addEventListener('click', handleSquareClick);
-});
 
 // Initial render
 renderBoard();
