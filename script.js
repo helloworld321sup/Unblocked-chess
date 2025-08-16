@@ -1,90 +1,92 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const game = new Chess();
-  let selectedSquare = null;
+const game = new Chess();
 
-  function renderBoard() {
-    const board = document.querySelector('.chess-board');
-    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+let selectedSquare = null;
 
-    board.innerHTML = ''; // Clear existing board
+function renderBoard() {
+  const board = document.querySelector('.chess-board');
+  const squares = board.querySelectorAll('.square');
 
-    for (let rank = 8; rank >= 1; rank--) {
-      const row = document.createElement('div');
-      row.classList.add('row');
+  // Clear all pieces
+  squares.forEach(square => {
+    square.innerHTML = '';
+  });
 
-      for (let file = 0; file < 8; file++) {
-        const squareId = files[file] + rank;
-        const squareColor = (file + rank) % 2 === 0 ? 'white' : 'black';
-        const square = document.createElement('div');
-        square.classList.add('square', squareColor);
-        square.setAttribute('data-square', squareId);
+  // Place pieces based on game state
+  const boardState = game.board();
+  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
-        // Add piece if present
-        const piece = game.get(squareId);
-        if (piece) {
-          const img = document.createElement('img');
-          img.src = getPieceImage(piece.color, piece.type);
-          img.alt = `${piece.color} ${piece.type}`;
-          square.appendChild(img);
-        }
+  for (let rank = 8; rank >= 1; rank--) {
+    for (let file = 0; file < 8; file++) {
+      const squareId = files[file] + rank;
+      const square = document.querySelector(`[data-square="${squareId}"]`);
+      const piece = boardState[8 - rank][file];
 
-        // Click event
-        square.addEventListener('click', handleSquareClick);
-        row.appendChild(square);
+      if (piece) {
+        const color = piece.color === 'w' ? 'white' : 'black';
+        const type = piece.type;
+
+        // Map to image URLs
+        const imgSrc = getPieceImage(color, type);
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.alt = `${color} ${type}`;
+        square.appendChild(img);
       }
-
-      board.appendChild(row);
     }
   }
+}
 
-  function getPieceImage(color, type) {
-    return `images/${color}-${type}.png`; // Make sure filenames match this pattern
-  }
+function getPieceImage(color, type) {
+  const base = 'https://static.stands4.com/images/symbol/';
+  const map = {
+    w: {
+      p: '3409_white-pawn.png',
+      r: '3406_white-rook.png',
+      n: '3408_white-knight.png',
+      b: '3407_white-bishop.png',
+      q: '3405_white-queen.png',
+      k: '3404_white-king.png',
+    },
+    b: {
+      p: '3403_black-pawn.png',
+      r: '3400_black-rook.png',
+      n: '3402_black-knight.png',
+      b: '3401_black-bishop.png',
+      q: '3399_black-queen.png',
+      k: '3398_black-king.png',
+    }
+  };
 
-  function handleSquareClick(event) {
+  return base + map[color[0]][type];
+}
+
+function handleSquareClick(event) {
   const squareElement = event.currentTarget;
   const square = squareElement.getAttribute('data-square');
-
-  console.log("Clicked square:", square); // DEBUG
-
-  clearHighlights();
 
   if (selectedSquare) {
     const move = game.move({
       from: selectedSquare,
       to: square,
-      promotion: 'q'
+      promotion: 'q' // always promote to queen for simplicity
     });
 
     if (move) {
-      console.log("Move made:", move); // DEBUG
       selectedSquare = null;
       renderBoard();
     } else {
-      console.log("Invalid move from", selectedSquare, "to", square); // DEBUG
+      // Invalid move: deselect
       selectedSquare = null;
-      renderBoard();
     }
   } else {
-    const piece = game.get(square);
-    if (piece && piece.color === game.turn()) {
-      selectedSquare = square;
-      squareElement.classList.add('selected');
-      console.log("Selected square:", square); // DEBUG
-
-      const moves = game.moves({ square, verbose: true });
-      console.log("Legal moves:", moves); // DEBUG
-
-      moves.forEach(move => {
-        const targetSquare = document.querySelector(`[data-square="${move.to}"]`);
-        if (targetSquare) {
-          targetSquare.classList.add('highlight');
-        }
-      });
-    }
+    selectedSquare = square;
   }
 }
 
-  // Initial render
-  renderBoard();
+// Attach click listeners
+document.querySelectorAll('.square').forEach(square => {
+  square.addEventListener('click', handleSquareClick);
 });
+
+// Initial render
+renderBoard();
