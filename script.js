@@ -100,3 +100,9 @@ function handleSquareClick(event) {
 
 // Initial render
 renderBoard();
+
+function clearHighlights() {
+  document.querySelectorAll('.square').forEach(square => {
+    square.classList.remove('selected', 'highlight');
+  });
+}
