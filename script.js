@@ -42,41 +42,48 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleSquareClick(event) {
-    const squareElement = event.currentTarget;
-    const square = squareElement.getAttribute('data-square');
+  const squareElement = event.currentTarget;
+  const square = squareElement.getAttribute('data-square');
 
-    clearHighlights();
+  console.log("Clicked square:", square); // DEBUG
 
-    if (selectedSquare) {
-      const move = game.move({
-        from: selectedSquare,
-        to: square,
-        promotion: 'q', // auto-promote to queen
-      });
+  clearHighlights();
 
-      if (move) {
-        selectedSquare = null;
-        renderBoard();
-      } else {
-        // Invalid move
-        selectedSquare = null;
-        renderBoard(); // refresh to clear highlight
-      }
+  if (selectedSquare) {
+    const move = game.move({
+      from: selectedSquare,
+      to: square,
+      promotion: 'q'
+    });
+
+    if (move) {
+      console.log("Move made:", move); // DEBUG
+      selectedSquare = null;
+      renderBoard();
     } else {
-      // Select square
-      const piece = game.get(square);
-      if (piece && piece.color === game.turn()) {
-        selectedSquare = square;
-        squareElement.classList.add('selected');
-      }
+      console.log("Invalid move from", selectedSquare, "to", square); // DEBUG
+      selectedSquare = null;
+      renderBoard();
+    }
+  } else {
+    const piece = game.get(square);
+    if (piece && piece.color === game.turn()) {
+      selectedSquare = square;
+      squareElement.classList.add('selected');
+      console.log("Selected square:", square); // DEBUG
+
+      const moves = game.moves({ square, verbose: true });
+      console.log("Legal moves:", moves); // DEBUG
+
+      moves.forEach(move => {
+        const targetSquare = document.querySelector(`[data-square="${move.to}"]`);
+        if (targetSquare) {
+          targetSquare.classList.add('highlight');
+        }
+      });
     }
   }
-
-  function clearHighlights() {
-    document.querySelectorAll('.square').forEach(sq => {
-      sq.classList.remove('selected', 'highlight');
-    });
-  }
+}
 
   // Initial render
   renderBoard();
