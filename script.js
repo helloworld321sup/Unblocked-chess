@@ -23,15 +23,21 @@ const turnIndicatorEl = document.getElementById("turn-indicator");
 const buzzerEl = document.getElementById("checkmate-buzzer");
 const buzzerSound = new Audio("checkmate-buzzer.mp3");
 const resetButton = document.getElementById("reset-button");
-const toggleBotButton = document.getElementById("toggle-bot");
+const toggleBotBtn = document.getElementById("toggle-mode");
+const easyBtn = document.getElementById("easy-btn");
+const mediumBtn = document.getElementById("medium-btn");
+const hardBtn = document.getElementById("hard-btn");
 
 let moveCount = 1;
-let vsBot = true;
+let vsBot = true; // start in bot mode
+let botDifficulty = "easy";
 
 // --- Render Board ---
 function renderBoard() {
   const positions = chess.board();
-  board.querySelectorAll('.square').forEach(square => {
+
+  const squares = board.querySelectorAll('.square');
+  squares.forEach(square => {
     const squareName = square.getAttribute('data-square');
     const file = squareName.charCodeAt(0) - 97;
     const rank = 8 - parseInt(squareName[1]);
@@ -53,7 +59,8 @@ function renderBoard() {
     const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
     if (selectedEl) selectedEl.classList.add('selected');
 
-    chess.moves({ square: selectedSquare, verbose: true }).forEach(move => {
+    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
+    legalMoves.forEach(move => {
       const target = document.querySelector(`[data-square="${move.to}"]`);
       if (target) target.classList.add('highlight');
     });
@@ -65,22 +72,50 @@ function renderBoard() {
 // --- Update Sidebar ---
 function updateSidebar() {
   moveCounterEl.textContent = `Move: ${moveCount}`;
-  turnIndicatorEl.textContent = `${chess.turn() === 'w' ? 'White' : 'Black'}'s Move`;
+  const turn = chess.turn() === 'w' ? 'White' : 'Black';
+  turnIndicatorEl.textContent = `${turn}'s Move`;
 
   if (chess.game_over() && chess.in_checkmate()) {
     buzzerEl.classList.add('active');
     buzzerSound.play();
+  } else {
+    buzzerEl.classList.remove('active');
   }
 }
 
-// --- Bot Move ---
+// --- Bot Logic ---
 function botMove() {
   if (!vsBot || chess.turn() !== "b") return;
-
-  const moves = chess.moves();
+  const moves = chess.moves({ verbose: true });
   if (moves.length === 0) return;
 
-  const move = moves[Math.floor(Math.random() * moves.length)];
+  let move;
+
+  if (botDifficulty === "easy") {
+    move = moves[Math.floor(Math.random() * moves.length)];
+  } else if (botDifficulty === "medium") {
+    const captureMoves = moves.filter(m => m.captured);
+    move = captureMoves.length > 0 
+      ? captureMoves[Math.floor(Math.random() * captureMoves.length)]
+      : moves[Math.floor(Math.random() * moves.length)];
+  } else if (botDifficulty === "hard") {
+    const pieceValue = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+    let bestValue = -1;
+    let bestMoves = [];
+
+    moves.forEach(m => {
+      const value = m.captured ? pieceValue[m.captured.toLowerCase()] : 0;
+      if (value > bestValue) {
+        bestValue = value;
+        bestMoves = [m];
+      } else if (value === bestValue) {
+        bestMoves.push(m);
+      }
+    });
+
+    move = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+  }
+
   chess.move(move);
   moveCount++;
   renderBoard();
@@ -88,7 +123,7 @@ function botMove() {
 
 // --- Board Click Handler ---
 board.addEventListener('click', e => {
-  if (vsBot && chess.turn() === "b") return; // block bot side
+  if (chess.turn() === "b" && vsBot) return; // prevent player from moving bot's pieces
 
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -102,6 +137,7 @@ board.addEventListener('click', e => {
       selectedSquare = null;
       moveCount++;
       renderBoard();
+
       if (vsBot) setTimeout(botMove, 500);
       return;
     } else if (piece && piece.color === chess.turn()) {
@@ -109,29 +145,34 @@ board.addEventListener('click', e => {
     } else {
       selectedSquare = null;
     }
-  } else if (piece && piece.color === chess.turn()) {
-    selectedSquare = clicked;
+  } else {
+    if (piece && piece.color === chess.turn()) {
+      selectedSquare = clicked;
+    }
   }
 
   renderBoard();
 });
 
-// --- Reset ---
+// --- Reset Button Handler ---
 resetButton.addEventListener("click", () => {
   chess.reset();
   moveCount = 1;
   selectedSquare = null;
-  buzzerEl.classList.remove("active");
   renderBoard();
 });
 
-// --- Toggle Bot ---
-toggleBotButton.addEventListener("click", () => {
+// --- Toggle Bot Mode ---
+toggleBotBtn.addEventListener("click", () => {
   vsBot = !vsBot;
-  toggleBotButton.textContent = vsBot ? "Playing: Bot" : "Playing: Human";
+  toggleBotBtn.textContent = vsBot ? "Play vs Human" : "Play vs Bot";
   if (vsBot && chess.turn() === "b") setTimeout(botMove, 500);
 });
 
+// --- Difficulty Buttons ---
+easyBtn.addEventListener("click", () => botDifficulty = "easy");
+mediumBtn.addEventListener("click", () => botDifficulty = "medium");
+hardBtn.addEventListener("click", () => botDifficulty = "hard");
+
 // --- Initial Render ---
 renderBoard();
-
