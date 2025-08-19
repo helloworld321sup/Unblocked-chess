@@ -34,18 +34,6 @@ let botDifficulty = "medium"; // default difficulty
 // Initialize button text to show CURRENT MODE
 toggleBotBtn.textContent = playBot ? "Playing vs Bot" : "Playing vs Human";
 
-// --- Stockfish ---
-const engine = Stockfish();
-engine.onmessage = function(event) {
-  const line = event.data || event;
-  if (line.startsWith('bestmove')) {
-    const bestMove = line.split(' ')[1];
-    chess.move(bestMove, { sloppy: true });
-    moveCount++;
-    renderBoard();
-  }
-};
-
 // --- Render Board ---
 function renderBoard() {
   const positions = chess.board();
@@ -92,7 +80,6 @@ function updateSidebar() {
   }
 }
 
-// --- Bot Move ---
 function botMove() {
   if (!playBot || chess.turn() !== "b") return;
 
@@ -101,81 +88,80 @@ function botMove() {
 
   let move;
 
-  if (botDifficulty === "stockfish") {
-    // Stockfish mode
-    const fen = chess.fen();
-    engine.postMessage(`position fen ${fen}`);
-    engine.postMessage("go depth 15");
-    return;
-  }
-
-  else if (botDifficulty === "hard") {
-    // --- Knight development first ---
-    const knightMoves = moves.filter(m => {
+  // --- Hard mode logic ---
+  if (botDifficulty === "hard") {
+    // 1. Develop knights to c6/f6 if safe
+    const knightDevelopment = moves.filter(m => {
       const piece = chess.get(m.from);
       if (!piece || piece.type !== "n") return false;
-      if (m.to === "c6" || m.to === "f6") {
-        const temp = new Chess(chess.fen());
-        temp.move({ from: m.from, to: m.to, promotion: 'q' });
-        const attacks = temp.moves({ verbose: true }).filter(a => {
-          const p = chess.get(a.from);
-          return p && p.color === 'w' && p.type === 'p' && a.to === m.to;
+      if ((m.to === "c6" || m.to === "f6")) {
+        // Check if square is attacked by white pawns
+        const tempChess = new Chess(chess.fen());
+        tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
+        const attackers = tempChess.moves({ verbose: true }).filter(a => {
+          return a.to === m.to && chess.get(a.from).color === 'w' && chess.get(a.from).type === 'p';
         });
-        return attacks.length === 0;
+        return attackers.length === 0;
       }
       return false;
     });
-    if (knightMoves.length) move = knightMoves[Math.floor(Math.random()*knightMoves.length)];
-
-    // --- Safe captures ---
+    if (knightDevelopment.length > 0) {
+      move = knightDevelopment[Math.floor(Math.random() * knightDevelopment.length)];
+    }
+    // 2. Safe captures (good trades only)
     if (!move) {
       const safeCaptures = moves.filter(m => {
         if (!m.flags.includes("c") && !m.flags.includes("e")) return false;
+        const tempChess = new Chess(chess.fen());
+        tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
+        // Only capture if the captured piece is equal or more valuable than our piece
         const captured = chess.get(m.to);
         const ourPiece = chess.get(m.from);
         if (!captured || !ourPiece) return false;
-        const value = { p:1, n:3, b:3, r:5, q:9, k:1000 };
+        const value = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 1000 };
         return value[captured.type] >= value[ourPiece.type];
       });
-      if (safeCaptures.length) move = safeCaptures[Math.floor(Math.random()*safeCaptures.length)];
+      if (safeCaptures.length > 0) {
+        move = safeCaptures[Math.floor(Math.random() * safeCaptures.length)];
+      }
     }
-
-    // --- Develop toward center ---
+    // 3. Develop other pieces toward center
     if (!move) {
-      const center = ["d6","e6","d5","e5","c6","f6"];
-      const centerMoves = moves.filter(m => center.includes(m.to));
-      if (centerMoves.length) move = centerMoves[Math.floor(Math.random()*centerMoves.length)];
+      const centerSquares = ["d6", "e6", "d5", "e5", "c6", "f6"];
+      const developMoves = moves.filter(m => centerSquares.includes(m.to));
+      if (developMoves.length > 0) {
+        move = developMoves[Math.floor(Math.random() * developMoves.length)];
+      }
     }
-
-    // --- Fallback safe move ---
+    // 4. Fallback: pick safe move (not leaving king in check)
     if (!move) {
-      const safe = moves.filter(m => {
-        const temp = new Chess(chess.fen());
-        temp.move({ from: m.from, to: m.to, promotion: 'q' });
-        return !temp.in_check();
+      const safeMoves = moves.filter(m => {
+        const tempChess = new Chess(chess.fen());
+        tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
+        return !tempChess.in_check();
       });
-      move = safe[Math.floor(Math.random()*safe.length)];
+      move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
     }
-  }
-
+  } 
+  // --- Medium: prefer captures/checks ---
   else if (botDifficulty === "medium") {
     const captures = moves.filter(m => m.flags.includes("c") || m.flags.includes("e"));
-    const safe = moves.filter(m => {
-      const temp = new Chess(chess.fen());
-      temp.move({ from: m.from, to: m.to, promotion: 'q' });
-      return !temp.in_check();
+    const safeMoves = moves.filter(m => {
+      const tempChess = new Chess(chess.fen());
+      tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
+      return !tempChess.in_check();
     });
-    move = captures.length ? captures[Math.floor(Math.random()*captures.length)]
-           : safe[Math.floor(Math.random()*safe.length)];
-  }
-
-  else { // easy
-    const safe = moves.filter(m => {
-      const temp = new Chess(chess.fen());
-      temp.move({ from: m.from, to: m.to, promotion: 'q' });
-      return !temp.in_check();
+    move = captures.length > 0 ? captures[Math.floor(Math.random() * captures.length)]
+           : safeMoves[Math.floor(Math.random() * safeMoves.length)];
+  } 
+  // --- Easy: random safe move ---
+  else {
+    const safeMoves = moves.filter(m => {
+      const tempChess = new Chess(chess.fen());
+      tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
+      return !tempChess.in_check();
     });
-    move = safe[Math.floor(Math.random()*safe.length)];
+    move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
   }
 
   chess.move(move);
@@ -183,7 +169,8 @@ function botMove() {
   renderBoard();
 }
 
-// --- Board Click ---
+
+// --- Board Click Handler ---
 board.addEventListener('click', e => {
   if (playBot && chess.turn() === "b") return;
 
@@ -210,7 +197,7 @@ board.addEventListener('click', e => {
   renderBoard();
 });
 
-// --- Reset ---
+// --- Reset Board ---
 resetButton.addEventListener("click", () => {
   chess.reset();
   moveCount = 1;
@@ -219,16 +206,18 @@ resetButton.addEventListener("click", () => {
   renderBoard();
 });
 
-// --- Toggle Bot ---
+// --- Toggle Bot Mode ---
 toggleBotBtn.addEventListener("click", () => {
   playBot = !playBot;
   toggleBotBtn.textContent = playBot ? "Playing vs Bot" : "Playing vs Human";
+
+  // Bot moves immediately if turned on during black's turn
   if (playBot && chess.turn() === "b") setTimeout(botMove, 500);
 });
 
 // --- Change Difficulty ---
 difficultySelect.addEventListener("change", () => {
-  botDifficulty = difficultySelect.value; // easy, medium, hard, stockfish
+  botDifficulty = difficultySelect.value; // "easy", "medium", "hard"
 });
 
 // --- Initial Render ---
