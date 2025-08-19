@@ -3,14 +3,57 @@ body {
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background: #238ee2;
   margin: 0;
+  background: black;
+  overflow: hidden;
+  position: relative;
 }
 
+/* glowing blue scars effect */
+body::before, body::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: repeating-linear-gradient(
+    115deg,
+    transparent 0 100px,
+    rgba(0, 140, 255, 0.4) 100px 110px,
+    transparent 110px 200px
+  );
+  animation: move 12s linear infinite;
+  opacity: 0.35;
+}
+
+body::after {
+  background: repeating-linear-gradient(
+    -115deg,
+    transparent 0 100px,
+    rgba(0, 200, 255, 0.6) 100px 110px,
+    transparent 110px 200px
+  );
+  animation: move2 15s linear infinite;
+  mix-blend-mode: screen;
+}
+
+@keyframes move {
+  from { transform: translateX(0) translateY(0); }
+  to { transform: translateX(250px) translateY(250px); }
+}
+
+@keyframes move2 {
+  from { transform: translateX(0) translateY(0); }
+  to { transform: translateX(-250px) translateY(250px); }
+}
+
+/* CHESSBOARD STYLES */
 .chess-board {
   display: flex;
   flex-direction: column;
   border: 2px solid #333;
+  z-index: 1; /* make sure board stays above background */
 }
 
 .row {
