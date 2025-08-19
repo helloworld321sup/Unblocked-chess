@@ -128,3 +128,20 @@ body::after {
   opacity: 1;
   transform: scale(1.1);
 }
+
+#reset-button {
+  padding: 10px;
+  font-weight: bold;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  background-color: #444;
+  color: white;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+#reset-button:hover {
+  background-color: #666;
+  transform: scale(1.05);
+}
+
