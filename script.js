@@ -17,6 +17,14 @@ const pieceImages = {
   bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
 };
 
+// Sidebar elements
+const moveCounterEl = document.getElementById("move-counter");
+const turnIndicatorEl = document.getElementById("turn-indicator");
+const buzzerEl = document.getElementById("checkmate-buzzer");
+const buzzerSound = new Audio("checkmate-buzzer.mp3"); // Add your buzzer sound
+
+let moveCount = 1;
+
 // Render board based on Chess.js state
 function renderBoard() {
   const positions = chess.board();
@@ -29,6 +37,7 @@ function renderBoard() {
 
     const piece = positions[rank][file];
     square.innerHTML = '';
+    square.classList.remove('selected', 'highlight');
 
     if (piece) {
       const key = piece.color + piece.type.toUpperCase();
@@ -37,8 +46,6 @@ function renderBoard() {
       img.alt = key;
       square.appendChild(img);
     }
-
-    square.classList.remove('selected', 'highlight');
   });
 
   if (selectedSquare) {
@@ -50,6 +57,21 @@ function renderBoard() {
       const target = document.querySelector(`[data-square="${move.to}"]`);
       if (target) target.classList.add('highlight');
     });
+  }
+
+  updateSidebar();
+}
+
+// Update move counter and turn indicator
+function updateSidebar() {
+  moveCounterEl.textContent = `Move: ${moveCount}`;
+  const turn = chess.turn() === 'w' ? 'White' : 'Black';
+  turnIndicatorEl.textContent = `${turn}'s Move`;
+
+  // Check for checkmate
+  if (chess.game_over() && chess.in_checkmate()) {
+    buzzerEl.classList.add('active');
+    buzzerSound.play();
   }
 }
 
@@ -63,9 +85,9 @@ board.addEventListener('click', e => {
 
   if (selectedSquare) {
     const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
-
     if (move) {
       selectedSquare = null;
+      moveCount++;
     } else if (piece && piece.color === chess.turn()) {
       selectedSquare = clicked;
     } else {
