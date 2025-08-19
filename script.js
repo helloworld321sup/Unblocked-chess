@@ -80,6 +80,34 @@ function updateSidebar() {
   }
 }
 
+const engine = Stockfish(); // Make sure you have stockfish.js loaded
+
+engine.onmessage = function(event) {
+  const line = event.data || event;
+  if (line.startsWith('bestmove')) {
+    const bestMove = line.split(' ')[1];
+    chess.move(bestMove, { sloppy: true });
+    moveCount++;
+    renderBoard();
+  }
+};
+
+function botMove() {
+  if (!playBot || chess.turn() !== "b") return;
+
+  const moves = chess.moves({ verbose: true });
+  if (moves.length === 0) return;
+
+  let move;
+
+  if (botDifficulty === "stockfish") {
+    // Stockfish mode
+    const fen = chess.fen();
+    engine.postMessage(`position fen ${fen}`);
+    engine.postMessage("go depth 15"); // Adjust depth if needed
+    return; // Wait for Stockfish to respond via onmessage
+  }
+
 function botMove() {
   if (!playBot || chess.turn() !== "b") return;
 
