@@ -22,18 +22,19 @@ const moveCounterEl = document.getElementById("move-counter");
 const turnIndicatorEl = document.getElementById("turn-indicator");
 const buzzerEl = document.getElementById("checkmate-buzzer");
 const buzzerSound = new Audio("checkmate-buzzer.mp3"); // Add your buzzer sound
+const resetButton = document.getElementById("reset-button");
 
 let moveCount = 1;
 
-// Render board based on Chess.js state
+// --- Render Board ---
 function renderBoard() {
   const positions = chess.board();
 
   const squares = board.querySelectorAll('.square');
   squares.forEach(square => {
     const squareName = square.getAttribute('data-square');
-    const file = squareName.charCodeAt(0) - 97; // 'a' → 0
-    const rank = 8 - parseInt(squareName[1]);  // '8' → 0
+    const file = squareName.charCodeAt(0) - 97;
+    const rank = 8 - parseInt(squareName[1]);
 
     const piece = positions[rank][file];
     square.innerHTML = '';
@@ -62,20 +63,19 @@ function renderBoard() {
   updateSidebar();
 }
 
-// Update move counter and turn indicator
+// --- Update Sidebar ---
 function updateSidebar() {
   moveCounterEl.textContent = `Move: ${moveCount}`;
   const turn = chess.turn() === 'w' ? 'White' : 'Black';
   turnIndicatorEl.textContent = `${turn}'s Move`;
 
-  // Check for checkmate
   if (chess.game_over() && chess.in_checkmate()) {
     buzzerEl.classList.add('active');
     buzzerSound.play();
   }
 }
 
-// Handle click events
+// --- Board Click Handler ---
 board.addEventListener('click', e => {
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -102,4 +102,14 @@ board.addEventListener('click', e => {
   renderBoard();
 });
 
+// --- Reset Button Handler ---
+resetButton.addEventListener("click", () => {
+  chess.reset();
+  moveCount = 1;
+  selectedSquare = null;
+  buzzerEl.classList.remove("active");
+  renderBoard();
+});
+
+// --- Initial Render ---
 renderBoard();
