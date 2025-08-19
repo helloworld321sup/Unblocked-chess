@@ -23,16 +23,15 @@ const turnIndicatorEl = document.getElementById("turn-indicator");
 const buzzerEl = document.getElementById("checkmate-buzzer");
 const buzzerSound = new Audio("checkmate-buzzer.mp3");
 const resetButton = document.getElementById("reset-button");
+const toggleBotButton = document.getElementById("toggle-bot");
 
 let moveCount = 1;
-let vsBot = true; // toggle bot mode ON/OFF
+let vsBot = true;
 
 // --- Render Board ---
 function renderBoard() {
   const positions = chess.board();
-
-  const squares = board.querySelectorAll('.square');
-  squares.forEach(square => {
+  board.querySelectorAll('.square').forEach(square => {
     const squareName = square.getAttribute('data-square');
     const file = squareName.charCodeAt(0) - 97;
     const rank = 8 - parseInt(squareName[1]);
@@ -54,8 +53,7 @@ function renderBoard() {
     const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
     if (selectedEl) selectedEl.classList.add('selected');
 
-    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
-    legalMoves.forEach(move => {
+    chess.moves({ square: selectedSquare, verbose: true }).forEach(move => {
       const target = document.querySelector(`[data-square="${move.to}"]`);
       if (target) target.classList.add('highlight');
     });
@@ -67,8 +65,7 @@ function renderBoard() {
 // --- Update Sidebar ---
 function updateSidebar() {
   moveCounterEl.textContent = `Move: ${moveCount}`;
-  const turn = chess.turn() === 'w' ? 'White' : 'Black';
-  turnIndicatorEl.textContent = `${turn}'s Move`;
+  turnIndicatorEl.textContent = `${chess.turn() === 'w' ? 'White' : 'Black'}'s Move`;
 
   if (chess.game_over() && chess.in_checkmate()) {
     buzzerEl.classList.add('active');
@@ -80,11 +77,10 @@ function updateSidebar() {
 function botMove() {
   if (!vsBot || chess.turn() !== "b") return;
 
-  let moves = chess.moves();
+  const moves = chess.moves();
   if (moves.length === 0) return;
 
-  // Pick random move
-  let move = moves[Math.floor(Math.random() * moves.length)];
+  const move = moves[Math.floor(Math.random() * moves.length)];
   chess.move(move);
   moveCount++;
   renderBoard();
@@ -92,7 +88,7 @@ function botMove() {
 
 // --- Board Click Handler ---
 board.addEventListener('click', e => {
-  if (chess.turn() === "b" && vsBot) return; // prevent user from playing bot's moves
+  if (vsBot && chess.turn() === "b") return; // block bot side
 
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -106,27 +102,21 @@ board.addEventListener('click', e => {
       selectedSquare = null;
       moveCount++;
       renderBoard();
-
-      // Bot responds if it's enabled
-      if (vsBot) {
-        setTimeout(botMove, 500); // bot "thinks" for 0.5s
-      }
+      if (vsBot) setTimeout(botMove, 500);
       return;
     } else if (piece && piece.color === chess.turn()) {
       selectedSquare = clicked;
     } else {
       selectedSquare = null;
     }
-  } else {
-    if (piece && piece.color === chess.turn()) {
-      selectedSquare = clicked;
-    }
+  } else if (piece && piece.color === chess.turn()) {
+    selectedSquare = clicked;
   }
 
   renderBoard();
 });
 
-// --- Reset Button Handler ---
+// --- Reset ---
 resetButton.addEventListener("click", () => {
   chess.reset();
   moveCount = 1;
@@ -135,5 +125,13 @@ resetButton.addEventListener("click", () => {
   renderBoard();
 });
 
+// --- Toggle Bot ---
+toggleBotButton.addEventListener("click", () => {
+  vsBot = !vsBot;
+  toggleBotButton.textContent = vsBot ? "Playing: Bot" : "Playing: Human";
+  if (vsBot && chess.turn() === "b") setTimeout(botMove, 500);
+});
+
 // --- Initial Render ---
 renderBoard();
+
