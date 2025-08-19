@@ -145,3 +145,16 @@ body::after {
   transform: scale(1.05);
 }
 
+#toggle-mode {
+  padding: 10px;
+  background-color: #444;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#toggle-mode.active {
+  background-color: green;
+}
