@@ -2,6 +2,7 @@ const chess = new Chess();
 const board = document.querySelector('.chess-board');
 let selectedSquare = null;
 
+// Piece images
 const pieceImages = {
   wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
   wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
@@ -25,7 +26,8 @@ const buzzerSound = new Audio("checkmate-buzzer.mp3");
 const resetButton = document.getElementById("reset-button");
 
 let moveCount = 1;
-let vsBot = true; // toggle bot mode ON/OFF
+let playingBot = false;
+let botDifficulty = "easy";
 
 // --- Render Board ---
 function renderBoard() {
@@ -76,23 +78,111 @@ function updateSidebar() {
   }
 }
 
-// --- Bot Move ---
-function botMove() {
-  if (!vsBot || chess.turn() !== "b") return;
+// ------------------
+// BOT MOVE LOGIC
+// ------------------
+const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 1000 };
 
-  let moves = chess.moves();
-  if (moves.length === 0) return;
-
-  // Pick random move
-  let move = moves[Math.floor(Math.random() * moves.length)];
-  chess.move(move);
-  moveCount++;
-  renderBoard();
+function botMoveEasy(game) {
+  const moves = game.moves();
+  return moves[Math.floor(Math.random() * moves.length)];
 }
+
+function botMoveMedium(game) {
+  const moves = game.moves({ verbose: true });
+  let best = null, bestScore = -999;
+  for (let m of moves) {
+    let score = m.captured ? (pieceValues[m.captured.toLowerCase()] || 0) : 0;
+    if (score > bestScore) { bestScore = score; best = m; }
+  }
+  return best || moves[Math.floor(Math.random() * moves.length)];
+}
+
+function evaluateBoard(game) {
+  let board = game.board();
+  let score = 0;
+  for (let row of board) {
+    for (let piece of row) {
+      if (piece) {
+        let val = pieceValues[piece.type];
+        score += piece.color === "w" ? val : -val;
+      }
+    }
+  }
+  return score;
+}
+
+function minimax(game, depth, alpha, beta, isMax) {
+  if (depth === 0 || game.game_over()) return evaluateBoard(game);
+  let moves = game.moves();
+  if (isMax) {
+    let maxEval = -Infinity;
+    for (let move of moves) {
+      game.move(move);
+      let eval = minimax(game, depth - 1, alpha, beta, false);
+      game.undo();
+      maxEval = Math.max(maxEval, eval);
+      alpha = Math.max(alpha, eval);
+      if (beta <= alpha) break;
+    }
+    return maxEval;
+  } else {
+    let minEval = Infinity;
+    for (let move of moves) {
+      game.move(move);
+      let eval = minimax(game, depth - 1, alpha, beta, true);
+      game.undo();
+      minEval = Math.min(minEval, eval);
+      beta = Math.min(beta, eval);
+      if (beta <= alpha) break;
+    }
+    return minEval;
+  }
+}
+
+function botMoveHard(game) {
+  let bestMove = null, bestVal = -Infinity;
+  let moves = game.moves();
+  for (let move of moves) {
+    game.move(move);
+    let value = minimax(game, 2, -Infinity, Infinity, false);
+    game.undo();
+    if (value > bestVal) {
+      bestVal = value;
+      bestMove = move;
+    }
+  }
+  return bestMove;
+}
+
+function makeBotMove() {
+  if (!playingBot || chess.turn() !== "b") return;
+  let move;
+  if (botDifficulty === "easy") move = botMoveEasy(chess);
+  if (botDifficulty === "medium") move = botMoveMedium(chess);
+  if (botDifficulty === "hard") move = botMoveHard(chess);
+  if (move) {
+    chess.move(move.san || move);
+    moveCount++;
+    renderBoard();
+  }
+}
+
+// --- Toggle Button ---
+document.getElementById("toggle-bot").addEventListener("click", () => {
+  playingBot = !playingBot;
+  document.getElementById("toggle-bot").textContent = playingBot ? "Playing: Bot" : "Playing: Human";
+  document.getElementById("bot-difficulty").style.display = playingBot ? "inline-block" : "none";
+  if (playingBot && chess.turn() === "b") setTimeout(makeBotMove, 500);
+});
+
+document.getElementById("bot-difficulty").addEventListener("change", (e) => {
+  botDifficulty = e.target.value;
+});
 
 // --- Board Click Handler ---
 board.addEventListener('click', e => {
-  if (chess.turn() === "b" && vsBot) return; // prevent user from playing bot's moves
+  if (playingBot && chess.turn() === "b") return;
 
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -106,11 +196,7 @@ board.addEventListener('click', e => {
       selectedSquare = null;
       moveCount++;
       renderBoard();
-
-      // Bot responds if it's enabled
-      if (vsBot) {
-        setTimeout(botMove, 500); // bot "thinks" for 0.5s
-      }
+      if (playingBot) setTimeout(makeBotMove, 500);
       return;
     } else if (piece && piece.color === chess.turn()) {
       selectedSquare = clicked;
@@ -126,7 +212,7 @@ board.addEventListener('click', e => {
   renderBoard();
 });
 
-// --- Reset Button Handler ---
+// --- Reset Button ---
 resetButton.addEventListener("click", () => {
   chess.reset();
   moveCount = 1;
