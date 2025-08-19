@@ -18,16 +18,16 @@ body {
 }
 
 .square {
-  width: 100px;
-  height: 100px;
+  width: 108px;
+  height: 108px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .square img {
-  width: 100px;
-  height: 100px;
+  width: 108px;
+  height: 108px;
   object-fit: contain;
 }
 
