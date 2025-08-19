@@ -2,6 +2,7 @@ const chess = new Chess();
 const board = document.querySelector('.chess-board');
 let selectedSquare = null;
 
+// Piece images
 const pieceImages = {
   wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
   wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
@@ -24,24 +25,20 @@ const buzzerEl = document.getElementById("checkmate-buzzer");
 const buzzerSound = new Audio("checkmate-buzzer.mp3");
 const resetButton = document.getElementById("reset-button");
 const toggleBotBtn = document.getElementById("toggle-mode");
-const easyBtn = document.getElementById("easy-btn");
-const mediumBtn = document.getElementById("medium-btn");
-const hardBtn = document.getElementById("hard-btn");
+const difficultySelect = document.getElementById("bot-difficulty");
 
 let moveCount = 1;
-let vsBot = true; // start in bot mode
-let botDifficulty = "easy";
+let playBot = true; // true = bot enabled
+let botDifficulty = "medium"; // default difficulty
 
 // --- Render Board ---
 function renderBoard() {
   const positions = chess.board();
 
-  const squares = board.querySelectorAll('.square');
-  squares.forEach(square => {
+  board.querySelectorAll('.square').forEach(square => {
     const squareName = square.getAttribute('data-square');
     const file = squareName.charCodeAt(0) - 97;
     const rank = 8 - parseInt(squareName[1]);
-
     const piece = positions[rank][file];
     square.innerHTML = '';
     square.classList.remove('selected', 'highlight');
@@ -78,42 +75,41 @@ function updateSidebar() {
   if (chess.game_over() && chess.in_checkmate()) {
     buzzerEl.classList.add('active');
     buzzerSound.play();
-  } else {
-    buzzerEl.classList.remove('active');
   }
 }
 
-// --- Bot Logic ---
+// --- Bot Move Logic ---
 function botMove() {
-  if (!vsBot || chess.turn() !== "b") return;
+  if (!playBot || chess.turn() !== "b") return;
+
   const moves = chess.moves({ verbose: true });
   if (moves.length === 0) return;
 
   let move;
 
+  // Easy: random move
   if (botDifficulty === "easy") {
     move = moves[Math.floor(Math.random() * moves.length)];
-  } else if (botDifficulty === "medium") {
-    const captureMoves = moves.filter(m => m.captured);
-    move = captureMoves.length > 0 
-      ? captureMoves[Math.floor(Math.random() * captureMoves.length)]
-      : moves[Math.floor(Math.random() * moves.length)];
-  } else if (botDifficulty === "hard") {
-    const pieceValue = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
-    let bestValue = -1;
-    let bestMoves = [];
+  }
 
-    moves.forEach(m => {
-      const value = m.captured ? pieceValue[m.captured.toLowerCase()] : 0;
-      if (value > bestValue) {
-        bestValue = value;
-        bestMoves = [m];
-      } else if (value === bestValue) {
-        bestMoves.push(m);
-      }
-    });
+  // Medium: prefer captures, else random
+  else if (botDifficulty === "medium") {
+    const captures = moves.filter(m => m.flags.includes("c"));
+    move = captures.length > 0 ? captures[Math.floor(Math.random() * captures.length)] : moves[Math.floor(Math.random() * moves.length)];
+  }
 
-    move = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+  // Hard: capture if possible, else defend king if in check, else random
+  else if (botDifficulty === "hard") {
+    const captures = moves.filter(m => m.flags.includes("c"));
+    if (captures.length > 0) move = captures[Math.floor(Math.random() * captures.length)];
+    else if (chess.in_check()) {
+      // try to get out of check
+      move = moves.find(m => {
+        const tempChess = new Chess(chess.fen());
+        tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
+        return !tempChess.in_check();
+      }) || moves[Math.floor(Math.random() * moves.length)];
+    } else move = moves[Math.floor(Math.random() * moves.length)];
   }
 
   chess.move(move);
@@ -123,7 +119,7 @@ function botMove() {
 
 // --- Board Click Handler ---
 board.addEventListener('click', e => {
-  if (chess.turn() === "b" && vsBot) return; // prevent player from moving bot's pieces
+  if (playBot && chess.turn() === "b") return;
 
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -137,42 +133,39 @@ board.addEventListener('click', e => {
       selectedSquare = null;
       moveCount++;
       renderBoard();
-
-      if (vsBot) setTimeout(botMove, 500);
+      if (playBot) setTimeout(botMove, 500);
       return;
     } else if (piece && piece.color === chess.turn()) {
       selectedSquare = clicked;
-    } else {
-      selectedSquare = null;
-    }
+    } else selectedSquare = null;
   } else {
-    if (piece && piece.color === chess.turn()) {
-      selectedSquare = clicked;
-    }
+    if (piece && piece.color === chess.turn()) selectedSquare = clicked;
   }
 
   renderBoard();
 });
 
-// --- Reset Button Handler ---
+// --- Reset Button ---
 resetButton.addEventListener("click", () => {
   chess.reset();
   moveCount = 1;
   selectedSquare = null;
+  buzzerEl.classList.remove("active");
   renderBoard();
 });
 
 // --- Toggle Bot Mode ---
 toggleBotBtn.addEventListener("click", () => {
-  vsBot = !vsBot;
-  toggleBotBtn.textContent = vsBot ? "Play vs Human" : "Play vs Bot";
-  if (vsBot && chess.turn() === "b") setTimeout(botMove, 500);
+  playBot = !playBot;
+  toggleBotBtn.textContent = playBot ? "Play vs Human" : "Play vs Bot";
+
+  if (playBot && chess.turn() === "b") setTimeout(botMove, 500);
 });
 
-// --- Difficulty Buttons ---
-easyBtn.addEventListener("click", () => botDifficulty = "easy");
-mediumBtn.addEventListener("click", () => botDifficulty = "medium");
-hardBtn.addEventListener("click", () => botDifficulty = "hard");
+// --- Change Difficulty ---
+difficultySelect.addEventListener("change", () => {
+  botDifficulty = difficultySelect.value; // "easy", "medium", or "hard"
+});
 
 // --- Initial Render ---
 renderBoard();
