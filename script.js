@@ -21,10 +21,11 @@ const pieceImages = {
 const moveCounterEl = document.getElementById("move-counter");
 const turnIndicatorEl = document.getElementById("turn-indicator");
 const buzzerEl = document.getElementById("checkmate-buzzer");
-const buzzerSound = new Audio("checkmate-buzzer.mp3"); // Add your buzzer sound
+const buzzerSound = new Audio("checkmate-buzzer.mp3");
 const resetButton = document.getElementById("reset-button");
 
 let moveCount = 1;
+let vsBot = true; // toggle bot mode ON/OFF
 
 // --- Render Board ---
 function renderBoard() {
@@ -75,8 +76,24 @@ function updateSidebar() {
   }
 }
 
+// --- Bot Move ---
+function botMove() {
+  if (!vsBot || chess.turn() !== "b") return;
+
+  let moves = chess.moves();
+  if (moves.length === 0) return;
+
+  // Pick random move
+  let move = moves[Math.floor(Math.random() * moves.length)];
+  chess.move(move);
+  moveCount++;
+  renderBoard();
+}
+
 // --- Board Click Handler ---
 board.addEventListener('click', e => {
+  if (chess.turn() === "b" && vsBot) return; // prevent user from playing bot's moves
+
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
 
@@ -88,6 +105,13 @@ board.addEventListener('click', e => {
     if (move) {
       selectedSquare = null;
       moveCount++;
+      renderBoard();
+
+      // Bot responds if it's enabled
+      if (vsBot) {
+        setTimeout(botMove, 500); // bot "thinks" for 0.5s
+      }
+      return;
     } else if (piece && piece.color === chess.turn()) {
       selectedSquare = clicked;
     } else {
