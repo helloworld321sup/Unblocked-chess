@@ -87,10 +87,54 @@ function botMove() {
   if (moves.length === 0) return;
 
   let move;
+  const value = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 1000 };
 
-  // --- Hard mode logic ---
-  if (botDifficulty === "hard") {
-    // 1. Develop knights to c6/f6 if safe
+  // Filter safe moves
+  const safeMoves = moves.filter(m => {
+    const temp = new Chess(chess.fen());
+    temp.move({ from: m.from, to: m.to, promotion: 'q' });
+    return !temp.in_check();
+  });
+
+  if (botDifficulty === "impossible") {
+    // 1. Develop pieces (knights, bishops, etc.) toward center
+    const developMoves = safeMoves.filter(m => {
+      const piece = chess.get(m.from);
+      const centerSquares = ["d6","e6","d5","e5","c6","f6","c5","f5"];
+      return (piece.type === 'n' || piece.type === 'b') && centerSquares.includes(m.to);
+    });
+    if (developMoves.length) move = developMoves[Math.floor(Math.random() * developMoves.length)];
+
+    // 2. Capture free pawns safely
+    if (!move) {
+      const freePawnCaptures = safeMoves.filter(m => {
+        const captured = chess.get(m.to);
+        return captured && captured.type === 'p' && !threatenedByOpponent(m.to, m.from);
+      });
+      if (freePawnCaptures.length) move = freePawnCaptures[Math.floor(Math.random() * freePawnCaptures.length)];
+    }
+
+    // 3. Fair trades (capture if piece value >= our piece)
+    if (!move) {
+      const fairCaptures = safeMoves.filter(m => {
+        const captured = chess.get(m.to);
+        const ourPiece = chess.get(m.from);
+        return captured && value[captured.type] >= value[ourPiece.type];
+      });
+      if (fairCaptures.length) move = fairCaptures[Math.floor(Math.random() * fairCaptures.length)];
+    }
+
+    // 4. Threaten pieces (move to attack without immediate capture)
+    if (!move) {
+      const threatenMoves = safeMoves.filter(m => isAttacking(m.to));
+      if (threatenMoves.length) move = threatenMoves[Math.floor(Math.random() * threatenMoves.length)];
+    }
+
+    // 5. Fallback: any safe move
+    if (!move) move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
+  }
+  else if (botDifficulty === "hard") {
+// 1. Develop knights to c6/f6 if safe
     const knightDevelopment = moves.filter(m => {
       const piece = chess.get(m.from);
       if (!piece || piece.type !== "n") return false;
@@ -142,32 +186,34 @@ function botMove() {
       });
       move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
     }
-  } 
-  // --- Medium: prefer captures/checks ---
+
+  }
   else if (botDifficulty === "medium") {
     const captures = moves.filter(m => m.flags.includes("c") || m.flags.includes("e"));
-    const safeMoves = moves.filter(m => {
-      const tempChess = new Chess(chess.fen());
-      tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
-      return !tempChess.in_check();
-    });
     move = captures.length > 0 ? captures[Math.floor(Math.random() * captures.length)]
            : safeMoves[Math.floor(Math.random() * safeMoves.length)];
-  } 
-  // --- Easy: random safe move ---
-  else {
-    const safeMoves = moves.filter(m => {
-      const tempChess = new Chess(chess.fen());
-      tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
-      return !tempChess.in_check();
-    });
+  }
+  else { // easy
     move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
   }
 
   chess.move(move);
   moveCount++;
   renderBoard();
+
+  // Helper: check if square is threatened by white, ignoring our attacking piece
+  function threatenedByOpponent(square, ignoreFrom) {
+    const moves = chess.moves({ verbose: true }).filter(m => chess.get(m.from).color === 'w' && m.from !== ignoreFrom);
+    return moves.some(m => m.to === square);
+  }
+
+  // Helper: check if we are attacking a square
+  function isAttacking(square) {
+    const moves = chess.moves({ verbose: true }).filter(m => chess.get(m.from).color === 'b');
+    return moves.some(m => m.to === square && !chess.get(m.to));
+  }
 }
+
 
 
 // --- Board Click Handler ---
