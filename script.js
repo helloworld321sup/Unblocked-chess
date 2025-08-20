@@ -96,6 +96,43 @@ function botMove() {
     return !temp.in_check();
   });
 
+  if (botDifficulty === "impossible") {
+    // 1. Develop pieces (knights, bishops, etc.) toward center
+    const developMoves = safeMoves.filter(m => {
+      const piece = chess.get(m.from);
+      const centerSquares = ["d6","e6","d5","e5","c6","f6","c5","f5"];
+      return (piece.type === 'n' || piece.type === 'b') && centerSquares.includes(m.to);
+    });
+    if (developMoves.length) move = developMoves[Math.floor(Math.random() * developMoves.length)];
+
+    // 2. Capture free pawns safely
+    if (!move) {
+      const freePawnCaptures = safeMoves.filter(m => {
+        const captured = chess.get(m.to);
+        return captured && captured.type === 'p' && !threatenedByOpponent(m.to, m.from);
+      });
+      if (freePawnCaptures.length) move = freePawnCaptures[Math.floor(Math.random() * freePawnCaptures.length)];
+    }
+
+    // 3. Fair trades (capture if piece value >= our piece)
+    if (!move) {
+      const fairCaptures = safeMoves.filter(m => {
+        const captured = chess.get(m.to);
+        const ourPiece = chess.get(m.from);
+        return captured && value[captured.type] >= value[ourPiece.type];
+      });
+      if (fairCaptures.length) move = fairCaptures[Math.floor(Math.random() * fairCaptures.length)];
+    }
+
+    // 4. Threaten pieces (move to attack without immediate capture)
+    if (!move) {
+      const threatenMoves = safeMoves.filter(m => isAttacking(m.to));
+      if (threatenMoves.length) move = threatenMoves[Math.floor(Math.random() * threatenMoves.length)];
+    }
+
+    // 5. Fallback: any safe move
+    if (!move) move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
+  }
   else if (botDifficulty === "hard") {
 // 1. Develop knights to c6/f6 if safe
     const knightDevelopment = moves.filter(m => {
@@ -229,5 +266,7 @@ difficultySelect.addEventListener("change", () => {
   botDifficulty = difficultySelect.value; // "easy", "medium", "hard"
 });
 
+// --- Initial Render ---
+renderBoard();
 // --- Initial Render ---
 renderBoard();
