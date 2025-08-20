@@ -268,6 +268,3 @@ difficultySelect.addEventListener("change", () => {
 
 // --- Initial Render ---
 renderBoard();
-
-// --- Initial Render ---
-renderBoard();
