@@ -89,95 +89,74 @@ function botMove() {
   let move;
   const value = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 1000 };
 
-  // Filter safe moves
+  // Safe moves (don’t leave king in check)
   const safeMoves = moves.filter(m => {
     const temp = new Chess(chess.fen());
-    temp.move({ from: m.from, to: m.to, promotion: 'q' });
+    temp.move({ from: m.from, to: m.to, promotion: "q" });
     return !temp.in_check();
   });
 
-  else if (botDifficulty === "hard") {
-// 1. Develop knights to c6/f6 if safe
-    const knightDevelopment = moves.filter(m => {
+  // --- Hard mode ---
+  if (botDifficulty === "hard") {
+    // 1. Develop knights to c6/f6 if safe
+    const knightDevelopment = safeMoves.filter(m => {
       const piece = chess.get(m.from);
       if (!piece || piece.type !== "n") return false;
-      if ((m.to === "c6" || m.to === "f6")) {
-        // Check if square is attacked by white pawns
-        const tempChess = new Chess(chess.fen());
-        tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
-        const attackers = tempChess.moves({ verbose: true }).filter(a => {
-          return a.to === m.to && chess.get(a.from).color === 'w' && chess.get(a.from).type === 'p';
-        });
-        return attackers.length === 0;
-      }
-      return false;
+      return m.to === "c6" || m.to === "f6";
     });
     if (knightDevelopment.length > 0) {
       move = knightDevelopment[Math.floor(Math.random() * knightDevelopment.length)];
     }
+
     // 2. Safe captures (good trades only)
     if (!move) {
-      const safeCaptures = moves.filter(m => {
+      const safeCaptures = safeMoves.filter(m => {
         if (!m.flags.includes("c") && !m.flags.includes("e")) return false;
-        const tempChess = new Chess(chess.fen());
-        tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
-        // Only capture if the captured piece is equal or more valuable than our piece
         const captured = chess.get(m.to);
         const ourPiece = chess.get(m.from);
         if (!captured || !ourPiece) return false;
-        const value = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 1000 };
         return value[captured.type] >= value[ourPiece.type];
       });
       if (safeCaptures.length > 0) {
         move = safeCaptures[Math.floor(Math.random() * safeCaptures.length)];
       }
     }
-    // 3. Develop other pieces toward center
+
+    // 3. Develop toward center
     if (!move) {
       const centerSquares = ["d6", "e6", "d5", "e5", "c6", "f6"];
-      const developMoves = moves.filter(m => centerSquares.includes(m.to));
+      const developMoves = safeMoves.filter(m => centerSquares.includes(m.to));
       if (developMoves.length > 0) {
         move = developMoves[Math.floor(Math.random() * developMoves.length)];
       }
     }
-    // 4. Fallback: pick safe move (not leaving king in check)
-    if (!move) {
-      const safeMoves = moves.filter(m => {
-        const tempChess = new Chess(chess.fen());
-        tempChess.move({ from: m.from, to: m.to, promotion: 'q' });
-        return !tempChess.in_check();
-      });
+
+    // 4. Fallback safe move
+    if (!move && safeMoves.length > 0) {
       move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
     }
+  }
 
-  }
+  // --- Medium: prefer captures ---
   else if (botDifficulty === "medium") {
-    const captures = moves.filter(m => m.flags.includes("c") || m.flags.includes("e"));
-    move = captures.length > 0 ? captures[Math.floor(Math.random() * captures.length)]
-           : safeMoves[Math.floor(Math.random() * safeMoves.length)];
+    const captures = safeMoves.filter(m => m.flags.includes("c") || m.flags.includes("e"));
+    move = captures.length > 0
+      ? captures[Math.floor(Math.random() * captures.length)]
+      : safeMoves[Math.floor(Math.random() * safeMoves.length)];
   }
-  else { // easy
+
+  // --- Easy: random safe move ---
+  else {
     move = safeMoves[Math.floor(Math.random() * safeMoves.length)];
   }
 
-  chess.move(move);
-  moveCount++;
-  renderBoard();
-
-  // Helper: check if square is threatened by white, ignoring our attacking piece
-  function threatenedByOpponent(square, ignoreFrom) {
-    const moves = chess.moves({ verbose: true }).filter(m => chess.get(m.from).color === 'w' && m.from !== ignoreFrom);
-    return moves.some(m => m.to === square);
-  }
-
-  // Helper: check if we are attacking a square
-  function isAttacking(square) {
-    const moves = chess.moves({ verbose: true }).filter(m => chess.get(m.from).color === 'b');
-    return moves.some(m => m.to === square && !chess.get(m.to));
+  // Play move
+  if (move) {
+    chess.move(move);
+    moveCount++;
+    renderBoard();
   }
 }
-
-
 
 // --- Board Click Handler ---
 board.addEventListener('click', e => {
