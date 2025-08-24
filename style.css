@@ -51,7 +51,7 @@ body {
 }
 
 .square.recent-move {
-  background-color: #f0df18;
+  background-color: #dbcc1a;
 }
 
 .container {
@@ -59,6 +59,12 @@ body {
   justify-content: center; /* centers the board+sidebar in page */
   align-items: flex-start; /* top-aligns the board and buttons */
   gap: 20px;               /* space between board and buttons */
+}
+
+.app {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;               /* space between board and UI */
 }
 
 .chess-ui {
