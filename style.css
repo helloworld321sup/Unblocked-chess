@@ -4,56 +4,16 @@ body {
   align-items: center;
   height: 100vh;
   margin: 0;
-  background: black;
+  background-color: #686868;
   overflow: hidden;
   position: relative;
 }
 
-/* glowing blue scars effect */
-body::before, body::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: repeating-linear-gradient(
-    115deg,
-    transparent 0 100px,
-    rgba(0, 140, 255, 0.4) 100px 110px,
-    transparent 110px 200px
-  );
-  animation: move 12s linear infinite;
-  opacity: 0.35;
-}
-
-body::after {
-  background: repeating-linear-gradient(
-    -115deg,
-    transparent 0 100px,
-    rgba(0, 200, 255, 0.6) 100px 110px,
-    transparent 110px 200px
-  );
-  animation: move2 15s linear infinite;
-  mix-blend-mode: screen;
-}
-
-@keyframes move {
-  from { transform: translateX(0) translateY(0); }
-  to { transform: translateX(250px) translateY(250px); }
-}
-
-@keyframes move2 {
-  from { transform: translateX(0) translateY(0); }
-  to { transform: translateX(-250px) translateY(250px); }
-}
-
-/* CHESSBOARD STYLES */
 .chess-board {
   display: flex;
   flex-direction: column;
-  border: 2px solid #333;
-  z-index: 1; /* make sure board stays above background */
+  border: 3px solid #686868;
+  z-index: 1;
 }
 
 .row {
@@ -61,16 +21,16 @@ body::after {
 }
 
 .square {
-  width: 108px;
-  height: 108px;
+  width: 80px;
+  height: 80px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .square img {
-  width: 108px;
-  height: 108px;
+  width: 77px;
+  height: 77px;
   object-fit: contain;
 }
 
@@ -79,28 +39,28 @@ body::after {
 }
 
 .black {
-  background-color: #b58863;
+  background-color: #d67959;
 }
 
 .square.selected {
-  outline: 2px solid orange;
+  background-color: rgba(38, 171, 202, 0.3);
 }
 
 .square.highlight {
-  background-color: rgba(255, 255, 0, 0.3);
+  background-color: rgba(40, 145, 194, 0.3);
 }
 
 .container {
   display: flex;
-  align-items: flex-start; /* align board and sidebar at top */
+  align-items: flex-start;
   gap: 20px;
-  z-index: 2; /* above background effects */
+  z-index: 2; 
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 35px;
 }
 
 #turn-indicator,
@@ -111,22 +71,6 @@ body::after {
   font-weight: bold;
   text-align: center;
   border-radius: 5px;
-}
-
-#checkmate-buzzer {
-  padding: 15px;
-  background-color: red;
-  color: black;
-  text-align: center;
-  font-weight: bold;
-  border-radius: 5px;
-  opacity: 0.3;
-  transition: opacity 0.3s, transform 0.2s;
-}
-
-#checkmate-buzzer.active {
-  opacity: 1;
-  transform: scale(1.1);
 }
 
 #reset-button {
@@ -145,16 +89,3 @@ body::after {
   transform: scale(1.05);
 }
 
-#toggle-mode {
-  padding: 10px;
-  background-color: #444;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-#toggle-mode.active {
-  background-color: green;
-}
