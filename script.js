@@ -19,6 +19,16 @@ const pieceImages = {
   bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
 };
 
+// --- Sounds ---
+const sounds = {
+  move: new Audio("http://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3"),
+  capture: new Audio("http://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3"),
+  castle: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/castle.mp3"),
+  check: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3"),
+  promotion: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/promote.mp3"),
+  checkmate: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_WEBM_/default/game-end.webm")
+};
+
 const resetButton = document.getElementById("reset-button");
 const undoButton = document.getElementById("undo-button");
 
@@ -43,46 +53,46 @@ function renderBoard() {
     }
   });
 
-const notationsDiv = document.getElementById('notations');
-let moveHistory = [];
-let currentMoveIndex = -1;
+  const notationsDiv = document.getElementById('notations');
+  let moveHistory = [];
+  let currentMoveIndex = -1;
 
-function addMoveToHistory(move) {
-  // Cut off any "future moves" if we had undone
-  moveHistory = moveHistory.slice(0, currentMoveIndex + 1);
-  moveHistory.push(move.san);
-  currentMoveIndex++;
-  updateNotations();
-}
-
-function updateNotations() {
-  const movesToShow = moveHistory.slice(0, currentMoveIndex + 1);
-  let formatted = "";
-  
-  for (let i = 0; i < movesToShow.length; i++) {
-    if (i % 2 === 0) {
-      // White's move (start new number)
-      formatted += `${Math.floor(i / 2) + 1}. ${movesToShow[i]} `;
-    } else {
-      // Black's move
-      formatted += `${movesToShow[i]}  `;
-    }
+  function addMoveToHistory(move) {
+    moveHistory = moveHistory.slice(0, currentMoveIndex + 1);
+    moveHistory.push(move.san);
+    currentMoveIndex++;
+    updateNotations();
   }
 
-  notationsDiv.textContent = formatted.trim();
-}
+  function updateNotations() {
+    const movesToShow = moveHistory.slice(0, currentMoveIndex + 1);
+    let formatted = "";
+    
+    for (let i = 0; i < movesToShow.length; i++) {
+      if (i % 2 === 0) {
+        formatted += `${Math.floor(i / 2) + 1}. ${movesToShow[i]} `;
+      } else {
+        formatted += `${movesToShow[i]}  `;
+      }
+    }
 
+    notationsDiv.textContent = formatted.trim();
+  }
+
+  const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
+  legalMoves.forEach(move => {
+    const target = document.querySelector(`[data-square="${move.to}"]`);
+    if (target) {
+      const dot = document.createElement('div');
+      dot.classList.add('move-dot');
+      target.appendChild(dot);
+    }
+  });
 
   // Highlight selected piece
   if (selectedSquare) {
     const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
     if (selectedEl) selectedEl.classList.add('selected');
-
-    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
-    legalMoves.forEach(move => {
-      const target = document.querySelector(`[data-square="${move.to}"]`);
-      if (target) target.classList.add('highlight');
-    });
   }
 
   // Highlight last move
@@ -91,6 +101,27 @@ function updateNotations() {
     const toSquare = document.querySelector(`[data-square="${lastMove.to}"]`);
     if (fromSquare) fromSquare.classList.add('recent-move');
     if (toSquare) toSquare.classList.add('recent-move');
+  }
+}
+
+// --- Play sound depending on move ---
+function playMoveSound(move) {
+  if (!move) return;
+
+  if (move.flags.includes("c")) {
+    sounds.capture.play();
+  } else if (move.flags.includes("k") || move.flags.includes("q")) {
+    sounds.castle.play();
+  } else if (move.flags.includes("p")) {
+    sounds.promotion.play();
+  } else {
+    sounds.move.play();
+  }
+
+  if (chess.in_checkmate()) {
+    sounds.checkmate.play();
+  } else if (chess.in_check()) {
+    sounds.check.play();
   }
 }
 
@@ -105,13 +136,17 @@ board.addEventListener('click', e => {
   if (selectedSquare) {
     const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
     if (move) {
-      lastMove = move;  // Store last move
+      lastMove = move;
+      playMoveSound(move); // <-- play sound here
       selectedSquare = null;
       moveCount++;
       renderBoard();
       return;
-    } else if (piece && piece.color === chess.turn()) selectedSquare = clicked;
-    else selectedSquare = null;
+    } else if (piece && piece.color === chess.turn()) {
+      selectedSquare = clicked;
+    } else {
+      selectedSquare = null;
+    }
   } else {
     if (piece && piece.color === chess.turn()) selectedSquare = clicked;
   }
