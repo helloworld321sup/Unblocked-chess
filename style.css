@@ -105,3 +105,19 @@ body {
   padding: 5px 12px;
 }
 
+.square {
+  position: relative; /* needed so we can position the dot inside */
+}
+
+.move-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;         /* size of dot */
+  height: 20px;
+  background-color: rgba(0, 0, 0, 0.3); /* faint gray */
+  border-radius: 50%;  /* make it round */
+  transform: translate(-50%, -50%); /* center it */
+  pointer-events: none; /* clicks go through the dot */
+}
+
