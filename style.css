@@ -65,7 +65,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-left: 20px; /* if next to board */
+  margin-left: 30px; /* if next to board */
 }
 
 .notations {
@@ -81,13 +81,13 @@ body {
 }
 
 .controls button {
-  font-size: 18px;
+  font-size: 16px;
   padding: 5px 12px;
   cursor: pointer;
 }
 
 #reset-button {
   font-size: 16px;
-  padding: 3px 8px;
+  padding: 5px 12px;
 }
 
