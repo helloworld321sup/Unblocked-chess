@@ -43,23 +43,35 @@ function renderBoard() {
     }
   });
 
-  const notationsDiv = document.getElementById('notations');
+const notationsDiv = document.getElementById('notations');
 let moveHistory = [];
 let currentMoveIndex = -1;
 
 function addMoveToHistory(move) {
-  // remove any "future" moves if you undid and now make a new move
+  // Cut off any "future moves" if we had undone
   moveHistory = moveHistory.slice(0, currentMoveIndex + 1);
-  moveHistory.push(move.san);   // SAN = standard algebraic notation
+  moveHistory.push(move.san);
   currentMoveIndex++;
   updateNotations();
 }
 
 function updateNotations() {
-  // join all moves up to currentMoveIndex and show in the box
   const movesToShow = moveHistory.slice(0, currentMoveIndex + 1);
-  notationsDiv.textContent = movesToShow.join(' ');
+  let formatted = "";
+  
+  for (let i = 0; i < movesToShow.length; i++) {
+    if (i % 2 === 0) {
+      // White's move (start new number)
+      formatted += `${Math.floor(i / 2) + 1}. ${movesToShow[i]} `;
+    } else {
+      // Black's move
+      formatted += `${movesToShow[i]}  `;
+    }
+  }
+
+  notationsDiv.textContent = formatted.trim();
 }
+
 
   // Highlight selected piece
   if (selectedSquare) {
