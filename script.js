@@ -53,32 +53,6 @@ function renderBoard() {
     }
   });
 
-  const notationsDiv = document.getElementById('notations');
-  let moveHistory = [];
-  let currentMoveIndex = -1;
-
-  function addMoveToHistory(move) {
-    moveHistory = moveHistory.slice(0, currentMoveIndex + 1);
-    moveHistory.push(move.san);
-    currentMoveIndex++;
-    updateNotations();
-  }
-
-  function updateNotations() {
-    const movesToShow = moveHistory.slice(0, currentMoveIndex + 1);
-    let formatted = "";
-    
-    for (let i = 0; i < movesToShow.length; i++) {
-      if (i % 2 === 0) {
-        formatted += `${Math.floor(i / 2) + 1}. ${movesToShow[i]} `;
-      } else {
-        formatted += `${movesToShow[i]}  `;
-      }
-    }
-
-    notationsDiv.textContent = formatted.trim();
-  }
-
   const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
   legalMoves.forEach(move => {
     const target = document.querySelector(`[data-square="${move.to}"]`);
