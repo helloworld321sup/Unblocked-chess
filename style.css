@@ -51,7 +51,7 @@ body {
 }
 
 .square.recent-move {
-  background-color: rgba(218, 203, 33, 0.3); /* goldish highlight */
+  background-color: #f0df18;
 }
 
 .container {
