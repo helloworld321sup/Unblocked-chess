@@ -6,7 +6,27 @@ let stockfish = null;
 if (typeof Stockfish === "function") {
   stockfish = Stockfish();
   stockfish.postMessage("uci");
+
+  stockfish.onmessage = function (event) {
+    const line = event.data;
+    if (line.startsWith("bestmove")) {
+      const parts = line.split(" ");
+      const best = parts[1]; // e.g. "e2e4"
+      if (best && best !== "(none)") {
+        const move = {
+          from: best.substring(0, 2),
+          to: best.substring(2, 4),
+          promotion: best.length > 4 ? best.substring(4, 5) : "q"
+        };
+        if (chess.move(move)) {
+          moveCount++;
+          renderBoard();
+        }
+      }
+    }
+  };
 }
+
 
 // Piece images
 const pieceImages = {
