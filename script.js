@@ -1,6 +1,7 @@
 const chess = new Chess();
 const board = document.querySelector('.chess-board');
 let selectedSquare = null;
+let lastMove = null;
 let moveCount = 1;
 
 const pieceImages = {
@@ -18,10 +19,10 @@ const pieceImages = {
   bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
 };
 
-const moveCounterEl = document.getElementById("move-counter");
-const turnIndicatorEl = document.getElementById("turn-indicator");
 const resetButton = document.getElementById("reset-button");
+const undoButton = document.getElementById("undo-button");
 
+// --- Render Board ---
 function renderBoard() {
   const positions = chess.board();
   board.querySelectorAll('.square').forEach(square => {
@@ -29,8 +30,9 @@ function renderBoard() {
     const file = squareName.charCodeAt(0) - 97;
     const rank = 8 - parseInt(squareName[1]);
     const piece = positions[rank][file];
+
     square.innerHTML = '';
-    square.classList.remove('selected', 'highlight');
+    square.classList.remove('selected', 'highlight', 'recent-move');
 
     if (piece) {
       const key = piece.color + piece.type.toUpperCase();
@@ -41,6 +43,7 @@ function renderBoard() {
     }
   });
 
+  // Highlight selected piece
   if (selectedSquare) {
     const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
     if (selectedEl) selectedEl.classList.add('selected');
@@ -52,12 +55,16 @@ function renderBoard() {
     });
   }
 
-  // Update sidebar
-  moveCounterEl.textContent = `Move: ${moveCount}`;
-  turnIndicatorEl.textContent = `${chess.turn() === 'w' ? 'White' : 'Black'}'s Move`;
+  // Highlight last move
+  if (lastMove) {
+    const fromSquare = document.querySelector(`[data-square="${lastMove.from}"]`);
+    const toSquare = document.querySelector(`[data-square="${lastMove.to}"]`);
+    if (fromSquare) fromSquare.classList.add('recent-move');
+    if (toSquare) toSquare.classList.add('recent-move');
+  }
 }
 
-// Click handler
+// --- Click Handler ---
 board.addEventListener('click', e => {
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -68,6 +75,7 @@ board.addEventListener('click', e => {
   if (selectedSquare) {
     const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
     if (move) {
+      lastMove = move;  // Store last move
       selectedSquare = null;
       moveCount++;
       renderBoard();
@@ -81,14 +89,26 @@ board.addEventListener('click', e => {
   renderBoard();
 });
 
-// Reset board
+// --- Reset Board ---
 resetButton.addEventListener("click", () => {
   chess.reset();
   moveCount = 1;
   selectedSquare = null;
+  lastMove = null;
   renderBoard();
 });
 
-// Initial render
+// --- Undo Move ---
+undoButton.addEventListener("click", () => {
+  const move = chess.undo();
+  if (move) {
+    moveCount--;
+    selectedSquare = null;
+    lastMove = chess.history({ verbose: true }).slice(-1)[0] || null;
+    renderBoard();
+  }
+});
+
+// --- Initial Render ---
 renderBoard();
 
