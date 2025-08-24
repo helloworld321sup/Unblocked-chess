@@ -61,38 +61,33 @@ body {
   gap: 20px;               /* space between board and buttons */
 }
 
-.sidebar {
+.chess-ui {
   display: flex;
-  flex-direction: column; /* stack buttons vertically */
-  gap: 10px;              /* space between buttons */
+  flex-direction: column;
+  align-items: center;
+  margin-left: 20px; /* if next to board */
+}
+
+.notations {
+  margin-bottom: 10px;
+  font-family: monospace;
+  font-size: 14px;
+  text-align: center;
+}
+
+.controls {
+  display: flex;
+  gap: 15px; /* space between buttons */
+}
+
+.controls button {
+  font-size: 18px;
+  padding: 5px 12px;
+  cursor: pointer;
 }
 
 #reset-button {
-  padding: 10px;
-  font-weight: bold;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  background-color: #4188a8;
-  color: white;
-  transition: background-color 0.2s, transform 0.2s;
+  font-size: 16px;
+  padding: 3px 8px;
 }
 
-#reset-button:hover {
-  background-color: #48a6d1;
-}
-
-#undo-button {
-  padding: 10px;
-  font-weight: bold;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-  background-color: #4188a8;
-  color: white;
-  transition: background-color 0.2s, transform 0.2s;
-}
-
-#undo-button:hover {
-  background-color: #48a6d1;
-}
