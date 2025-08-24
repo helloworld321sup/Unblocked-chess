@@ -8,10 +8,16 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <div class="sidebar">
-      <button id="reset-button">Reset Board</button>
-      <button id="undo-button">Undo Move</button>
+<div class="chess-ui">
+  <div class="notations" id="notations">
+    <!-- Game moves will go here -->
+  </div>
+  <div class="controls">
+    <button id="undo-button">⬅️ undo</button>
+    <button id="reset-button">reset board</button>
+    <button id="redo-button">forward ➡️</button>
+  </div>
+</div>
 
     <div class="chess-board">
       <!-- Row 8 -->
