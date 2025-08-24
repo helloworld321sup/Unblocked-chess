@@ -1,8 +1,8 @@
 const chess = new Chess();
 const board = document.querySelector('.chess-board');
 let selectedSquare = null;
+let moveCount = 1;
 
-// Piece images
 const pieceImages = {
   wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
   wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
@@ -18,14 +18,10 @@ const pieceImages = {
   bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
 };
 
-// Sidebar elements
 const moveCounterEl = document.getElementById("move-counter");
 const turnIndicatorEl = document.getElementById("turn-indicator");
 const resetButton = document.getElementById("reset-button");
 
-let moveCount = 1;
-
-// --- Render Board ---
 function renderBoard() {
   const positions = chess.board();
   board.querySelectorAll('.square').forEach(square => {
@@ -56,25 +52,13 @@ function renderBoard() {
     });
   }
 
-  updateSidebar();
-}
-
-// --- Update Sidebar ---
-function updateSidebar() {
+  // Update sidebar
   moveCounterEl.textContent = `Move: ${moveCount}`;
-  const turn = chess.turn() === 'w' ? 'White' : 'Black';
-  turnIndicatorEl.textContent = `${turn}'s Move`;
-
-  if (chess.game_over() && chess.in_checkmate()) {
-    buzzerEl.classList.add('active');
-    buzzerSound.play();
-  }
+  turnIndicatorEl.textContent = `${chess.turn() === 'w' ? 'White' : 'Black'}'s Move`;
 }
 
-// --- Board Click Handler ---
+// Click handler
 board.addEventListener('click', e => {
-  if (playBot && chess.turn() === "b") return;
-
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
 
@@ -87,7 +71,6 @@ board.addEventListener('click', e => {
       selectedSquare = null;
       moveCount++;
       renderBoard();
-      if (playBot) setTimeout(botMove, 500);
       return;
     } else if (piece && piece.color === chess.turn()) selectedSquare = clicked;
     else selectedSquare = null;
@@ -98,30 +81,14 @@ board.addEventListener('click', e => {
   renderBoard();
 });
 
-// --- Reset Board ---
+// Reset board
 resetButton.addEventListener("click", () => {
   chess.reset();
   moveCount = 1;
   selectedSquare = null;
-  buzzerEl.classList.remove("active");
   renderBoard();
 });
 
-// --- Toggle Bot Mode ---
-toggleBotBtn.addEventListener("click", () => {
-  playBot = !playBot;
-  toggleBotBtn.textContent = playBot ? "Playing vs Bot" : "Playing vs Human";
-
-  // Bot moves immediately if turned on during black's turn
-  if (playBot && chess.turn() === "b") setTimeout(botMove, 500);
-});
-
-// --- Change Difficulty ---
-difficultySelect.addEventListener("change", () => {
-  botDifficulty = difficultySelect.value; // "easy", "medium", "hard"
-});
-
-// --- Initial Render ---
+// Initial render
 renderBoard();
-// --- Initial Render ---
-renderBoard();
+
