@@ -43,6 +43,24 @@ function renderBoard() {
     }
   });
 
+  const notationsDiv = document.getElementById('notations');
+let moveHistory = [];
+let currentMoveIndex = -1;
+
+function addMoveToHistory(move) {
+  // remove any "future" moves if you undid and now make a new move
+  moveHistory = moveHistory.slice(0, currentMoveIndex + 1);
+  moveHistory.push(move.san);   // SAN = standard algebraic notation
+  currentMoveIndex++;
+  updateNotations();
+}
+
+function updateNotations() {
+  // join all moves up to currentMoveIndex and show in the box
+  const movesToShow = moveHistory.slice(0, currentMoveIndex + 1);
+  notationsDiv.textContent = movesToShow.join(' ');
+}
+
   // Highlight selected piece
   if (selectedSquare) {
     const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
