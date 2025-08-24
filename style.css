@@ -56,17 +56,16 @@ body {
 
 .container {
   display: flex;
-  align-items: flex-start;
-  gap: 20px;
-  z-index: 2; 
+  justify-content: center; /* centers the board+sidebar in page */
+  align-items: flex-start; /* top-aligns the board and buttons */
+  gap: 20px;               /* space between board and buttons */
 }
 
 .sidebar {
   display: flex;
-  flex-direction: column;
-  gap: 35px;
+  flex-direction: column; /* stack buttons vertically */
+  gap: 10px;              /* space between buttons */
 }
-
 
 #reset-button {
   padding: 10px;
@@ -83,3 +82,17 @@ body {
   background-color: #48a6d1;
 }
 
+#undo-button {
+  padding: 10px;
+  font-weight: bold;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  background-color: #4188a8;
+  color: white;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+#undo-button:hover {
+  background-color: #48a6d1;
+}
