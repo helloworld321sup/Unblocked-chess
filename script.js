@@ -200,6 +200,7 @@ function playMoveSound(move) {
 }
 
 // --- Click Handler ---
+// --- Click Handler ---
 board.addEventListener('click', e => {
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -207,27 +208,35 @@ board.addEventListener('click', e => {
   const piece = chess.get(clicked);
 
   if (selectedSquare) {
+    // Try to move the selected piece to the clicked square
     const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
-if (move) {
-  lastMove = move;
-  playMoveSound(move);
-  undoneMoves = []; // clear redo history
-  selectedSquare = null;
-  moveCount++;
-  renderBoard();
+    if (move) {
+      lastMove = move;
+      playMoveSound(move);
+      undoneMoves = []; // clear redo history
+      selectedSquare = null;
+      moveCount++;
+      renderBoard();
 
-  setTimeout(makeAIMove, 120); // <-- add this
-  return;
-}
-    } else if (piece && piece.color === chess.turn()) {
+      setTimeout(makeAIMove, 120); // Bot moves after player
+      return;
+    }
+    
+    // If move invalid but clicked a piece of the same color, re-select it
+    if (piece && piece.color === chess.turn()) {
       selectedSquare = clicked;
-    } else selectedSquare = null;
+    } else {
+      selectedSquare = null;
+    }
+
   } else if (piece && piece.color === chess.turn()) {
+    // If no piece selected yet, select clicked piece
     selectedSquare = clicked;
   }
 
   renderBoard();
 });
+
 
 // --- Drag & Drop ---
 let dragPiece = null;
@@ -322,7 +331,7 @@ if (move) {
 
   setTimeout(makeAIMove, 120); // <-- tell the bot to move
 }
-
+});
 
 
 // --- Reset Board ---
