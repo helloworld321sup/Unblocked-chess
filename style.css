@@ -85,7 +85,7 @@ body {
   padding: 11px 65px;
   border-radius: 6px;
   cursor: pointer;
-  background: #242424;
+  background-color: #242424;
 }
 
 #reset-button {
