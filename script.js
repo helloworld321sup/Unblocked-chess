@@ -129,14 +129,20 @@ function orderMoves(ch) {
 }
 
 function getOpeningMove() {
-  const fen = chess.fen().split(" ").slice(0, 4).join(" "); // simple FEN ignoring move counters
-  const moves = openingBook[fen] || openingBook[fen === chess.START_FEN ? "start" : undefined];
+  // Build the move history key in your book format
+  const historyMoves = chess.history({ verbose: true }).map(m => m.from + m.to).join(' ');
+  
+  // If no moves yet, use "start"
+  const key = historyMoves || "start";
+  const moves = openingBook[key];
+  
   if (moves && moves.length) {
     const move = moves[Math.floor(Math.random() * moves.length)];
     return move;
   }
   return null;
 }
+
 
 // --- MINIMAX + ALPHA-BETA ---
 function search(depth, alpha, beta) {
