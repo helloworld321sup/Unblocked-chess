@@ -30,6 +30,113 @@ const sounds = {
   checkmate: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_WEBM_/default/game-end.webm")
 };
 
+// --- AI CONFIG ---
+const AI = {
+  side: 'b',   // bot plays black by default
+  depth: 3     // tweak: 2 = fast, 3 = ok, 4 = slower/stronger
+};
+
+// --- EVALUATION (white-positive score) ---
+const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
+
+function evaluatePosition(ch) {
+  // material
+  let score = 0;
+  const board = ch.board();
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (!p) continue;
+      const val = PIECE_VALUES[p.type];
+      score += p.color === 'w' ? val : -val;
+    }
+  }
+  // mobility (small bonus for number of legal moves)
+  const curr = ch.turn();
+  const moves = ch.moves();
+  const mobility = moves.length * 2; // small weight
+  score += (curr === 'w' ? mobility : -mobility);
+
+  // checkmate/stalemate bonuses handled in search
+  return score;
+}
+
+// --- MOVE ORDERING (captures first: MVV-LVA-ish) ---
+function orderMoves(ch) {
+  const moves = ch.moves({ verbose: true });
+  return moves.sort((a, b) => {
+    const aCap = a.captured ? (PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece]) : -1;
+    const bCap = b.captured ? (PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece]) : -1;
+    return bCap - aCap; // higher first
+  });
+}
+
+// --- MINIMAX + ALPHA-BETA ---
+function search(depth, alpha, beta) {
+  if (depth === 0) return { score: evaluatePosition(chess) };
+
+  // terminal states
+  if (chess.in_checkmate()) {
+    // side to move is checkmated
+    return { score: chess.turn() === 'w' ? -999999 : 999999 };
+  }
+  if (chess.in_stalemate() || chess.in_draw()) {
+    return { score: 0 };
+  }
+
+  let bestMove = null;
+
+  if (chess.turn() === 'w') {
+    // maximize
+    let best = -Infinity;
+    for (const m of orderMoves(chess)) {
+      chess.move(m);
+      const { score } = search(depth - 1, alpha, beta);
+      chess.undo();
+      if (score > best) { best = score; bestMove = m; }
+      alpha = Math.max(alpha, score);
+      if (alpha >= beta) break; // beta cutoff
+    }
+    return { score: best, move: bestMove };
+  } else {
+    // minimize
+    let best = Infinity;
+    for (const m of orderMoves(chess)) {
+      chess.move(m);
+      const { score } = search(depth - 1, alpha, beta);
+      chess.undo();
+      if (score < best) { best = score; bestMove = m; }
+      beta = Math.min(beta, score);
+      if (alpha >= beta) break; // alpha cutoff
+    }
+    return { score: best, move: bestMove };
+  }
+}
+
+function findBestMove() {
+  // Iterative deepening (optional): single depth is fine for now
+  return search(AI.depth, -Infinity, Infinity).move || null;
+}
+
+// --- BOT MOVE DRIVER ---
+function makeAIMove() {
+  if (chess.game_over()) return;
+  if (chess.turn() !== AI.side) return;
+
+  const best = findBestMove();
+  if (!best) return;
+
+  const move = chess.move(best);
+  if (move) {
+    lastMove = move;
+    playMoveSound(move);
+    undoneMoves = []; // new branch: clear redo
+    moveCount++;
+    renderBoard();
+  }
+}
+
+
 const resetButton = document.getElementById("reset-button");
 const undoButton = document.getElementById("undo-button");
 const redoButton = document.getElementById("redo-button");
@@ -202,15 +309,17 @@ board.addEventListener('drop', e => {
   const toSquare = targetSquareEl.getAttribute('data-square');
   const move = chess.move({ from: selectedSquare, to: toSquare, promotion: 'q' });
 
-  if (move) {
-    lastMove = move;
-    playMoveSound(move);
-    undoneMoves = []; // clear redo history
-    selectedSquare = null;
-    moveCount++;
-    renderBoard();
-  }
-});
+if (move) {
+  lastMove = move;
+  playMoveSound(move);
+  undoneMoves = [];
+  selectedSquare = null;
+  moveCount++;
+  renderBoard();
+
+  setTimeout(makeAIMove, 120); // <-- tell the bot to move
+}
+
 
 
 // --- Reset Board ---
