@@ -81,15 +81,16 @@ body {
 }
 
 .controls button {
-  font-size: 20px;
-  padding: 13px 42px;
+  font-size: 60px;
+  padding: 11px 65px;
   border-radius: 6px;
   cursor: pointer;
+  background: #242424;
 }
 
 #reset-button {
-  font-size: 20px;
-  padding: 13px 30px;
+  font-size: 60px;
+  padding: 11px 60px;
   background-color: #242424;
 }
 
