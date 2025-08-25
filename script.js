@@ -3,6 +3,7 @@ const board = document.querySelector('.chess-board');
 let selectedSquare = null;
 let lastMove = null;
 let moveCount = 1;
+let undoneMoves = []; // store moves you undo
 
 const pieceImages = {
   wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
@@ -141,9 +142,22 @@ resetButton.addEventListener("click", () => {
 undoButton.addEventListener("click", () => {
   const move = chess.undo();
   if (move) {
+    undoneMoves.push(move); // save move for redo
     moveCount--;
     selectedSquare = null;
     lastMove = chess.history({ verbose: true }).slice(-1)[0] || null;
+    renderBoard();
+  }
+});
+
+const redoButton = document.getElementById("redo-button");
+
+redoButton.addEventListener("click", () => {
+  if (undoneMoves.length > 0) {
+    const move = undoneMoves.pop(); // take the last undone move
+    chess.move(move); // replay the move
+    moveCount++;
+    lastMove = move;
     renderBoard();
   }
 });
