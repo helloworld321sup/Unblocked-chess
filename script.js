@@ -120,18 +120,85 @@ board.addEventListener('click', e => {
 });
 
 // --- Drag & Drop ---
+let dragPiece = null;
+let dragGhost = null;
+
+// --- Drag Start ---
 board.addEventListener('dragstart', e => {
   const img = e.target;
   if (!img.dataset.square) return;
+
   selectedSquare = img.dataset.square;
+  const piece = chess.get(selectedSquare);
+  if (!piece) return;
+
+  dragPiece = img;
+
+  // Hide the original piece while dragging
+  img.style.opacity = '0';
+
+  // Create a ghost piece that follows the cursor
+  dragGhost = img.cloneNode();
+  dragGhost.style.position = 'absolute';
+  dragGhost.style.pointerEvents = 'none';
+  dragGhost.style.width = img.offsetWidth + 'px';
+  dragGhost.style.height = img.offsetHeight + 'px';
+  dragGhost.style.zIndex = 1000;
+  document.body.appendChild(dragGhost);
+
+  // Remove default drag image
+  e.dataTransfer.setDragImage(new Image(), 0, 0);
 });
 
-board.addEventListener('dragover', e => e.preventDefault());
+// --- Drag ---
+board.addEventListener('drag', e => {
+  if (!dragGhost) return;
+  dragGhost.style.left = e.pageX - dragGhost.offsetWidth / 2 + 'px';
+  dragGhost.style.top = e.pageY - dragGhost.offsetHeight / 2 + 'px';
+});
 
+// --- Drag End ---
+board.addEventListener('dragend', e => {
+  if (dragGhost) {
+    dragGhost.remove();
+    dragGhost = null;
+  }
+  if (dragPiece) {
+    dragPiece.style.opacity = '1';
+    dragPiece = null;
+  }
+  selectedSquare = null;
+  renderBoard();
+});
+
+// --- Drag Over ---
+board.addEventListener('dragover', e => {
+  e.preventDefault();
+
+  // Show legal moves dynamically while dragging
+  if (selectedSquare) {
+    renderBoard(); // clear previous highlights
+    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
+    legalMoves.forEach(move => {
+      const target = document.querySelector(`[data-square="${move.to}"]`);
+      if (target) {
+        const dot = document.createElement('div');
+        dot.classList.add('move-dot');
+        target.appendChild(dot);
+      }
+    });
+
+    const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
+    if (selectedEl) selectedEl.classList.add('selected');
+  }
+});
+
+// --- Drop ---
 board.addEventListener('drop', e => {
   e.preventDefault();
   const targetSquareEl = e.target.closest('.square');
   if (!targetSquareEl || !selectedSquare) return;
+
   const toSquare = targetSquareEl.getAttribute('data-square');
   const move = chess.move({ from: selectedSquare, to: toSquare, promotion: 'q' });
 
@@ -144,6 +211,7 @@ board.addEventListener('drop', e => {
     renderBoard();
   }
 });
+
 
 // --- Reset Board ---
 resetButton.addEventListener("click", () => {
