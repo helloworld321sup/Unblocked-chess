@@ -33,7 +33,7 @@ const sounds = {
 // --- AI CONFIG ---
 const AI = {
   side: 'b',   // bot plays black by default
-  depth: 3     // tweak: 2 = fast, 3 = ok, 4 = slower/stronger
+  depth: 4     // tweak: 2 = fast, 3 = ok, 4 = slower/stronger
 };
 
 // --- EVALUATION (white-positive score) ---
