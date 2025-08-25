@@ -36,8 +36,65 @@ const AI = {
   depth: 3     // tweak: 2 = fast, 3 = ok, 4 = slower/stronger
 };
 
+const openingBook = {
+  "start": ["e2e4", "d2d4", "c2c4", "g1f3", "f2f4"],
+  
+  // 1. e4 openings
+  "e2e4": ["e7e5", "c7c5", "e7e6", "c7c6"],
+  "e2e4 e7e5": ["g1f3", "f1c4", "d2d4", "b1c3"],
+  "e2e4 c7c5": ["g1f3", "c2c3", "d2d4"],
+
+  // 1. d4 openings
+  "d2d4": ["d7d5", "g8f6", "e7e6", "c7c5"],
+  "d2d4 d7d5": ["c2c4", "g1f3", "e2e3"],
+  "d2d4 g8f6": ["c2c4", "g1f3", "b1c3"],
+
+  // 1. c4 openings
+  "c2c4": ["e7e5", "g8f6", "c7c6", "e7e6"],
+  "c2c4 e7e5": ["g1f3", "b1c3", "d2d4"],
+
+  // 1. Nf3 openings
+  "g1f3": ["d7d5", "g8f6", "c7c5", "e7e6"],
+
+  // King's Pawn openings continued
+  "e2e4 e7e5 g1f3": ["b8c6", "g8f6", "f8c5"],
+  "e2e4 e7e5 f1c4": ["b8c6", "g8f6", "f8c5"],
+
+  // Queen's Pawn openings continued
+  "d2d4 d7d5 c2c4": ["e7e6", "c7c6", "g8f6"],
+  "d2d4 g8f6 c2c4": ["e7e6", "g7g6", "c7c6"],
+
+  // Ruy Lopez
+  "e2e4 e7e5 g1f3 b8c6 f1b5": ["a7a6", "f8c5"],
+
+  // Italian Game
+  "e2e4 e7e5 g1f3 b8c6 f1c4": ["g8f6", "f8c5"],
+
+  // Sicilian Defense
+  "e2e4 c7c5 g1f3": ["d7d6", "e7e6", "g8f6"],
+
+  // Queen's Gambit
+  "d2d4 d7d5 c2c4 e7e6": ["g1f3", "b1c3"],
+
+  // King's Indian Defense
+  "d2d4 g8f6 c2c4 g7g6": ["g1f3", "b1c3"],
+
+  // English Opening
+  "c2c4 e7e5 g1f3": ["b8c6", "g8f6"],
+
+  // London System
+  "d2d4 d7d5 c1f4": ["g8f6", "e7e6"],
+
+  // More random openings
+  "f2f4": ["e7e5", "d7d5"],
+  "g1f3 d7d5 f2f4": ["g8f6", "c7c5"],
+
+  // add more variations as you like
+};
+
+
 // --- EVALUATION (white-positive score) ---
-const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
+const PIECE_VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 0 };
 
 function evaluatePosition(ch) {
   // material
@@ -69,6 +126,16 @@ function orderMoves(ch) {
     const bCap = b.captured ? (PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece]) : -1;
     return bCap - aCap; // higher first
   });
+}
+
+function getOpeningMove() {
+  const fen = chess.fen().split(" ").slice(0, 4).join(" "); // simple FEN ignoring move counters
+  const moves = openingBook[fen] || openingBook[fen === chess.START_FEN ? "start" : undefined];
+  if (moves && moves.length) {
+    const move = moves[Math.floor(Math.random() * moves.length)];
+    return move;
+  }
+  return null;
 }
 
 // --- MINIMAX + ALPHA-BETA ---
@@ -118,23 +185,30 @@ function findBestMove() {
   return search(AI.depth, -Infinity, Infinity).move || null;
 }
 
-// --- BOT MOVE DRIVER ---
 function makeAIMove() {
   if (chess.game_over()) return;
   if (chess.turn() !== AI.side) return;
 
-  const best = findBestMove();
-  if (!best) return;
+  // Try opening book first
+  const openingMove = getOpeningMove();
+  let move;
+  if (openingMove) {
+    move = chess.move(openingMove, { sloppy: true }); // sloppy=true allows SAN/coordinate moves
+  } else {
+    const best = findBestMove();
+    if (!best) return;
+    move = chess.move(best);
+  }
 
-  const move = chess.move(best);
   if (move) {
     lastMove = move;
     playMoveSound(move);
-    undoneMoves = []; // new branch: clear redo
+    undoneMoves = [];
     moveCount++;
     renderBoard();
   }
 }
+
 
 
 const resetButton = document.getElementById("reset-button");
