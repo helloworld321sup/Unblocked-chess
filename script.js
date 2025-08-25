@@ -208,14 +208,17 @@ board.addEventListener('click', e => {
 
   if (selectedSquare) {
     const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
-    if (move) {
-      lastMove = move;
-      playMoveSound(move);
-      undoneMoves = []; // clear redo history
-      selectedSquare = null;
-      moveCount++;
-      renderBoard();
-      return;
+if (move) {
+  lastMove = move;
+  playMoveSound(move);
+  undoneMoves = []; // clear redo history
+  selectedSquare = null;
+  moveCount++;
+  renderBoard();
+
+  setTimeout(makeAIMove, 120); // <-- add this
+  return;
+}
     } else if (piece && piece.color === chess.turn()) {
       selectedSquare = clicked;
     } else selectedSquare = null;
