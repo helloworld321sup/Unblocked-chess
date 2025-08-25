@@ -32,6 +32,7 @@ const sounds = {
 
 const resetButton = document.getElementById("reset-button");
 const undoButton = document.getElementById("undo-button");
+const redoButton = document.getElementById("redo-button");
 
 // --- Render Board ---
 function renderBoard() {
@@ -50,6 +51,8 @@ function renderBoard() {
       const img = document.createElement('img');
       img.src = pieceImages[key];
       img.alt = key;
+      img.draggable = true;
+      img.dataset.square = squareName;
       square.appendChild(img);
     }
   });
@@ -64,13 +67,11 @@ function renderBoard() {
     }
   });
 
-  // Highlight selected piece
   if (selectedSquare) {
     const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
     if (selectedEl) selectedEl.classList.add('selected');
   }
 
-  // Highlight last move
   if (lastMove) {
     const fromSquare = document.querySelector(`[data-square="${lastMove.from}"]`);
     const toSquare = document.querySelector(`[data-square="${lastMove.to}"]`);
@@ -82,29 +83,19 @@ function renderBoard() {
 // --- Play sound depending on move ---
 function playMoveSound(move) {
   if (!move) return;
+  if (move.flags.includes("c")) sounds.capture.play();
+  else if (move.flags.includes("k") || move.flags.includes("q")) sounds.castle.play();
+  else if (move.flags.includes("p")) sounds.promotion.play();
+  else sounds.move.play();
 
-  if (move.flags.includes("c")) {
-    sounds.capture.play();
-  } else if (move.flags.includes("k") || move.flags.includes("q")) {
-    sounds.castle.play();
-  } else if (move.flags.includes("p")) {
-    sounds.promotion.play();
-  } else {
-    sounds.move.play();
-  }
-
-  if (chess.in_checkmate()) {
-    sounds.checkmate.play();
-  } else if (chess.in_check()) {
-    sounds.check.play();
-  }
+  if (chess.in_checkmate()) sounds.checkmate.play();
+  else if (chess.in_check()) sounds.check.play();
 }
 
 // --- Click Handler ---
 board.addEventListener('click', e => {
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
-
   const clicked = targetSquare.getAttribute('data-square');
   const piece = chess.get(clicked);
 
@@ -112,21 +103,46 @@ board.addEventListener('click', e => {
     const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
     if (move) {
       lastMove = move;
-      playMoveSound(move); // <-- play sound here
+      playMoveSound(move);
+      undoneMoves = []; // clear redo history
       selectedSquare = null;
       moveCount++;
       renderBoard();
       return;
     } else if (piece && piece.color === chess.turn()) {
       selectedSquare = clicked;
-    } else {
-      selectedSquare = null;
-    }
-  } else {
-    if (piece && piece.color === chess.turn()) selectedSquare = clicked;
+    } else selectedSquare = null;
+  } else if (piece && piece.color === chess.turn()) {
+    selectedSquare = clicked;
   }
 
   renderBoard();
+});
+
+// --- Drag & Drop ---
+board.addEventListener('dragstart', e => {
+  const img = e.target;
+  if (!img.dataset.square) return;
+  selectedSquare = img.dataset.square;
+});
+
+board.addEventListener('dragover', e => e.preventDefault());
+
+board.addEventListener('drop', e => {
+  e.preventDefault();
+  const targetSquareEl = e.target.closest('.square');
+  if (!targetSquareEl || !selectedSquare) return;
+  const toSquare = targetSquareEl.getAttribute('data-square');
+  const move = chess.move({ from: selectedSquare, to: toSquare, promotion: 'q' });
+
+  if (move) {
+    lastMove = move;
+    playMoveSound(move);
+    undoneMoves = []; // clear redo history
+    selectedSquare = null;
+    moveCount++;
+    renderBoard();
+  }
 });
 
 // --- Reset Board ---
@@ -135,6 +151,7 @@ resetButton.addEventListener("click", () => {
   moveCount = 1;
   selectedSquare = null;
   lastMove = null;
+  undoneMoves = [];
   renderBoard();
 });
 
@@ -142,7 +159,7 @@ resetButton.addEventListener("click", () => {
 undoButton.addEventListener("click", () => {
   const move = chess.undo();
   if (move) {
-    undoneMoves.push(move); // save move for redo
+    undoneMoves.push(move);
     moveCount--;
     selectedSquare = null;
     lastMove = chess.history({ verbose: true }).slice(-1)[0] || null;
@@ -150,18 +167,16 @@ undoButton.addEventListener("click", () => {
   }
 });
 
-const redoButton = document.getElementById("redo-button");
-
+// --- Redo Move ---
 redoButton.addEventListener("click", () => {
   if (undoneMoves.length > 0) {
-    const move = undoneMoves.pop(); // take the last undone move
-    chess.move(move); // replay the move
-    moveCount++;
+    const move = undoneMoves.pop();
+    chess.move(move);
     lastMove = move;
+    moveCount++;
     renderBoard();
   }
 });
 
 // --- Initial Render ---
 renderBoard();
-
