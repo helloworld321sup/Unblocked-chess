@@ -120,6 +120,157 @@ const BOOK_LINES = [
   "Nf3 d5 d4 c6 c4 Nf6 Nc3 e6 e3 Nbd7 Qc2 Bd6 Bd3 O-O",
 ];
 
+// Pawn
+const pawnEvalWhite = [
+  [ 0,   0,   0,   0,   0,   0,   0,   0],
+  [ 5,  10,  10, -20, -20,  10,  10,   5],
+  [ 5,  -5, -10,   0,   0, -10,  -5,   5],
+  [ 0,   0,   0,  20,  20,   0,   0,   0],
+  [ 5,   5,  10,  25,  25,  10,   5,   5],
+  [10,  10,  20,  30,  30,  20,  10,  10],
+  [50,  50,  50,  50,  50,  50,  50,  50],
+  [ 0,   0,   0,   0,   0,   0,   0,   0]
+];
+const pawnEvalBlack = pawnEvalWhite.slice().reverse();
+
+// Knight
+const knightEval = [
+  [-50, -40, -30, -30, -30, -30, -40, -50],
+  [-40, -20,   0,   0,   0,   0, -20, -40],
+  [-30,   0,  10,  15,  15,  10,   0, -30],
+  [-30,   5,  15,  20,  20,  15,   5, -30],
+  [-30,   0,  15,  20,  20,  15,   0, -30],
+  [-30,   5,  10,  15,  15,  10,   5, -30],
+  [-40, -20,   0,   5,   5,   0, -20, -40],
+  [-50, -40, -30, -30, -30, -30, -40, -50]
+];
+
+// Bishop
+const bishopEval = [
+  [-20, -10, -10, -10, -10, -10, -10, -20],
+  [-10,   5,   0,   0,   0,   0,   5, -10],
+  [-10,  10,  10,  10,  10,  10,  10, -10],
+  [-10,   0,  10,  10,  10,  10,   0, -10],
+  [-10,   5,   5,  10,  10,   5,   5, -10],
+  [-10,   0,   5,  10,  10,   5,   0, -10],
+  [-10,   0,   0,   0,   0,   0,   0, -10],
+  [-20, -10, -10, -10, -10, -10, -10, -20]
+];
+
+// Rook
+const rookEval = [
+  [  0,   0,   0,   5,   5,   0,   0,   0],
+  [ -5,   0,   0,   0,   0,   0,   0,  -5],
+  [ -5,   0,   0,   0,   0,   0,   0,  -5],
+  [ -5,   0,   0,   0,   0,   0,   0,  -5],
+  [ -5,   0,   0,   0,   0,   0,   0,  -5],
+  [ -5,   0,   0,   0,   0,   0,   0,  -5],
+  [  5,  10,  10,  10,  10,  10,  10,   5],
+  [  0,   0,   0,   0,   0,   0,   0,   0]
+];
+
+// Queen
+const queenEval = [
+  [-20, -10, -10,  -5,  -5, -10, -10, -20],
+  [-10,   0,   0,   0,   0,   0,   0, -10],
+  [-10,   0,   5,   5,   5,   5,   0, -10],
+  [ -5,   0,   5,   5,   5,   5,   0,  -5],
+  [  0,   0,   5,   5,   5,   5,   0,  -5],
+  [-10,   5,   5,   5,   5,   5,   0, -10],
+  [-10,   0,   5,   0,   0,   0,   0, -10],
+  [-20, -10, -10,  -5,  -5, -10, -10, -20]
+];
+
+// King (early/midgame)
+const kingEvalWhite = [
+  [-30, -40, -40, -50, -50, -40, -40, -30],
+  [-30, -40, -40, -50, -50, -40, -40, -30],
+  [-30, -40, -40, -50, -50, -40, -40, -30],
+  [-30, -40, -40, -50, -50, -40, -40, -30],
+  [-20, -30, -30, -40, -40, -30, -30, -20],
+  [-10, -20, -20, -20, -20, -20, -20, -10],
+  [ 20,  20,   0,   0,   0,   0,  20,  20],
+  [ 20,  30,  10,   0,   0,  10,  30,  20]
+];
+const kingEvalBlack = kingEvalWhite.slice().reverse();
+
+// Piece-Square Tables (PST)
+// values are from White’s perspective
+// (for Black, we’ll just flip the board)
+
+// Pawn
+const pst_pawn = [
+  [ 0,  0,  0,  0,  0,  0,  0,  0],
+  [50, 50, 50, 50, 50, 50, 50, 50],
+  [10, 10, 20, 30, 30, 20, 10, 10],
+  [ 5,  5, 10, 25, 25, 10,  5,  5],
+  [ 0,  0,  0, 20, 20,  0,  0,  0],
+  [ 5, -5,-10,  0,  0,-10, -5,  5],
+  [ 5, 10, 10,-20,-20, 10, 10,  5],
+  [ 0,  0,  0,  0,  0,  0,  0,  0]
+];
+
+// Knight
+const pst_knight = [
+  [-50,-40,-30,-30,-30,-30,-40,-50],
+  [-40,-20,  0,  0,  0,  0,-20,-40],
+  [-30,  0, 10, 15, 15, 10,  0,-30],
+  [-30,  5, 15, 20, 20, 15,  5,-30],
+  [-30,  0, 15, 20, 20, 15,  0,-30],
+  [-30,  5, 10, 15, 15, 10,  5,-30],
+  [-40,-20,  0,  5,  5,  0,-20,-40],
+  [-50,-40,-30,-30,-30,-30,-40,-50]
+];
+
+// Bishop
+const pst_bishop = [
+  [-20,-10,-10,-10,-10,-10,-10,-20],
+  [-10,  5,  0,  0,  0,  0,  5,-10],
+  [-10, 10, 10, 10, 10, 10, 10,-10],
+  [-10,  0, 10, 10, 10, 10,  0,-10],
+  [-10,  5,  5, 10, 10,  5,  5,-10],
+  [-10,  0,  5, 10, 10,  5,  0,-10],
+  [-10,  0,  0,  0,  0,  0,  0,-10],
+  [-20,-10,-10,-10,-10,-10,-10,-20]
+];
+
+// Rook
+const pst_rook = [
+  [ 0,  0,  0,  0,  0,  0,  0,  0],
+  [ 5, 10, 10, 10, 10, 10, 10,  5],
+  [-5,  0,  0,  0,  0,  0,  0, -5],
+  [-5,  0,  0,  0,  0,  0,  0, -5],
+  [-5,  0,  0,  0,  0,  0,  0, -5],
+  [-5,  0,  0,  0,  0,  0,  0, -5],
+  [-5,  0,  0,  0,  0,  0,  0, -5],
+  [ 0,  0,  0,  5,  5,  0,  0,  0]
+];
+
+// Queen
+const pst_queen = [
+  [-20,-10,-10, -5, -5,-10,-10,-20],
+  [-10,  0,  0,  0,  0,  0,  0,-10],
+  [-10,  0,  5,  5,  5,  5,  0,-10],
+  [ -5,  0,  5,  5,  5,  5,  0, -5],
+  [  0,  0,  5,  5,  5,  5,  0, -5],
+  [-10,  5,  5,  5,  5,  5,  0,-10],
+  [-10,  0,  5,  0,  0,  0,  0,-10],
+  [-20,-10,-10, -5, -5,-10,-10,-20]
+];
+
+// King (opening/midgame)
+const pst_king = [
+  [-30,-40,-40,-50,-50,-40,-40,-30],
+  [-30,-40,-40,-50,-50,-40,-40,-30],
+  [-30,-40,-40,-50,-50,-40,-40,-30],
+  [-30,-40,-40,-50,-50,-40,-40,-30],
+  [-20,-30,-30,-40,-40,-30,-30,-20],
+  [-10,-20,-20,-20,-20,-20,-20,-10],
+  [ 20, 20,  0,  0,  0,  0, 20, 20],
+  [ 20, 30, 10,  0,  0, 10, 30, 20]
+];
+
+
 // Build a map: key = UCI history string (e2e4 e7e5 ...), value = array of next UCI moves from those lines
 function buildOpeningBook(lines) {
   const book = Object.create(null);
@@ -168,22 +319,51 @@ function applyUci(uci) {
 // ============================================================================
 const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 
-function evaluatePosition(ch) {
-  let score = 0;
-  const board = ch.board();
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const p = board[r][c];
-      if (!p) continue;
-      const val = PIECE_VALUES[p.type];
-      score += p.color === 'w' ? val : -val;
+function evaluateBoard(game) {
+  let total = 0;
+  const board = game.board();
+
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = board[row][col];
+      if (square !== null) {
+        let value = getPieceValue(square.type);
+        let pstBonus = getPST(square, row, col);
+        total += square.color === 'w' ? value + pstBonus : -(value + pstBonus);
+      }
     }
   }
-  const moves = ch.moves();
-  const mobility = moves.length * 2;
-  score += (ch.turn() === 'w' ? mobility : -mobility);
-  return score;
+
+  return total;
 }
+
+function getPieceValue(type) {
+  switch (type) {
+    case 'p': return 100;
+    case 'n': return 320;
+    case 'b': return 330;
+    case 'r': return 500;
+    case 'q': return 900;
+    case 'k': return 20000;
+  }
+}
+
+function getPST(piece, row, col) {
+  // flip row for black so they "see" the board from their side
+  const r = piece.color === 'w' ? row : 7 - row;
+  const c = col;
+
+  switch (piece.type) {
+    case 'p': return pst_pawn[r][c];
+    case 'n': return pst_knight[r][c];
+    case 'b': return pst_bishop[r][c];
+    case 'r': return pst_rook[r][c];
+    case 'q': return pst_queen[r][c];
+    case 'k': return pst_king[r][c];
+  }
+  return 0;
+}
+
 
 function orderMoves(ch) {
   const moves = ch.moves({ verbose: true });
@@ -195,7 +375,7 @@ function orderMoves(ch) {
 }
 
 function search(depth, alpha, beta) {
-  if (depth === 0) return { score: evaluatePosition(chess) };
+  if (depth === 0) return { score: evaluateBoard(chess) };
   if (chess.in_checkmate()) return { score: chess.turn() === 'w' ? -999999 : 999999 };
   if (chess.in_stalemate() || chess.in_draw()) return { score: 0 };
 
