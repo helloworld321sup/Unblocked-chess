@@ -110,17 +110,3 @@ body {
   pointer-events: none; /* clicks go through the dot */
 }
 
-#play-bot-button {
-  padding: 10px 20px;
-  font-size: 16px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-#play-bot-button:hover {
-  background-color: #45a049;
-}
-
