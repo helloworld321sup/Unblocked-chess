@@ -218,5 +218,10 @@ redoButton?.addEventListener("click", () => {
   }
 });
 
+document.getElementById('play-bot-button').addEventListener('click', () => {
+  window.location.href = "playbot.html";
+});
+
+
 // Initial render
 renderBoard();
