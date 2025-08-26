@@ -31,37 +31,8 @@ const sounds = {
 };
 
 // --- Engine config ---
-let userSide = 'w'; // default
-const AI = { side: 'b', depth: 3 };
-
-document.getElementById('play-white')?.addEventListener('click', () => {
-  userSide = 'w';
-  AI.side = 'b';
-  startGame();
-});
-
-document.getElementById('play-black')?.addEventListener('click', () => {
-  userSide = 'b';
-  AI.side = 'w';
-  startGame();
-});
-
-function startGame() {
-  chess.reset();
-  moveCount = 1;
-  selectedSquare = null;
-  lastMove = null;
-  undoneMoves = [];
-  renderBoard();
-  if (AI.side === 'w') setTimeout(makeAIMove, 120);
-}
-
-// --- Engine config ---
 let userSide = null;         // 'w' or 'b'
 const AI = { side: null, depth: 3 };
-
-let userSide = 'w'; // default
-const AI = { side: 'b', depth: 3 };
 
 document.getElementById('play-white')?.addEventListener('click', () => {
   userSide = 'w';
