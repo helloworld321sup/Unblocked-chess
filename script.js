@@ -1,7 +1,3 @@
-// Chess engine + draggable board with a big opening book (auto-built from SAN lines)
-// Drop this in after chess.js is loaded and your HTML board exists
-
-// --- Core state ---
 const chess = new Chess();
 const board = document.querySelector('.chess-board');
 let selectedSquare = null;
