@@ -1,10 +1,15 @@
+// Chess engine + draggable board with a big opening book (auto-built from SAN lines)
+// Drop this in after chess.js is loaded and your HTML board exists
+
+// --- Core state ---
 const chess = new Chess();
 const board = document.querySelector('.chess-board');
 let selectedSquare = null;
 let lastMove = null;
 let moveCount = 1;
-let undoneMoves = []; // store moves you undo
+let undoneMoves = [];
 
+// --- UI assets ---
 const pieceImages = {
   wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
   wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
@@ -20,7 +25,6 @@ const pieceImages = {
   bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
 };
 
-// --- Sounds ---
 const sounds = {
   move: new Audio("http://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3"),
   capture: new Audio("http://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3"),
@@ -30,74 +34,145 @@ const sounds = {
   checkmate: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_WEBM_/default/game-end.webm")
 };
 
-// --- AI CONFIG ---
-const AI = {
-  side: 'b',   // bot plays black by default
-  depth: 3     // tweak: 2 = fast, 3 = ok, 4 = slower/stronger
-};
+// --- Engine config ---
+const AI = { side: 'b', depth: 3 };
 
-const openingBook = {
-  "start": ["e2e4", "d2d4", "c2c4", "g1f3", "f2f4"],
-  
-  // 1. e4 openings
-  "e2e4": ["e7e5", "c7c5", "e7e6", "c7c6"],
-  "e2e4 e7e5": ["g1f3", "f1c4", "d2d4", "b1c3"],
-  "e2e4 c7c5": ["g1f3", "c2c3", "d2d4"],
+// Limit how deep the opening book is used (plies = half-moves). 16 = ~8 moves each side.
+const BOOK_PLY_LIMIT = 16;
 
-  // 1. d4 openings
-  "d2d4": ["d7d5", "g8f6", "e7e6", "c7c5"],
-  "d2d4 d7d5": ["c2c4", "g1f3", "e2e3"],
-  "d2d4 g8f6": ["c2c4", "g1f3", "b1c3"],
+// ============================================================================
+//                           OPENING BOOK (auto-built)
+// ============================================================================
+// We'll define a bunch of well-known opening mainlines in SAN and automatically build
+// a transposition-table-like book keyed by UCI history (e2e4 e7e5 ...).
+// You can add lines to BOOK_LINES to grow the book fast.
 
-  // 1. c4 openings
-  "c2c4": ["e7e5", "g8f6", "c7c6", "e7e6"],
-  "c2c4 e7e5": ["g1f3", "b1c3", "d2d4"],
+const BOOK_LINES = [
+  // --- e4 open games ---
+  "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8 d4 Nbd7",
+  "e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d4 exd4 cxd4 Bb4+ Bd2 Bxd2+ Nbxd2 d5 exd5 Nxd5",
+  "e4 e5 Nf3 Nc6 d4 exd4 Nxd4 Nf6 Nc3 Bb4 Nxc6 bxc6 Bd3 d5 O-O O-O Qf3 Re8",
+  "e4 e5 Nf3 Nc6 d3 Nf6 c3 d5 Nbd2 a5 Be2 Be7 O-O O-O",
+  "e4 e5 Bc4 Nf6 d3 c6 Nf3 d5 Bb3 Bb4+ c3 Bd6",
+  // Scotch
+  "e4 e5 Nf3 Nc6 d4 exd4 Nxd4 Bc5 Be3 Qf6 c3 Nge7",
+  // Four Knights
+  "e4 e5 Nf3 Nc6 Nc3 Nf6 Bb5 Bb4 O-O O-O d3 d6 Bg5",
+  // King's Gambit
+  "e4 e5 f4 exxf4 Nf3 g5 h4 g4 Ne5 Nf6 d4 d6 Nd3 Nxe4",
 
-  // 1. Nf3 openings
-  "g1f3": ["d7d5", "g8f6", "c7c5", "e7e6"],
+  // --- Sicilian ---
+  "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be2 e5 Nb3 Be7",
+  "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 g6 c4 Bg7 Be3 Nf6 Nc3 O-O",
+  "e4 c5 Nf3 e6 d4 cxd4 Nxd4 a6 c4 Nf6 Nc3 Qc7 Be2 Be7",
+  "e4 c5 c3 d5 exd5 Qxd5 d4 Nf6 Nf3 Bg4 Be2 e6 O-O Nc6",
+  "e4 c5 d4 cxd4 c3 dxc3 Nxc3 Nc6 Nf3 d6 Bc4 e6",
+  // Dragon
+  "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6",
 
-  // King's Pawn openings continued
-  "e2e4 e7e5 g1f3": ["b8c6", "g8f6", "f8c5"],
-  "e2e4 e7e5 f1c4": ["b8c6", "g8f6", "f8c5"],
+  // --- French ---
+  "e4 e6 d4 d5 Nc3 Nf6 Bg5 Be7 e5 Nfd7 h4 a6 Qg4",
+  "e4 e6 d4 d5 Nd2 Nf6 e5 Nfd7 Bd3 c5 c3 Nc6 Ne2",
+  "e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Qb6 a3 a5 Be2",
+  "e4 e6 d4 d5 exd5 exd5 Nf3 Nf6 Bd3 Be7 O-O O-O",
 
-  // Queen's Pawn openings continued
-  "d2d4 d7d5 c2c4": ["e7e6", "c7c6", "g8f6"],
-  "d2d4 g8f6 c2c4": ["e7e6", "g7g6", "c7c6"],
+  // --- Caro-Kann ---
+  "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5 Ng3 Bg6 h4 h6 Nf3 Nd7",
+  "e4 c6 d4 d5 e5 Bf5 Nf3 e6 Be2 c5 O-O Nc6 c3",
+  "e4 c6 d4 d5 exd5 cxd5 Bd3 Nc6 c3 Nf6 Bf4 Bg4",
 
-  // Ruy Lopez
-  "e2e4 e7e5 g1f3 b8c6 f1b5": ["a7a6", "f8c5"],
+  // --- Pirc/Modern ---
+  "e4 d6 d4 Nf6 Nc3 g6 Nf3 Bg7 Be2 O-O O-O a6 a4",
+  "e4 g6 d4 Bg7 Nc3 d6 Nf3 a6 a4 b6 Be2 Bb7 O-O",
 
-  // Italian Game
-  "e2e4 e7e5 g1f3 b8c6 f1c4": ["g8f6", "f8c5"],
+  // --- Scandinavian ---
+  "e4 d5 exd5 Qxd5 Nc3 Qa5 d4 c6 Nf3 Nf6 Bc4 Bf5 O-O e6",
 
-  // Sicilian Defense
-  "e2e4 c7c5 g1f3": ["d7d6", "e7e6", "g8f6"],
+  // --- Alekhine ---
+  "e4 Nf6 e5 Nd5 d4 d6 Nf3 Bg4 Be2 e6 O-O Be7 c4",
 
-  // Queen's Gambit
-  "d2d4 d7d5 c2c4 e7e6": ["g1f3", "b1c3"],
+  // --- d4: Queen's Gambit / Indian Defenses ---
+  "d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O Nf3 h6 Bh4 b6",
+  "d4 d5 c4 c6 Nf3 Nf6 Nc3 e6 e3 Nbd7 Bd3 dxc4 Bxc4 b5",
+  "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6",
+  "d4 Nf6 c4 g6 Nc3 d5 Nf3 Bg7 Qb3 dxc4 Qxc4 O-O e4",
+  "d4 Nf6 c4 e6 Nc3 Bb4 e3 O-O Bd3 d5 Nf3 c5 O-O",
+  "d4 Nf6 c4 e6 Nc3 d5 Nf3 Be7 Bf4 O-O e3 Nbd8 Rc1",
+  "d4 e6 c4 f5 Nc3 Nf6 Nf3 b6 g3 Bb7 Bg2 Be7 O-O O-O",
+  "d4 Nf6 c4 c5 d5 e6 Nc3 exd5 cxd5 d6 e4 g6 Nf3 Bg7",
+  "d4 Nf6 c4 c5 d5 b5 cxb5 a6 b6 e6 Nc3 exd5 Nxd5 Bb7",
 
-  // King's Indian Defense
-  "d2d4 g8f6 c2c4 g7g6": ["g1f3", "b1c3"],
+  // --- Catalan ---
+  "d4 Nf6 c4 e6 g3 d5 Bg2 Be7 Nf3 O-O O-O dxc4 Qc2 a6",
 
-  // English Opening
-  "c2c4 e7e5 g1f3": ["b8c6", "g8f6"],
+  // --- English / Reti ---
+  "c4 e5 Nc3 Nf6 Nf3 Nc6 g3 d5 cxd5 Nxd5 Bg2 Be7 O-O",
+  "c4 c5 Nc3 Nc6 g3 g6 Bg2 Bg7 e3 e6 Nge2 Nge7 d4",
+  "c4 Nf6 g3 g6 Bg2 Bg7 Nc3 O-O d3 d6 e4 c5 Nge2 Nc6",
+  "Nf3 d5 g3 Nf6 Bg2 e6 O-O Be7 d3 O-O Nbd2 c5 e4 Nc6",
 
-  // London System
-  "d2d4 d7d5 c1f4": ["g8f6", "e7e6"],
+  // --- London / Colle / Tromp ---
+  "d4 d5 Nf3 Nf6 Bf4 e6 e3 c5 c3 Nc6 Nbd2 Bd6 Bg3 O-O",
+  "d4 Nf6 Nf3 g6 Bf4 Bg7 e3 O-O h3 d6 Be2 Nbd7 O-O",
+  "d4 Nf6 Bg5 e6 e4 h6 Bxf6 Qxf6 Nf3 d6 Nc3 g6 Be2 Bg7",
 
-  // More random openings
-  "f2f4": ["e7e5", "d7d5"],
-  "g1f3 d7d5 f2f4": ["g8f6", "c7c5"],
+  // --- Misc sidelines to widen book ---
+  "e4 e5 d4 exd4 Qxd4 Nc6 Qe3 Nf6 Nc3 Bb4 Bd2 O-O O-O-O",
+  "e4 c5 b4 cxb4 a3 d5 exd5 Qxd5 Nf3 e5 c4 Qe6 Be2",
+  "d4 f5 c4 Nf6 Nc3 e6 Nf3 Bb4 g3 O-O Bg2 d6 O-O Qe8",
+  "c4 e6 Nc3 d5 d4 Nf6 Nf3 Be7 Bg5 O-O e3 h6 Bh4 b6",
+  "Nf3 d5 d4 c6 c4 Nf6 Nc3 e6 e3 Nbd7 Qc2 Bd6 Bd3 O-O",
+];
 
-  // add more variations as you like
-};
+// Build a map: key = UCI history string (e2e4 e7e5 ...), value = array of next UCI moves from those lines
+function buildOpeningBook(lines) {
+  const book = Object.create(null);
+  for (const line of lines) {
+    const tmp = new Chess();
+    const sans = line.trim().split(/\s+/);
+    const keyMoves = [];
+    for (const san of sans) {
+      const mv = tmp.move(san, { sloppy: true });
+      if (!mv) break;
+      const uci = mv.from + mv.to + (mv.promotion ? mv.promotion : '');
+      const key = keyMoves.join(' '); // empty string at start means book for first mover
+      if (!book[key]) book[key] = [];
+      if (!book[key].includes(uci)) book[key].push(uci);
+      keyMoves.push(uci);
+    }
+  }
+  return book;
+}
 
+const openingBook = buildOpeningBook(BOOK_LINES);
 
-// --- EVALUATION (white-positive score) ---
-const PIECE_VALUES = { p: 100, n: 300, b: 300, r: 500, q: 900, k: 0 };
+function uciHistoryKey(ch = chess) {
+  const hist = ch.history({ verbose: true });
+  return hist.map(m => m.from + m.to + (m.promotion || '')).join(' ');
+}
+
+function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function getOpeningMove() {
+  if (BOOK_PLY_LIMIT && chess.history().length >= BOOK_PLY_LIMIT) return null;
+  const key = uciHistoryKey();
+  const options = openingBook[key];
+  return options && options.length ? pickRandom(options) : null;
+}
+
+function applyUci(uci) {
+  const from = uci.slice(0,2);
+  const to = uci.slice(2,4);
+  const promotion = uci.length === 5 ? uci[4] : undefined;
+  return chess.move({ from, to, promotion });
+}
+
+// ============================================================================
+//                               SEARCH (minimax)
+// ============================================================================
+const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 
 function evaluatePosition(ch) {
-  // material
   let score = 0;
   const board = ch.board();
   for (let r = 0; r < 8; r++) {
@@ -108,98 +183,65 @@ function evaluatePosition(ch) {
       score += p.color === 'w' ? val : -val;
     }
   }
-  // mobility (small bonus for number of legal moves)
-  const curr = ch.turn();
   const moves = ch.moves();
-  const mobility = moves.length * 2; // small weight
-  score += (curr === 'w' ? mobility : -mobility);
-
-  // checkmate/stalemate bonuses handled in search
+  const mobility = moves.length * 2;
+  score += (ch.turn() === 'w' ? mobility : -mobility);
   return score;
 }
 
-// --- MOVE ORDERING (captures first: MVV-LVA-ish) ---
 function orderMoves(ch) {
   const moves = ch.moves({ verbose: true });
   return moves.sort((a, b) => {
     const aCap = a.captured ? (PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece]) : -1;
     const bCap = b.captured ? (PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece]) : -1;
-    return bCap - aCap; // higher first
+    return bCap - aCap;
   });
 }
 
-function getOpeningMove() {
-  // Build the move history key in your book format
-  const historyMoves = chess.history({ verbose: true }).map(m => m.from + m.to).join(' ');
-  
-  // If no moves yet, use "start"
-  const key = historyMoves || "start";
-  const moves = openingBook[key];
-  
-  if (moves && moves.length) {
-    const move = moves[Math.floor(Math.random() * moves.length)];
-    return move;
-  }
-  return null;
-}
-
-
-// --- MINIMAX + ALPHA-BETA ---
 function search(depth, alpha, beta) {
   if (depth === 0) return { score: evaluatePosition(chess) };
-
-  // terminal states
-  if (chess.in_checkmate()) {
-    // side to move is checkmated
-    return { score: chess.turn() === 'w' ? -999999 : 999999 };
-  }
-  if (chess.in_stalemate() || chess.in_draw()) {
-    return { score: 0 };
-  }
+  if (chess.in_checkmate()) return { score: chess.turn() === 'w' ? -999999 : 999999 };
+  if (chess.in_stalemate() || chess.in_draw()) return { score: 0 };
 
   let bestMove = null;
-
   if (chess.turn() === 'w') {
-    // maximize
     let best = -Infinity;
     for (const m of orderMoves(chess)) {
       chess.move(m);
       const { score } = search(depth - 1, alpha, beta);
       chess.undo();
       if (score > best) { best = score; bestMove = m; }
-      alpha = Math.max(alpha, score);
-      if (alpha >= beta) break; // beta cutoff
+      if (score > alpha) alpha = score;
+      if (alpha >= beta) break;
     }
     return { score: best, move: bestMove };
   } else {
-    // minimize
     let best = Infinity;
     for (const m of orderMoves(chess)) {
       chess.move(m);
       const { score } = search(depth - 1, alpha, beta);
       chess.undo();
       if (score < best) { best = score; bestMove = m; }
-      beta = Math.min(beta, score);
-      if (alpha >= beta) break; // alpha cutoff
+      if (score < beta) beta = score;
+      if (alpha >= beta) break;
     }
     return { score: best, move: bestMove };
   }
 }
 
 function findBestMove() {
-  // Iterative deepening (optional): single depth is fine for now
-  return search(AI.depth, -Infinity, Infinity).move || null;
+  const result = search(AI.depth, -Infinity, Infinity);
+  return result.move || null;
 }
 
 function makeAIMove() {
   if (chess.game_over()) return;
   if (chess.turn() !== AI.side) return;
 
-  // Try opening book first
-  const openingMove = getOpeningMove();
   let move;
-  if (openingMove) {
-    move = chess.move(openingMove, { sloppy: true }); // sloppy=true allows SAN/coordinate moves
+  const bookUci = getOpeningMove();
+  if (bookUci) {
+    move = applyUci(bookUci);
   } else {
     const best = findBestMove();
     if (!best) return;
@@ -215,13 +257,13 @@ function makeAIMove() {
   }
 }
 
-
-
+// ============================================================================
+//                                   UI
+// ============================================================================
 const resetButton = document.getElementById("reset-button");
 const undoButton = document.getElementById("undo-button");
 const redoButton = document.getElementById("redo-button");
 
-// --- Render Board ---
 function renderBoard() {
   const positions = chess.board();
   board.querySelectorAll('.square').forEach(square => {
@@ -267,7 +309,6 @@ function renderBoard() {
   }
 }
 
-// --- Play sound depending on move ---
 function playMoveSound(move) {
   if (!move) return;
   if (move.flags.includes("c")) sounds.capture.play();
@@ -279,8 +320,7 @@ function playMoveSound(move) {
   else if (chess.in_check()) sounds.check.play();
 }
 
-// --- Click Handler ---
-// --- Click Handler ---
+// --- Click input ---
 board.addEventListener('click', e => {
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -288,55 +328,36 @@ board.addEventListener('click', e => {
   const piece = chess.get(clicked);
 
   if (selectedSquare) {
-    // Try to move the selected piece to the clicked square
     const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
     if (move) {
       lastMove = move;
       playMoveSound(move);
-      undoneMoves = []; // clear redo history
+      undoneMoves = [];
       selectedSquare = null;
       moveCount++;
       renderBoard();
-
-      setTimeout(makeAIMove, 120); // Bot moves after player
+      setTimeout(makeAIMove, 120);
       return;
     }
-    
-    // If move invalid but clicked a piece of the same color, re-select it
-    if (piece && piece.color === chess.turn()) {
-      selectedSquare = clicked;
-    } else {
-      selectedSquare = null;
-    }
-
+    if (piece && piece.color === chess.turn()) selectedSquare = clicked; else selectedSquare = null;
   } else if (piece && piece.color === chess.turn()) {
-    // If no piece selected yet, select clicked piece
     selectedSquare = clicked;
   }
-
   renderBoard();
 });
 
-
-// --- Drag & Drop ---
+// --- Drag & drop ---
 let dragPiece = null;
 let dragGhost = null;
 
-// --- Drag Start ---
 board.addEventListener('dragstart', e => {
   const img = e.target;
   if (!img.dataset.square) return;
-
   selectedSquare = img.dataset.square;
   const piece = chess.get(selectedSquare);
   if (!piece) return;
-
   dragPiece = img;
-
-  // Hide the original piece while dragging
   img.style.opacity = '0';
-
-  // Create a ghost piece that follows the cursor
   dragGhost = img.cloneNode();
   dragGhost.style.position = 'absolute';
   dragGhost.style.pointerEvents = 'none';
@@ -344,39 +365,26 @@ board.addEventListener('dragstart', e => {
   dragGhost.style.height = img.offsetHeight + 'px';
   dragGhost.style.zIndex = 1000;
   document.body.appendChild(dragGhost);
-
-  // Remove default drag image
   e.dataTransfer.setDragImage(new Image(), 0, 0);
 });
 
-// --- Drag ---
 board.addEventListener('drag', e => {
   if (!dragGhost) return;
   dragGhost.style.left = e.pageX - dragGhost.offsetWidth / 2 + 'px';
   dragGhost.style.top = e.pageY - dragGhost.offsetHeight / 2 + 'px';
 });
 
-// --- Drag End ---
-board.addEventListener('dragend', e => {
-  if (dragGhost) {
-    dragGhost.remove();
-    dragGhost = null;
-  }
-  if (dragPiece) {
-    dragPiece.style.opacity = '1';
-    dragPiece = null;
-  }
+board.addEventListener('dragend', () => {
+  if (dragGhost) { dragGhost.remove(); dragGhost = null; }
+  if (dragPiece) { dragPiece.style.opacity = '1'; dragPiece = null; }
   selectedSquare = null;
   renderBoard();
 });
 
-// --- Drag Over ---
 board.addEventListener('dragover', e => {
   e.preventDefault();
-
-  // Show legal moves dynamically while dragging
   if (selectedSquare) {
-    renderBoard(); // clear previous highlights
+    renderBoard();
     const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
     legalMoves.forEach(move => {
       const target = document.querySelector(`[data-square="${move.to}"]`);
@@ -386,36 +394,30 @@ board.addEventListener('dragover', e => {
         target.appendChild(dot);
       }
     });
-
     const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
     if (selectedEl) selectedEl.classList.add('selected');
   }
 });
 
-// --- Drop ---
 board.addEventListener('drop', e => {
   e.preventDefault();
   const targetSquareEl = e.target.closest('.square');
   if (!targetSquareEl || !selectedSquare) return;
-
   const toSquare = targetSquareEl.getAttribute('data-square');
   const move = chess.move({ from: selectedSquare, to: toSquare, promotion: 'q' });
-
-if (move) {
-  lastMove = move;
-  playMoveSound(move);
-  undoneMoves = [];
-  selectedSquare = null;
-  moveCount++;
-  renderBoard();
-
-  setTimeout(makeAIMove, 120); // <-- tell the bot to move
-}
+  if (move) {
+    lastMove = move;
+    playMoveSound(move);
+    undoneMoves = [];
+    selectedSquare = null;
+    moveCount++;
+    renderBoard();
+    setTimeout(makeAIMove, 120);
+  }
 });
 
-
-// --- Reset Board ---
-resetButton.addEventListener("click", () => {
+// --- Control buttons ---
+resetButton?.addEventListener("click", () => {
   chess.reset();
   moveCount = 1;
   selectedSquare = null;
@@ -424,8 +426,7 @@ resetButton.addEventListener("click", () => {
   renderBoard();
 });
 
-// --- Undo Move ---
-undoButton.addEventListener("click", () => {
+undoButton?.addEventListener("click", () => {
   const move = chess.undo();
   if (move) {
     undoneMoves.push(move);
@@ -436,8 +437,7 @@ undoButton.addEventListener("click", () => {
   }
 });
 
-// --- Redo Move ---
-redoButton.addEventListener("click", () => {
+redoButton?.addEventListener("click", () => {
   if (undoneMoves.length > 0) {
     const move = undoneMoves.pop();
     chess.move(move);
@@ -447,5 +447,5 @@ redoButton.addEventListener("click", () => {
   }
 });
 
-// --- Initial Render ---
+// Initial render
 renderBoard();
