@@ -705,5 +705,18 @@ redoButton?.addEventListener("click", () => {
   }
 });
 
+document.getElementById('play-white').addEventListener('click', () => {
+  userSide = 'w';
+  AI.side = 'b';
+  startGame();
+});
+
+document.getElementById('play-black').addEventListener('click', () => {
+  userSide = 'b';
+  AI.side = 'w';
+  startGame();
+});
+
+
 // Initial render
 renderBoard();
