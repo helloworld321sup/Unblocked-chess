@@ -1,0 +1,142 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #686868;
+  overflow: hidden;
+  position: relative;
+}
+
+.chess-board {
+  display: flex;
+  flex-direction: column;
+  border: 3px solid #686868;
+  z-index: 1;
+}
+
+.row {
+  display: flex;
+}
+
+.square {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.square img {
+  width: 77px;
+  height: 77px;
+  object-fit: contain;
+}
+
+.white {
+  background-color: #f0d9b5;
+}
+
+.black {
+  background-color: #d67959;
+}
+
+.square.selected {
+  background-color: rgba(38, 171, 202, 0.3);
+}
+
+.square.highlight {
+  background-color: rgba(40, 145, 194, 0.3);
+}
+
+.square.recent-move {
+  background-color: #dbcc1a;
+}
+
+.container {
+  display: flex;
+  justify-content: center; /* centers the board+sidebar in page */
+  align-items: flex-start; /* top-aligns the board and buttons */
+  gap: 20px;               /* space between board and buttons */
+}
+
+.app {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;               /* space between board and UI */
+}
+
+.chess-container {
+  display: flex;
+  flex-direction: column;   /* stack board above buttons */
+  align-items: center;      /* center horizontally */
+  gap: 15px;                /* spacing between board and buttons */
+}
+
+.square {
+  position: relative; /* needed so we can position the dot inside */
+}
+
+.move-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;         /* size of dot */
+  height: 20px;
+  background-color: rgba(0, 0, 0, 0.3); /* faint gray */
+  border-radius: 50%;  /* make it round */
+  transform: translate(-50%, -50%); /* center it */
+  pointer-events: none; /* clicks go through the dot */
+}
+
+/* Buttons styling */
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  background-color: #269aca;
+  color: white;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #1b7c94;
+}
+
+/* Sidebar for buttons */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+
+/* Drag ghost style (optional) */
+.drag-ghost {
+  opacity: 0.7;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1000;
+}
+
+/* Responsive board */
+@media (max-width: 600px) {
+  .square {
+    width: 50px;
+    height: 50px;
+  }
+
+  .square img {
+    width: 48px;
+    height: 48px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 8px 16px;
+  }
+}
+
