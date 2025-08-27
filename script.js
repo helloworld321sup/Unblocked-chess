@@ -485,6 +485,16 @@ function renderBoard() {
   }
 }
 
+function updateGameStatus() {
+    if (chess.in_checkmate()) {
+        messageDiv.textContent = "Checkmate: Click the reset board to play again";
+    } else if (chess.in_draw() || chess.insufficient_material() || chess.in_stalemate()) {
+        messageDiv.textContent = "Draw: Click the reset board to play again";
+    } else {
+        messageDiv.textContent = "";
+    }
+}
+
 function playMoveSound(move) {
   if (!move) return;
   if (move.flags.includes("c")) sounds.capture.play();
