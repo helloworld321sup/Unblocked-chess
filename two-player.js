@@ -345,6 +345,12 @@ copyPgnBtn?.addEventListener("click", () => {
   copyPGN();
 });
 
+// --- Home button ---
+const homeButton = document.getElementById("home-button");
+homeButton?.addEventListener("click", () => {
+  window.location.href = 'index.html';
+});
+
 // Initial render
 renderBoard();
 updateGameStatus();
