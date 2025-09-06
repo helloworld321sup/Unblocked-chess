@@ -473,17 +473,23 @@ function renderBoard() {
       
       // Only update if the piece image is different
       if (!existingImg || existingImg.src !== expectedSrc) {
-        square.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = expectedSrc;
-        img.alt = key;
-        img.draggable = true;
-        img.dataset.square = squareName;
-        square.appendChild(img);
+        if (existingImg) {
+          // Replace existing image
+          existingImg.src = expectedSrc;
+          existingImg.alt = key;
+        } else {
+          // Create new image
+          const img = document.createElement('img');
+          img.src = expectedSrc;
+          img.alt = key;
+          img.draggable = true;
+          img.dataset.square = squareName;
+          square.appendChild(img);
+        }
       }
     } else if (existingImg) {
       // Remove piece if square is empty
-      square.innerHTML = '';
+      existingImg.remove();
     }
   });
 
@@ -565,6 +571,9 @@ function flipBoard() {
   boardFlipped = !boardFlipped;
   const rows = board.querySelectorAll('.row');
   const rowsArray = Array.from(rows);
+  
+  // Store current pieces before flipping
+  const currentPositions = chess.board();
   
   // Clear the board first to prevent visual glitches
   board.innerHTML = '';
