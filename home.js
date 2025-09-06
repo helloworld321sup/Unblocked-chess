@@ -8,6 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   botPlayBtn.addEventListener('click', function() {
-    window.location.href = 'bot-play.html';
+    window.location.href = 'choose-color.html';
   });
 });
