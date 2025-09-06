@@ -7,8 +7,73 @@ body {
   background-color: #686868;
   overflow: hidden;
   position: relative;
+  font-family: Arial, sans-serif;
 }
 
+/* Home Page Styles */
+.home-container {
+  text-align: center;
+  color: white;
+}
+
+.home-container h1 {
+  font-size: 3rem;
+  margin-bottom: 2rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.game-options {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.option-card {
+  background: linear-gradient(145deg, #2c2c2c, #3c3c3c);
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  min-width: 250px;
+}
+
+.option-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+}
+
+.option-card h2 {
+  color: #f0d9b5;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.option-card p {
+  color: #ccc;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+}
+
+.play-btn {
+  background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.play-btn:hover {
+  background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+/* Chess Board Styles */
 .chess-board {
   display: flex;
   flex-direction: column;
@@ -26,6 +91,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative; /* needed so we can position the dot inside */
 }
 
 .square img {
@@ -86,6 +152,14 @@ body {
   border-radius: 6px;
   cursor: pointer;
   background-color: #242424;
+  border: none;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.controls button:hover {
+  background-color: #343434;
+  transform: translateY(-2px);
 }
 
 #reset-button {
@@ -94,8 +168,20 @@ body {
   background-color: #242424;
 }
 
-.square {
-  position: relative; /* needed so we can position the dot inside */
+#resign-button {
+  font-size: 40px;
+  padding: 15px 30px;
+  background-color: #8B0000;
+}
+
+#resign-button:hover {
+  background-color: #A00000;
+}
+
+#flip-button {
+  font-size: 40px;
+  padding: 15px 30px;
+  background-color: #242424;
 }
 
 .move-dot {
@@ -110,3 +196,125 @@ body {
   pointer-events: none; /* clicks go through the dot */
 }
 
+/* Game Message */
+#game-message {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: white;
+  font-size: 1.2rem;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+/* Game Over Popup */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.popup-content {
+  background: linear-gradient(145deg, #2c2c2c, #3c3c3c);
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.5);
+  max-width: 400px;
+  width: 90%;
+}
+
+.popup-content h2 {
+  color: #f0d9b5;
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+.popup-content p {
+  color: #ccc;
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.popup-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.popup-btn {
+  background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  min-width: 120px;
+}
+
+.popup-btn:hover {
+  background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .home-container h1 {
+    font-size: 2rem;
+  }
+  
+  .game-options {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .option-card {
+    min-width: 200px;
+  }
+  
+  .square {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .square img {
+    width: 57px;
+    height: 57px;
+  }
+  
+  .controls button {
+    font-size: 40px;
+    padding: 8px 40px;
+  }
+  
+  #resign-button, #flip-button {
+    font-size: 30px;
+    padding: 12px 20px;
+  }
+  
+  .popup-content {
+    padding: 1.5rem;
+  }
+  
+  .popup-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .popup-btn {
+    width: 100%;
+    max-width: 200px;
+  }
+}
