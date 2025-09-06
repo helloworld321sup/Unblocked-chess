@@ -531,6 +531,12 @@ body {
 }
 
 /* Settings Page Styles */
+body.settings-page {
+  overflow: auto;
+  height: auto;
+  min-height: 100vh;
+}
+
 .settings-container {
   max-width: 800px;
   margin: 0 auto;
