@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const colorOptions = document.querySelectorAll('.color-option');
   const soundToggle = document.getElementById('sound-toggle');
   const pieceOptions = document.querySelectorAll('.piece-option');
+  const difficultyOptions = document.querySelectorAll('.difficulty-option');
   const resetBtn = document.getElementById('reset-settings');
   const backBtn = document.getElementById('back-to-home');
 
@@ -45,6 +46,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  // Difficulty selection
+  difficultyOptions.forEach(option => {
+    option.addEventListener('click', function() {
+      // Remove active class from all options
+      difficultyOptions.forEach(opt => opt.classList.remove('active'));
+      // Add active class to selected option
+      this.classList.add('active');
+      // Save setting
+      localStorage.setItem('botDifficulty', this.dataset.difficulty);
+      // Apply setting immediately
+      applyDifficulty(this.dataset.difficulty);
+    });
+  });
+
   // Reset settings
   resetBtn.addEventListener('click', function() {
     if (confirm('Are you sure you want to reset all settings to defaults?')) {
@@ -79,6 +94,14 @@ document.addEventListener('DOMContentLoaded', function() {
       pieceOption.classList.add('active');
       applyPieceStyle(pieceStyle);
     }
+
+    // Load difficulty
+    const difficulty = localStorage.getItem('botDifficulty') || 'medium';
+    const difficultyOption = document.querySelector(`[data-difficulty="${difficulty}"]`);
+    if (difficultyOption) {
+      difficultyOption.classList.add('active');
+      applyDifficulty(difficulty);
+    }
   }
 
   // Apply board color setting
@@ -98,11 +121,18 @@ document.addEventListener('DOMContentLoaded', function() {
     window.pieceStyle = style;
   }
 
+  // Apply difficulty setting
+  function applyDifficulty(difficulty) {
+    // This will be used by the bot-play page to set AI difficulty
+    window.botDifficulty = difficulty;
+  }
+
   // Reset all settings to defaults
   function resetToDefaults() {
     localStorage.removeItem('boardColor');
     localStorage.removeItem('soundEnabled');
     localStorage.removeItem('pieceStyle');
+    localStorage.removeItem('botDifficulty');
     
     // Reload the page to apply defaults
     location.reload();
@@ -120,6 +150,10 @@ window.getSoundEnabled = function() {
 
 window.getPieceStyle = function() {
   return localStorage.getItem('pieceStyle') || 'classic';
+};
+
+window.getBotDifficulty = function() {
+  return localStorage.getItem('botDifficulty') || 'medium';
 };
 
 window.getPieceImages = function() {
