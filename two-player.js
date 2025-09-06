@@ -166,6 +166,10 @@ ${pgn} ${gameResult}`;
 function showScorebook() {
   const pgn = generatePGN();
   pgnText.value = pgn;
+  // Close game over popup if it's open
+  if (gameOverPopup.style.display === 'flex') {
+    gameOverPopup.style.display = 'none';
+  }
   scorebookPopup.style.display = 'flex';
 }
 
