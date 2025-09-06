@@ -680,7 +680,10 @@ board.addEventListener('click', e => {
       renderBoard();
       updateGameStatus();
       console.log('Human move completed, new turn:', chess.turn(), 'calling AI in 120ms');
-      setTimeout(makeAIMove, 120);
+      setTimeout(() => {
+        console.log('About to call makeAIMove after human move');
+        makeAIMove();
+      }, 120);
       return;
     }
     if (piece && piece.color === chess.turn()) selectedSquare = clicked; else selectedSquare = null;
