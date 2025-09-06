@@ -59,13 +59,49 @@ const sounds = {
 
 // --- Engine config ---
 let playerColor = localStorage.getItem('playerColor') || 'white';
-let AI = { side: playerColor === 'white' ? 'b' : 'w', depth: 3 };
+
+// Get difficulty setting and configure AI
+function getAIConfig() {
+  const difficulty = localStorage.getItem('botDifficulty') || 'medium';
+  let depth, useAdvancedEval, useOpeningBook;
+  
+  switch (difficulty) {
+    case 'easy':
+      depth = 2;
+      useAdvancedEval = false;
+      useOpeningBook = false;
+      break;
+    case 'medium':
+      depth = 3;
+      useAdvancedEval = false;
+      useOpeningBook = true;
+      break;
+    case 'hard':
+      depth = 4;
+      useAdvancedEval = true;
+      useOpeningBook = true;
+      break;
+    default:
+      depth = 3;
+      useAdvancedEval = false;
+      useOpeningBook = true;
+  }
+  
+  return { depth, useAdvancedEval, useOpeningBook };
+}
+
+let AI = { 
+  side: playerColor === 'white' ? 'b' : 'w', 
+  ...getAIConfig()
+};
 
 // Update AI side when page loads
 function updateAISide() {
   playerColor = localStorage.getItem('playerColor') || 'white';
   AI.side = playerColor === 'white' ? 'b' : 'w';
-  console.log('updateAISide - playerColor:', playerColor, 'AI.side:', AI.side);
+  // Update AI config based on difficulty
+  Object.assign(AI, getAIConfig());
+  console.log('updateAISide - playerColor:', playerColor, 'AI.side:', AI.side, 'AI config:', AI);
 }
 
 // Limit how deep the opening book is used (plies = half-moves). 16 = ~8 moves each side.
@@ -336,6 +372,8 @@ function uciHistoryKey(ch = chess) {
 function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 function getOpeningMove() {
+  // Don't use opening book on easy difficulty
+  if (!AI.useOpeningBook) return null;
   if (BOOK_PLY_LIMIT && chess.history().length >= BOOK_PLY_LIMIT) return null;
   const key = uciHistoryKey();
   const options = openingBook[key];
@@ -364,12 +402,58 @@ function evaluateBoard(game) {
       if (square !== null) {
         let value = getPieceValue(square.type);
         let pstBonus = getPST(square, row, col);
+        
+        // Advanced evaluation for hard difficulty
+        if (AI.useAdvancedEval) {
+          pstBonus += getAdvancedEvaluation(square, row, col, game);
+        }
+        
         total += square.color === 'w' ? value + pstBonus : -(value + pstBonus);
       }
     }
   }
 
   return total;
+}
+
+// Advanced evaluation features for hard difficulty
+function getAdvancedEvaluation(piece, row, col, game) {
+  let bonus = 0;
+  
+  // Center control bonus
+  if ((row >= 3 && row <= 4) && (col >= 3 && col <= 4)) {
+    bonus += piece.type === 'p' ? 10 : 5;
+  }
+  
+  // Mobility bonus (simplified)
+  const moves = game.moves({ square: String.fromCharCode(97 + col) + (8 - row), verbose: true });
+  bonus += moves.length * 2;
+  
+  // King safety (simplified)
+  if (piece.type === 'k') {
+    const kingMoves = game.moves({ square: String.fromCharCode(97 + col) + (8 - row), verbose: true });
+    bonus -= kingMoves.length * 3; // Penalty for exposed king
+  }
+  
+  // Pawn structure (simplified)
+  if (piece.type === 'p') {
+    // Bonus for connected pawns
+    const file = String.fromCharCode(97 + col);
+    const rank = 8 - row;
+    const adjacentFiles = [String.fromCharCode(97 + col - 1), String.fromCharCode(97 + col + 1)];
+    
+    for (const adjFile of adjacentFiles) {
+      if (adjFile >= 'a' && adjFile <= 'h') {
+        const adjSquare = adjFile + rank;
+        const adjPiece = game.get(adjSquare);
+        if (adjPiece && adjPiece.type === 'p' && adjPiece.color === piece.color) {
+          bonus += 15; // Connected pawns bonus
+        }
+      }
+    }
+  }
+  
+  return bonus;
 }
 
 function getPieceValue(type) {
