@@ -368,10 +368,11 @@ body {
 
 .color-options {
   display: flex;
-  gap: 3rem;
+  gap: 2rem;
   justify-content: center;
   flex-wrap: wrap;
   margin-bottom: 3rem;
+  align-items: stretch;
 }
 
 .color-card {
@@ -381,6 +382,8 @@ body {
   box-shadow: 0 8px 16px rgba(0,0,0,0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   min-width: 250px;
+  max-width: 300px;
+  flex: 1;
   border: 3px solid transparent;
 }
 
@@ -402,8 +405,8 @@ body {
 }
 
 .preview-piece {
-  width: 80px;
-  height: 80px;
+  width: 120px;
+  height: 120px;
   object-fit: contain;
 }
 
@@ -527,6 +530,13 @@ body {
   
   .color-card {
     min-width: 200px;
+    max-width: 280px;
+    width: 100%;
+  }
+  
+  .preview-piece {
+    width: 100px;
+    height: 100px;
   }
 }
 
