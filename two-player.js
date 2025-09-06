@@ -6,20 +6,45 @@ let moveCount = 1;
 let undoneMoves = [];
 
 // --- UI assets ---
-const pieceImages = {
-  wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
-  wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
-  wN: "https://static.stands4.com/images/symbol/3408_white-knight.png",
-  wB: "https://static.stands4.com/images/symbol/3407_white-bishop.png",
-  wQ: "https://static.stands4.com/images/symbol/3405_white-queen.png",
-  wK: "https://static.stands4.com/images/symbol/3404_white-king.png",
-  bP: "https://static.stands4.com/images/symbol/3403_black-pawn.png",
-  bR: "https://static.stands4.com/images/symbol/3400_black-rook.png",
-  bN: "https://static.stands4.com/images/symbol/3402_black-knight.png",
-  bB: "https://static.stands4.com/images/symbol/3401_black-bishop.png",
-  bQ: "https://static.stands4.com/images/symbol/3399_black-queen.png",
-  bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
-};
+// Load settings from localStorage
+function getPieceImages() {
+  const style = localStorage.getItem('pieceStyle') || 'classic';
+  
+  if (style === 'modern') {
+    return {
+      wP: "https://assets-themes.chess.com/image/ejgfv/150/wp.png",
+      wR: "https://assets-themes.chess.com/image/ejgfv/150/wr.png",
+      wN: "https://assets-themes.chess.com/image/ejgfv/150/wn.png",
+      wB: "https://assets-themes.chess.com/image/ejgfv/150/wb.png",
+      wQ: "https://assets-themes.chess.com/image/ejgfv/150/wq.png",
+      wK: "https://assets-themes.chess.com/image/ejgfv/150/wk.png",
+      bP: "https://assets-themes.chess.com/image/ejgfv/150/bp.png",
+      bR: "https://assets-themes.chess.com/image/ejgfv/150/br.png",
+      bN: "https://assets-themes.chess.com/image/ejgfv/150/bn.png",
+      bB: "https://assets-themes.chess.com/image/ejgfv/150/bb.png",
+      bQ: "https://assets-themes.chess.com/image/ejgfv/150/bq.png",
+      bK: "https://assets-themes.chess.com/image/ejgfv/150/bk.png",
+    };
+  } else {
+    // Classic pieces (default)
+    return {
+      wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
+      wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
+      wN: "https://static.stands4.com/images/symbol/3408_white-knight.png",
+      wB: "https://static.stands4.com/images/symbol/3407_white-bishop.png",
+      wQ: "https://static.stands4.com/images/symbol/3405_white-queen.png",
+      wK: "https://static.stands4.com/images/symbol/3404_white-king.png",
+      bP: "https://static.stands4.com/images/symbol/3403_black-pawn.png",
+      bR: "https://static.stands4.com/images/symbol/3400_black-rook.png",
+      bN: "https://static.stands4.com/images/symbol/3402_black-knight.png",
+      bB: "https://static.stands4.com/images/symbol/3401_black-bishop.png",
+      bQ: "https://static.stands4.com/images/symbol/3399_black-queen.png",
+      bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
+    };
+  }
+}
+
+const pieceImages = getPieceImages();
 
 const sounds = {
   move: new Audio("http://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3"),
@@ -166,6 +191,11 @@ function copyPGN() {
 
 function playMoveSound(move) {
   if (!move) return;
+  
+  // Check if sound is enabled
+  const soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+  if (!soundEnabled) return;
+  
   if (move.flags.includes("c")) sounds.capture.play();
   else if (move.flags.includes("k") || move.flags.includes("q")) sounds.castle.play();
   else if (move.flags.includes("p")) sounds.promotion.play();
@@ -350,6 +380,10 @@ const homeButton = document.getElementById("home-button");
 homeButton?.addEventListener("click", () => {
   window.location.href = 'index.html';
 });
+
+// Apply settings
+const boardColor = localStorage.getItem('boardColor') || '#4800ff';
+document.documentElement.style.setProperty('--black-square-color', boardColor);
 
 // Initial render
 renderBoard();
