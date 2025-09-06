@@ -392,6 +392,14 @@ function applyUci(uci) {
 // ============================================================================
 const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 
+// Transposition table for position caching
+const transpositionTable = new Map();
+const MAX_TABLE_SIZE = 100000; // Limit memory usage
+
+// Time management
+let searchStartTime = 0;
+const MAX_SEARCH_TIME = 2000; // 2 seconds max per move
+
 function evaluateBoard(game) {
   let total = 0;
   const board = game.board();
@@ -416,38 +424,43 @@ function evaluateBoard(game) {
   return total;
 }
 
-// Advanced evaluation features for hard difficulty
+// Advanced evaluation features for hard difficulty (optimized for speed)
 function getAdvancedEvaluation(piece, row, col, game) {
   let bonus = 0;
   
-  // Center control bonus
+  // Center control bonus (fast lookup)
   if ((row >= 3 && row <= 4) && (col >= 3 && col <= 4)) {
     bonus += piece.type === 'p' ? 10 : 5;
   }
   
-  // Mobility bonus (simplified)
-  const moves = game.moves({ square: String.fromCharCode(97 + col) + (8 - row), verbose: true });
-  bonus += moves.length * 2;
-  
-  // King safety (simplified)
-  if (piece.type === 'k') {
-    const kingMoves = game.moves({ square: String.fromCharCode(97 + col) + (8 - row), verbose: true });
-    bonus -= kingMoves.length * 3; // Penalty for exposed king
+  // Only calculate mobility for major pieces (faster)
+  if (piece.type === 'q' || piece.type === 'r' || piece.type === 'b' || piece.type === 'n') {
+    const square = String.fromCharCode(97 + col) + (8 - row);
+    const moves = game.moves({ square, verbose: true });
+    bonus += moves.length * 2;
   }
   
-  // Pawn structure (simplified)
+  // King safety (only for king)
+  if (piece.type === 'k') {
+    const square = String.fromCharCode(97 + col) + (8 - row);
+    const kingMoves = game.moves({ square, verbose: true });
+    bonus -= kingMoves.length * 3;
+  }
+  
+  // Simplified pawn structure (only check adjacent files)
   if (piece.type === 'p') {
-    // Bonus for connected pawns
     const file = String.fromCharCode(97 + col);
     const rank = 8 - row;
-    const adjacentFiles = [String.fromCharCode(97 + col - 1), String.fromCharCode(97 + col + 1)];
     
-    for (const adjFile of adjacentFiles) {
+    // Check left and right files only
+    for (let offset = -1; offset <= 1; offset += 2) {
+      const adjFile = String.fromCharCode(97 + col + offset);
       if (adjFile >= 'a' && adjFile <= 'h') {
         const adjSquare = adjFile + rank;
         const adjPiece = game.get(adjSquare);
         if (adjPiece && adjPiece.type === 'p' && adjPiece.color === piece.color) {
-          bonus += 15; // Connected pawns bonus
+          bonus += 15;
+          break; // Only count once
         }
       }
     }
@@ -487,18 +500,50 @@ function getPST(piece, row, col) {
 function orderMoves(ch) {
   const moves = ch.moves({ verbose: true });
   return moves.sort((a, b) => {
+    // 1. Captures (best captures first)
     const aCap = a.captured ? (PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece]) : -1;
     const bCap = b.captured ? (PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece]) : -1;
-    return bCap - aCap;
+    if (aCap !== bCap) return bCap - aCap;
+    
+    // 2. Promotions
+    if (a.promotion && !b.promotion) return -1;
+    if (!a.promotion && b.promotion) return 1;
+    
+    // 3. Center moves (e4, d4, e5, d5)
+    const centerSquares = ['e4', 'd4', 'e5', 'd5'];
+    const aCenter = centerSquares.includes(a.to) ? 1 : 0;
+    const bCenter = centerSquares.includes(b.to) ? 1 : 0;
+    if (aCenter !== bCenter) return bCenter - aCenter;
+    
+    // 4. Piece value (move higher value pieces first)
+    return PIECE_VALUES[b.piece] - PIECE_VALUES[a.piece];
   });
 }
 
 function search(depth, alpha, beta) {
+  // Time check
+  if (Date.now() - searchStartTime > MAX_SEARCH_TIME) {
+    return { score: evaluateBoard(chess) };
+  }
+  
+  // Transposition table lookup
+  const positionKey = chess.fen();
+  if (transpositionTable.has(positionKey)) {
+    const entry = transpositionTable.get(positionKey);
+    if (entry.depth >= depth) {
+      if (entry.type === 'exact') return { score: entry.score };
+      if (entry.type === 'lower' && entry.score >= beta) return { score: beta };
+      if (entry.type === 'upper' && entry.score <= alpha) return { score: alpha };
+    }
+  }
+  
   if (depth === 0) return { score: evaluateBoard(chess) };
   if (chess.in_checkmate()) return { score: chess.turn() === 'w' ? -999999 : 999999 };
   if (chess.in_stalemate() || chess.in_draw()) return { score: 0 };
 
   let bestMove = null;
+  let originalAlpha = alpha;
+  
   if (chess.turn() === 'w') {
     let best = -Infinity;
     for (const m of orderMoves(chess)) {
@@ -509,6 +554,9 @@ function search(depth, alpha, beta) {
       if (score > alpha) alpha = score;
       if (alpha >= beta) break;
     }
+    
+    // Store in transposition table
+    storeTransposition(positionKey, best, depth, originalAlpha, beta);
     return { score: best, move: bestMove };
   } else {
     let best = Infinity;
@@ -520,13 +568,57 @@ function search(depth, alpha, beta) {
       if (score < beta) beta = score;
       if (alpha >= beta) break;
     }
+    
+    // Store in transposition table
+    storeTransposition(positionKey, best, depth, originalAlpha, beta);
     return { score: best, move: bestMove };
   }
 }
 
+function storeTransposition(key, score, depth, alpha, beta) {
+  // Limit table size
+  if (transpositionTable.size >= MAX_TABLE_SIZE) {
+    // Clear half the table (simple strategy)
+    const entries = Array.from(transpositionTable.entries());
+    transpositionTable.clear();
+    for (let i = 0; i < entries.length / 2; i++) {
+      transpositionTable.set(entries[i][0], entries[i][1]);
+    }
+  }
+  
+  let type = 'exact';
+  if (score <= alpha) type = 'upper';
+  else if (score >= beta) type = 'lower';
+  
+  transpositionTable.set(key, { score, depth, type });
+}
+
 function findBestMove() {
-  const result = search(AI.depth, -Infinity, Infinity);
-  return result.move || null;
+  searchStartTime = Date.now();
+  
+  // Clear transposition table for new search
+  transpositionTable.clear();
+  
+  // Iterative deepening for better move quality within time limit
+  let bestMove = null;
+  let bestScore = -Infinity;
+  
+  // Start with depth 1 and work up to AI.depth
+  for (let depth = 1; depth <= AI.depth; depth++) {
+    const result = search(depth, -Infinity, Infinity);
+    
+    // If we have time, use this result
+    if (Date.now() - searchStartTime < MAX_SEARCH_TIME * 0.8) {
+      bestMove = result.move;
+      bestScore = result.score;
+    } else {
+      // Time's up, use previous result
+      break;
+    }
+  }
+  
+  console.log(`AI search completed in ${Date.now() - searchStartTime}ms, depth: ${AI.depth}`);
+  return bestMove || null;
 }
 
 function makeAIMove() {
