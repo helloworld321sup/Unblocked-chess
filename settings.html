@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chess Settings</title>
+  <link rel="icon" href="Unblocked-Chess Favicon.png" type="image/png">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="settings-container">
+    <h1>⚙️ Chess Settings</h1>
+    
+    <!-- Board Colors Section -->
+    <div class="settings-section">
+      <h2>🎨 Board Colors</h2>
+      <p>Choose the color for the dark squares:</p>
+      <div class="color-options">
+        <div class="color-option" data-color="#4800ff" style="background-color: #4800ff;"></div>
+        <div class="color-option" data-color="#006fff" style="background-color: #006fff;"></div>
+        <div class="color-option" data-color="#00baff" style="background-color: #00baff;"></div>
+        <div class="color-option" data-color="#0fce82" style="background-color: #0fce82;"></div>
+        <div class="color-option" data-color="#1dc010" style="background-color: #1dc010;"></div>
+        <div class="color-option" data-color="#c0c90f" style="background-color: #c0c90f;"></div>
+        <div class="color-option" data-color="#d67959" style="background-color: #d67959;"></div>
+        <div class="color-option" data-color="#eb860d" style="background-color: #eb860d;"></div>
+        <div class="color-option" data-color="#eb4e0d" style="background-color: #eb4e0d;"></div>
+        <div class="color-option" data-color="#c98643" style="background-color: #c98643;"></div>
+        <div class="color-option" data-color="#c53ba9" style="background-color: #c53ba9;"></div>
+      </div>
+    </div>
+
+    <!-- Sound Settings Section -->
+    <div class="settings-section">
+      <h2>🔊 Sound Settings</h2>
+      <div class="setting-item">
+        <label for="sound-toggle">
+          <input type="checkbox" id="sound-toggle" />
+          <span class="toggle-slider"></span>
+          Enable move sounds
+        </label>
+      </div>
+    </div>
+
+    <!-- Piece Images Section -->
+    <div class="settings-section">
+      <h2>♟️ Piece Style</h2>
+      <p>Choose your preferred piece style:</p>
+      <div class="piece-options">
+        <div class="piece-option" data-style="classic">
+          <div class="piece-preview">
+            <img src="https://static.stands4.com/images/symbol/3409_white-pawn.png" alt="Classic White Pawn" />
+            <img src="https://static.stands4.com/images/symbol/3403_black-pawn.png" alt="Classic Black Pawn" />
+          </div>
+          <span>Classic</span>
+        </div>
+        <div class="piece-option" data-style="modern">
+          <div class="piece-preview">
+            <img src="https://assets-themes.chess.com/image/ejgfv/150/wp.png" alt="Modern White Pawn" />
+            <img src="https://assets-themes.chess.com/image/ejgfv/150/bp.png" alt="Modern Black Pawn" />
+          </div>
+          <span>Modern</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="settings-actions">
+      <button id="reset-settings" class="settings-btn secondary">Reset to Defaults</button>
+      <button id="back-to-home" class="settings-btn primary">Back to Home</button>
+    </div>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
