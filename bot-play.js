@@ -453,11 +453,9 @@ function renderBoard() {
   // Clear all visual indicators first
   board.querySelectorAll('.square').forEach(square => {
     square.classList.remove('selected', 'highlight', 'recent-move');
-    // Remove move dots
-    const existingDot = square.querySelector('.move-dot');
-    if (existingDot) {
-      existingDot.remove();
-    }
+    // Remove ALL move dots (in case there are multiple)
+    const existingDots = square.querySelectorAll('.move-dot');
+    existingDots.forEach(dot => dot.remove());
   });
   
   // Update pieces efficiently
@@ -494,9 +492,19 @@ function renderBoard() {
     const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
     legalMoves.forEach(move => {
       const target = document.querySelector(`[data-square="${move.to}"]`);
-      if (target) {
+      if (target && !target.querySelector('.move-dot')) {
         const dot = document.createElement('div');
         dot.classList.add('move-dot');
+        // Ensure correct styling
+        dot.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
+        dot.style.width = '20px';
+        dot.style.height = '20px';
+        dot.style.borderRadius = '50%';
+        dot.style.position = 'absolute';
+        dot.style.top = '50%';
+        dot.style.left = '50%';
+        dot.style.transform = 'translate(-50%, -50%)';
+        dot.style.pointerEvents = 'none';
         target.appendChild(dot);
       }
     });
@@ -648,18 +656,7 @@ board.addEventListener('dragend', () => {
 board.addEventListener('dragover', e => {
   e.preventDefault();
   if (selectedSquare) {
-    renderBoard();
-    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
-    legalMoves.forEach(move => {
-      const target = document.querySelector(`[data-square="${move.to}"]`);
-      if (target) {
-        const dot = document.createElement('div');
-        dot.classList.add('move-dot');
-        target.appendChild(dot);
-      }
-    });
-    const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
-    if (selectedEl) selectedEl.classList.add('selected');
+    renderBoard(); // This will handle move dots and selection
   }
 });
 
