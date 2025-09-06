@@ -362,6 +362,12 @@ homeBtn?.addEventListener("click", () => {
   window.location.href = 'index.html';
 });
 
+// --- Game Over Popup Copy PGN button ---
+const copyPgnGameoverBtn = document.getElementById("copy-pgn-gameover-btn");
+copyPgnGameoverBtn?.addEventListener("click", () => {
+  copyPGN();
+});
+
 // --- Scorebook buttons ---
 scorebookButton?.addEventListener("click", () => {
   showScorebook();
