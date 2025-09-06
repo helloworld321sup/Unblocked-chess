@@ -776,15 +776,7 @@ flipButton?.addEventListener("click", () => {
 
 // --- Popup buttons ---
 playAgainBtn?.addEventListener("click", () => {
-  chess.reset();
-  moveCount = 1;
-  selectedSquare = null;
-  lastMove = null;
-  undoneMoves = [];
-  boardFlipped = false;
-  hideGameOverPopup();
-  renderBoard();
-  updateGameStatus();
+  window.location.href = 'choose-color.html';
 });
 
 homeBtn?.addEventListener("click", () => {
