@@ -695,6 +695,63 @@ body.settings-page {
   object-fit: contain;
 }
 
+.difficulty-options {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.difficulty-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 1.5rem 1rem;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255,255,255,0.1);
+  min-width: 120px;
+}
+
+.difficulty-option:hover {
+  border-color: #fff;
+  background: rgba(255,255,255,0.2);
+}
+
+.difficulty-option.active {
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.2);
+}
+
+.difficulty-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+}
+
+.difficulty-icon {
+  font-size: 24px;
+}
+
+.difficulty-option span {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.difficulty-option small {
+  color: #ccc;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .settings-actions {
   display: flex;
   gap: 1rem;
