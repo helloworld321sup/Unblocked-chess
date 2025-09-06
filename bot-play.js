@@ -810,7 +810,7 @@ flipButton?.addEventListener("click", () => {
 
 // --- Popup buttons ---
 playAgainBtn?.addEventListener("click", () => {
-    window.location.href = 'choose-color.html';
+  window.location.href = 'choose-color.html';
 });
 
 homeBtn?.addEventListener("click", () => {
