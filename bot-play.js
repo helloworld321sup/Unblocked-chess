@@ -440,12 +440,17 @@ function makeAIMove() {
 // ============================================================================
 const resignButton = document.getElementById("resign-button");
 const flipButton = document.getElementById("flip-button");
+const scorebookButton = document.getElementById("scorebook-button");
 const messageDiv = document.getElementById("game-message");
 const gameOverPopup = document.getElementById("game-over-popup");
 const gameOverTitle = document.getElementById("game-over-title");
 const gameOverMessage = document.getElementById("game-over-message");
 const playAgainBtn = document.getElementById("play-again-btn");
 const homeBtn = document.getElementById("home-btn");
+const scorebookPopup = document.getElementById("scorebook-popup");
+const pgnText = document.getElementById("pgn-text");
+const copyPgnBtn = document.getElementById("copy-pgn-btn");
+const closeScorebookBtn = document.getElementById("close-scorebook-btn");
 
 function renderBoard() {
   const positions = chess.board();
@@ -554,6 +559,52 @@ function showGameOverPopup(title, message) {
 
 function hideGameOverPopup() {
   gameOverPopup.style.display = 'none';
+}
+
+function generatePGN() {
+  const pgn = chess.pgn();
+  const gameResult = chess.in_checkmate() ? 
+    (chess.turn() === 'w' ? '0-1' : '1-0') :
+    chess.in_draw() ? '1/2-1/2' : '*';
+  
+  const pgnHeader = `[Event "Human vs Bot"]
+[Site "Chess Game"]
+[Date "${new Date().toISOString().split('T')[0]}"]
+[Round "1"]
+[White "Human"]
+[Black "Bot"]
+[Result "${gameResult}"]
+[TimeControl "-"]
+
+${pgn} ${gameResult}`;
+  
+  return pgnHeader;
+}
+
+function showScorebook() {
+  const pgn = generatePGN();
+  pgnText.value = pgn;
+  scorebookPopup.style.display = 'flex';
+}
+
+function hideScorebook() {
+  scorebookPopup.style.display = 'none';
+}
+
+function copyPGN() {
+  pgnText.select();
+  pgnText.setSelectionRange(0, 99999); // For mobile devices
+  document.execCommand('copy');
+  
+  // Visual feedback
+  const originalText = copyPgnBtn.textContent;
+  copyPgnBtn.textContent = 'Copied!';
+  copyPgnBtn.style.backgroundColor = '#4CAF50';
+  
+  setTimeout(() => {
+    copyPgnBtn.textContent = originalText;
+    copyPgnBtn.style.backgroundColor = '';
+  }, 2000);
 }
 
 function playMoveSound(move) {
@@ -715,6 +766,19 @@ playAgainBtn?.addEventListener("click", () => {
 
 homeBtn?.addEventListener("click", () => {
   window.location.href = 'index.html';
+});
+
+// --- Scorebook buttons ---
+scorebookButton?.addEventListener("click", () => {
+  showScorebook();
+});
+
+closeScorebookBtn?.addEventListener("click", () => {
+  hideScorebook();
+});
+
+copyPgnBtn?.addEventListener("click", () => {
+  copyPGN();
 });
 
 // Initial render
