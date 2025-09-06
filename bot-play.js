@@ -1,10 +1,11 @@
-const chess = new Chess();
-const board = document.querySelector('.chess-board');
-let selectedSquare = null;
-let lastMove = null;
-let moveCount = 1;
-let undoneMoves = [];
-let boardFlipped = false;
+// Initial render
+renderBoard();
+updateGameStatus();
+
+// If player chose black, make AI move first
+if (playerColor === 'black' && chess.turn() === 'w') {
+  setTimeout(makeAIMove, 500);
+} = false;
 
 // --- UI assets ---
 const pieceImages = {
@@ -32,7 +33,8 @@ const sounds = {
 };
 
 // --- Engine config ---
-const AI = { side: 'b', depth: 3 };
+let playerColor = localStorage.getItem('playerColor') || 'white';
+let AI = { side: playerColor === 'white' ? 'b' : 'w', depth: 3 };
 
 // Limit how deep the opening book is used (plies = half-moves). 16 = ~8 moves each side.
 const BOOK_PLY_LIMIT = 16;
@@ -538,15 +540,15 @@ function renderBoard() {
 
 function updateGameStatus() {
   if (chess.in_checkmate()) {
-    const winner = chess.turn() === 'w' ? 'Bot' : 'You';
+    const winner = chess.turn() === playerColor ? 'Bot' : 'You';
     showGameOverPopup('Checkmate!', `${winner} wins by checkmate!`);
   } else if (chess.in_draw() || chess.insufficient_material() || chess.in_stalemate()) {
     showGameOverPopup('Draw!', 'The game ended in a draw');
   } else if (chess.in_check()) {
-    const player = chess.turn() === 'w' ? 'You' : 'Bot';
+    const player = chess.turn() === playerColor ? 'You' : 'Bot';
     messageDiv.textContent = `${player} is in check!`;
   } else {
-    const player = chess.turn() === 'w' ? 'Your' : 'Bot\'s';
+    const player = chess.turn() === playerColor ? 'Your' : 'Bot\'s';
     messageDiv.textContent = `${player} turn`;
   }
 }
@@ -567,12 +569,15 @@ function generatePGN() {
     (chess.turn() === 'w' ? '0-1' : '1-0') :
     chess.in_draw() ? '1/2-1/2' : '*';
   
+  const whitePlayer = playerColor === 'white' ? 'Human' : 'Bot';
+  const blackPlayer = playerColor === 'black' ? 'Human' : 'Bot';
+  
   const pgnHeader = `[Event "Human vs Bot"]
 [Site "Chess Game"]
 [Date "${new Date().toISOString().split('T')[0]}"]
 [Round "1"]
-[White "Human"]
-[Black "Bot"]
+[White "${whitePlayer}"]
+[Black "${blackPlayer}"]
 [Result "${gameResult}"]
 [TimeControl "-"]
 
@@ -648,7 +653,7 @@ function resign() {
 // --- Click input ---
 board.addEventListener('click', e => {
   if (gameOverPopup.style.display === 'flex') return; // Don't allow moves when popup is open
-  if (chess.turn() !== 'w') return; // Only allow human moves on white's turn
+  if (chess.turn() !== playerColor) return; // Only allow human moves on player's turn
   
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -681,7 +686,7 @@ let dragGhost = null;
 
 board.addEventListener('dragstart', e => {
   if (gameOverPopup.style.display === 'flex') return;
-  if (chess.turn() !== 'w') return;
+  if (chess.turn() !== playerColor) return;
   
   const img = e.target;
   if (!img.dataset.square) return;
@@ -723,7 +728,7 @@ board.addEventListener('dragover', e => {
 board.addEventListener('drop', e => {
   e.preventDefault();
   if (gameOverPopup.style.display === 'flex') return;
-  if (chess.turn() !== 'w') return;
+  if (chess.turn() !== playerColor) return;
   
   const targetSquareEl = e.target.closest('.square');
   if (!targetSquareEl || !selectedSquare) return;
@@ -784,3 +789,8 @@ copyPgnBtn?.addEventListener("click", () => {
 // Initial render
 renderBoard();
 updateGameStatus();
+
+// If player chose black, make AI move first
+if (playerColor === 'black' && chess.turn() === 'w') {
+  setTimeout(makeAIMove, 500);
+}
