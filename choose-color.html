@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Choose Your Color - Chess vs Bot</title>
+  <link rel="icon" href="Unblocked-Chess Favicon.png" type="image/png">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="color-selection-container">
+    <h1>Choose Your Color</h1>
+    <p>Select which color you want to play as against the bot:</p>
+    
+    <div class="color-options">
+      <div class="color-card white-card">
+        <div class="piece-preview">
+          <img src="https://static.stands4.com/images/symbol/3404_white-king.png" alt="White King" class="preview-piece">
+        </div>
+        <h2>Play as White</h2>
+        <p>You move first</p>
+        <button id="play-white-btn" class="color-btn white-btn">Play as White</button>
+      </div>
+      
+      <div class="color-card black-card">
+        <div class="piece-preview">
+          <img src="https://static.stands4.com/images/symbol/3398_black-king.png" alt="Black King" class="preview-piece">
+        </div>
+        <h2>Play as Black</h2>
+        <p>Bot moves first</p>
+        <button id="play-black-btn" class="color-btn black-btn">Play as Black</button>
+      </div>
+    </div>
+    
+    <button id="back-btn" class="back-button">← Back to Home</button>
+  </div>
+
+  <script src="choose-color.js"></script>
+</body>
+</html>
