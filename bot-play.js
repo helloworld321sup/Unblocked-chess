@@ -1,16 +1,16 @@
-    const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
-    if (move) {
-      lastMove = move;
-      playMoveSound(move);
-      undoneMoves = [];
-      selectedSquare = null;
-      moveCount++;
-      renderBoard();
-      updateGameStatus();
-      console.log('Human move completed, new turn:', chess.turn(), 'calling AI in 120ms');
-      setTimeout(makeAIMove, 120);
-      return;
-    }images/symbol/3408_white-knight.png",
+const chess = new Chess();
+const board = document.querySelector('.chess-board');
+let selectedSquare = null;
+let lastMove = null;
+let moveCount = 1;
+let undoneMoves = [];
+let boardFlipped = false;
+
+// --- UI assets ---
+const pieceImages = {
+  wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
+  wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
+  wN: "https://static.stands4.com/images/symbol/3408_white-knight.png",
   wB: "https://static.stands4.com/images/symbol/3407_white-bishop.png",
   wQ: "https://static.stands4.com/images/symbol/3405_white-queen.png",
   wK: "https://static.stands4.com/images/symbol/3404_white-king.png",
