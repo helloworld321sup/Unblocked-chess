@@ -6,6 +6,9 @@ let moveCount = 1;
 let undoneMoves = [];
 let boardFlipped = false;
 
+let humanColor = 'w'; // default
+let botColor = 'b';
+
 // --- UI assets ---
 const pieceImages = {
   wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
@@ -657,6 +660,37 @@ function resign() {
   showGameOverPopup('Game Resigned', 'You resigned. Bot wins!');
 }
 
+board.addEventListener('click', e => {
+  if (chess.turn() !== humanColor) return; // block human moves if it's bot's turn
+  if (gameOverPopup.style.display === 'flex') return;
+
+  const targetSquare = e.target.closest('.square');
+  if (!targetSquare) return;
+  const clicked = targetSquare.getAttribute('data-square');
+  const piece = chess.get(clicked);
+
+  if (selectedSquare) {
+    const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
+    if (move) {
+      lastMove = move;
+      playMoveSound(move);
+      undoneMoves = [];
+      selectedSquare = null;
+      moveCount++;
+      renderBoard();
+      updateGameStatus();
+      setTimeout(botTurn, 200); // trigger bot after human moves
+      return;
+    }
+    if (piece && piece.color === humanColor) selectedSquare = clicked;
+    else selectedSquare = null;
+  } else if (piece && piece.color === humanColor) {
+    selectedSquare = clicked;
+  }
+  renderBoard();
+});
+
+
 // --- Click input ---
 board.addEventListener('click', e => {
   if (gameOverPopup.style.display === 'flex') return; // Don't allow moves when popup is open
@@ -686,6 +720,37 @@ board.addEventListener('click', e => {
   }
   renderBoard();
 });
+
+board.addEventListener('click', e => {
+  if (chess.turn() !== humanColor) return; // block human moves if it's bot's turn
+  if (gameOverPopup.style.display === 'flex') return;
+
+  const targetSquare = e.target.closest('.square');
+  if (!targetSquare) return;
+  const clicked = targetSquare.getAttribute('data-square');
+  const piece = chess.get(clicked);
+
+  if (selectedSquare) {
+    const move = chess.move({ from: selectedSquare, to: clicked, promotion: 'q' });
+    if (move) {
+      lastMove = move;
+      playMoveSound(move);
+      undoneMoves = [];
+      selectedSquare = null;
+      moveCount++;
+      renderBoard();
+      updateGameStatus();
+      setTimeout(botTurn, 200); // trigger bot after human moves
+      return;
+    }
+    if (piece && piece.color === humanColor) selectedSquare = clicked;
+    else selectedSquare = null;
+  } else if (piece && piece.color === humanColor) {
+    selectedSquare = clicked;
+  }
+  renderBoard();
+});
+
 
 // --- Drag & drop ---
 let dragPiece = null;
