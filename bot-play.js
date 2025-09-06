@@ -806,11 +806,25 @@ flipButton?.addEventListener("click", () => {
 
 // --- Popup buttons ---
 playAgainBtn?.addEventListener("click", () => {
-  window.location.href = 'choose-color.html';
+  chess.reset();
+  moveCount = 1;
+  selectedSquare = null;
+  lastMove = null;
+  undoneMoves = [];
+  boardFlipped = false;
+  hideGameOverPopup();
+  renderBoard();
+  updateGameStatus();
 });
 
 homeBtn?.addEventListener("click", () => {
   window.location.href = 'index.html';
+});
+
+// --- Game Over Popup Copy PGN button ---
+const copyPgnGameoverBtn = document.getElementById("copy-pgn-gameover-btn");
+copyPgnGameoverBtn?.addEventListener("click", () => {
+  showScorebook();
 });
 
 // --- Scorebook buttons ---
