@@ -633,6 +633,10 @@ function showScorebook() {
 
 function hideScorebook() {
   scorebookPopup.style.display = 'none';
+  // If game is over, show the game over popup again
+  if (chess.game_over()) {
+    gameOverPopup.style.display = 'flex';
+  }
 }
 
 function copyPGN() {
@@ -810,7 +814,7 @@ flipButton?.addEventListener("click", () => {
 
 // --- Popup buttons ---
 playAgainBtn?.addEventListener("click", () => {
-  window.location.href = 'choose-color.html';
+    window.location.href = 'choose-color.html';
 });
 
 homeBtn?.addEventListener("click", () => {
