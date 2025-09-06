@@ -365,7 +365,7 @@ homeBtn?.addEventListener("click", () => {
 // --- Game Over Popup Copy PGN button ---
 const copyPgnGameoverBtn = document.getElementById("copy-pgn-gameover-btn");
 copyPgnGameoverBtn?.addEventListener("click", () => {
-  copyPGN();
+  showScorebook();
 });
 
 // --- Scorebook buttons ---
