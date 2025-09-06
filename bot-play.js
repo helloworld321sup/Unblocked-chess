@@ -632,9 +632,11 @@ function showScorebook() {
 }
 
 function hideScorebook() {
+  console.log('hideScorebook called, game_over:', chess.game_over());
   scorebookPopup.style.display = 'none';
   // If game is over, show the game over popup again
   if (chess.game_over()) {
+    console.log('Game is over, showing game over popup');
     gameOverPopup.style.display = 'flex';
   }
 }
