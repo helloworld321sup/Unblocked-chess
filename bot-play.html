@@ -107,6 +107,20 @@
   <div class="controls">
     <button id="resign-button">🏳️</button>
     <button id="flip-button">🔄</button>
+    <button id="scorebook-button">📋</button>
+  </div>
+</div>
+
+<!-- Scorebook Popup -->
+<div id="scorebook-popup" class="popup-overlay" style="display: none;">
+  <div class="popup-content scorebook-content">
+    <h2>Game Scorebook (PGN)</h2>
+    <p>Copy this PGN to import into chess.com or other chess sites for analysis:</p>
+    <textarea id="pgn-text" readonly></textarea>
+    <div class="popup-buttons">
+      <button id="copy-pgn-btn" class="popup-btn">Copy PGN</button>
+      <button id="close-scorebook-btn" class="popup-btn">Close</button>
+    </div>
   </div>
 </div>
 
