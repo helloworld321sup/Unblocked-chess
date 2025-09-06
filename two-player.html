@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chess Board</title>
+  <title>Two Player Chess</title>
   <link rel="icon" href="Unblocked-Chess Favicon.png" type="image/png">
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -109,9 +109,21 @@
   </div>
 </div>
 
-  <div id="game-message" style="text-align:center; font-weight:bold; margin-bottom:10px;"></div>
+<div id="game-message" style="text-align:center; font-weight:bold; margin-bottom:10px;"></div>
+
+<!-- Game Over Popup -->
+<div id="game-over-popup" class="popup-overlay" style="display: none;">
+  <div class="popup-content">
+    <h2 id="game-over-title">Game Over</h2>
+    <p id="game-over-message"></p>
+    <div class="popup-buttons">
+      <button id="play-again-btn" class="popup-btn">Play Again</button>
+      <button id="home-btn" class="popup-btn">Home Screen</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.js"></script>
-<script src="script.js"></script>
+<script src="two-player.js"></script>
 </body>
 </html>
