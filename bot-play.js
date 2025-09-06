@@ -5,6 +5,7 @@ let lastMove = null;
 let moveCount = 1;
 let undoneMoves = [];
 let boardFlipped = false;
+let gameEnded = false; // Track if game has ended (including resignation)
 
 // --- UI assets ---
 // Load settings from localStorage
@@ -575,9 +576,11 @@ function updateGameStatus() {
   const playerColorChess = playerColor === 'white' ? 'w' : 'b';
   
   if (chess.in_checkmate()) {
+    gameEnded = true;
     const winner = chess.turn() === playerColorChess ? 'Bot' : 'You';
     showGameOverPopup('Checkmate!', `${winner} wins by checkmate!`);
   } else if (chess.in_draw() || chess.insufficient_material() || chess.in_stalemate()) {
+    gameEnded = true;
     showGameOverPopup('Draw!', 'The game ended in a draw');
   } else if (chess.in_check()) {
     const player = chess.turn() === playerColorChess ? 'You' : 'Bot';
@@ -632,10 +635,10 @@ function showScorebook() {
 }
 
 function hideScorebook() {
-  console.log('hideScorebook called, game_over:', chess.game_over());
+  console.log('hideScorebook called, game_over:', chess.game_over(), 'gameEnded:', gameEnded);
   scorebookPopup.style.display = 'none';
   // If game is over, show the game over popup again
-  if (chess.game_over()) {
+  if (chess.game_over() || gameEnded) {
     console.log('Game is over, showing game over popup');
     gameOverPopup.style.display = 'flex';
   }
@@ -697,6 +700,7 @@ function flipBoard() {
 }
 
 function resign() {
+  gameEnded = true;
   showGameOverPopup('Game Resigned', 'You resigned. Bot wins!');
 }
 
