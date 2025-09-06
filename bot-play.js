@@ -547,16 +547,18 @@ function renderBoard() {
 }
 
 function updateGameStatus() {
+  const playerColorChess = playerColor === 'white' ? 'w' : 'b';
+  
   if (chess.in_checkmate()) {
-    const winner = chess.turn() === playerColor ? 'Bot' : 'You';
+    const winner = chess.turn() === playerColorChess ? 'Bot' : 'You';
     showGameOverPopup('Checkmate!', `${winner} wins by checkmate!`);
   } else if (chess.in_draw() || chess.insufficient_material() || chess.in_stalemate()) {
     showGameOverPopup('Draw!', 'The game ended in a draw');
   } else if (chess.in_check()) {
-    const player = chess.turn() === playerColor ? 'You' : 'Bot';
+    const player = chess.turn() === playerColorChess ? 'You' : 'Bot';
     messageDiv.textContent = `${player} is in check!`;
   } else {
-    const player = chess.turn() === playerColor ? 'Your' : 'Bot\'s';
+    const player = chess.turn() === playerColorChess ? 'Your' : 'Bot\'s';
     messageDiv.textContent = `${player} turn`;
   }
 }
@@ -661,8 +663,9 @@ function resign() {
 // --- Click input ---
 board.addEventListener('click', e => {
   if (gameOverPopup.style.display === 'flex') return; // Don't allow moves when popup is open
-  console.log('Click detected, turn:', chess.turn(), 'playerColor:', playerColor, 'can move:', chess.turn() === playerColor);
-  if (chess.turn() !== playerColor) return; // Only allow human moves on player's turn
+  const playerColorChess = playerColor === 'white' ? 'w' : 'b';
+  console.log('Click detected, turn:', chess.turn(), 'playerColor:', playerColor, 'can move:', chess.turn() === playerColorChess);
+  if (chess.turn() !== playerColorChess) return; // Only allow human moves on player's turn
   
   const targetSquare = e.target.closest('.square');
   if (!targetSquare) return;
@@ -699,7 +702,8 @@ let dragGhost = null;
 
 board.addEventListener('dragstart', e => {
   if (gameOverPopup.style.display === 'flex') return;
-  if (chess.turn() !== playerColor) return;
+  const playerColorChess = playerColor === 'white' ? 'w' : 'b';
+  if (chess.turn() !== playerColorChess) return;
   
   const img = e.target;
   if (!img.dataset.square) return;
@@ -741,7 +745,8 @@ board.addEventListener('dragover', e => {
 board.addEventListener('drop', e => {
   e.preventDefault();
   if (gameOverPopup.style.display === 'flex') return;
-  if (chess.turn() !== playerColor) return;
+  const playerColorChess = playerColor === 'white' ? 'w' : 'b';
+  if (chess.turn() !== playerColorChess) return;
   
   const targetSquareEl = e.target.closest('.square');
   if (!targetSquareEl || !selectedSquare) return;
