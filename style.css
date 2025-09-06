@@ -367,24 +367,24 @@ body {
 }
 
 .color-options {
-  display: flex;
-  gap: 2rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 3rem;
-  align-items: stretch;
+  display: flex !important;
+  gap: 2rem !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+  margin-bottom: 3rem !important;
+  align-items: stretch !important;
 }
 
 .color-card {
-  background: linear-gradient(145deg, #2c2c2c, #3c3c3c);
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  min-width: 250px;
-  max-width: 300px;
-  flex: 1;
-  border: 3px solid transparent;
+  background: linear-gradient(145deg, #2c2c2c, #3c3c3c) !important;
+  border-radius: 20px !important;
+  padding: 2rem !important;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3) !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+  min-width: 250px !important;
+  max-width: 300px !important;
+  flex: 1 !important;
+  border: 3px solid transparent !important;
 }
 
 .color-card:hover {
@@ -405,9 +405,9 @@ body {
 }
 
 .preview-piece {
-  width: 120px;
-  height: 120px;
-  object-fit: contain;
+  width: 120px !important;
+  height: 120px !important;
+  object-fit: contain !important;
 }
 
 .color-card h2 {
