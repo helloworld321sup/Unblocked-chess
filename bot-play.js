@@ -1,11 +1,10 @@
-// Initial render
-renderBoard();
-updateGameStatus();
-
-// If player chose black, make AI move first
-if (playerColor === 'black' && chess.turn() === 'w') {
-  setTimeout(makeAIMove, 500);
-} = false;
+const chess = new Chess();
+const board = document.querySelector('.chess-board');
+let selectedSquare = null;
+let lastMove = null;
+let moveCount = 1;
+let undoneMoves = [];
+let boardFlipped = false;
 
 // --- UI assets ---
 const pieceImages = {
@@ -35,6 +34,13 @@ const sounds = {
 // --- Engine config ---
 let playerColor = localStorage.getItem('playerColor') || 'white';
 let AI = { side: playerColor === 'white' ? 'b' : 'w', depth: 3 };
+
+// Update AI side when page loads
+function updateAISide() {
+  playerColor = localStorage.getItem('playerColor') || 'white';
+  AI.side = playerColor === 'white' ? 'b' : 'w';
+  console.log('updateAISide - playerColor:', playerColor, 'AI.side:', AI.side);
+}
 
 // Limit how deep the opening book is used (plies = half-moves). 16 = ~8 moves each side.
 const BOOK_PLY_LIMIT = 16;
@@ -414,6 +420,7 @@ function findBestMove() {
 }
 
 function makeAIMove() {
+  console.log('makeAIMove called, turn:', chess.turn(), 'AI.side:', AI.side, 'playerColor:', playerColor);
   if (chess.game_over()) return;
   if (chess.turn() !== AI.side) return;
 
@@ -786,11 +793,18 @@ copyPgnBtn?.addEventListener("click", () => {
   copyPGN();
 });
 
+// Update AI side based on player choice
+updateAISide();
+console.log('Initial setup - playerColor:', playerColor, 'AI.side:', AI.side, 'chess.turn():', chess.turn());
+
 // Initial render
 renderBoard();
 updateGameStatus();
 
 // If player chose black, make AI move first
 if (playerColor === 'black' && chess.turn() === 'w') {
+  console.log('Player chose black, making AI move first');
   setTimeout(makeAIMove, 500);
+} else if (playerColor === 'white' && chess.turn() === 'b') {
+  console.log('Player chose white, AI should move first but turn is black - this might be an issue');
 }
