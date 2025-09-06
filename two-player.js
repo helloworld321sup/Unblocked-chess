@@ -175,6 +175,10 @@ function showScorebook() {
 
 function hideScorebook() {
   scorebookPopup.style.display = 'none';
+  // If game is over, show the game over popup again
+  if (chess.game_over()) {
+    gameOverPopup.style.display = 'flex';
+  }
 }
 
 function copyPGN() {
