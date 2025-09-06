@@ -449,26 +449,43 @@ const homeBtn = document.getElementById("home-btn");
 
 function renderBoard() {
   const positions = chess.board();
+  
+  // First, clear all visual indicators
+  board.querySelectorAll('.square').forEach(square => {
+    square.classList.remove('selected', 'highlight', 'recent-move');
+    // Remove move dots
+    const existingDot = square.querySelector('.move-dot');
+    if (existingDot) {
+      existingDot.remove();
+    }
+  });
+  
+  // Then update pieces
   board.querySelectorAll('.square').forEach(square => {
     const squareName = square.getAttribute('data-square');
     const file = squareName.charCodeAt(0) - 97;
     const rank = 8 - parseInt(squareName[1]);
     const piece = positions[rank][file];
 
-    square.innerHTML = '';
-    square.classList.remove('selected', 'highlight', 'recent-move');
-
+    // Only update if piece has changed
+    const existingImg = square.querySelector('img');
     if (piece) {
       const key = piece.color + piece.type.toUpperCase();
-      const img = document.createElement('img');
-      img.src = pieceImages[key];
-      img.alt = key;
-      img.draggable = true;
-      img.dataset.square = squareName;
-      square.appendChild(img);
+      if (!existingImg || existingImg.src !== pieceImages[key]) {
+        square.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = pieceImages[key];
+        img.alt = key;
+        img.draggable = true;
+        img.dataset.square = squareName;
+        square.appendChild(img);
+      }
+    } else if (existingImg) {
+      square.innerHTML = '';
     }
   });
 
+  // Add move dots for legal moves
   const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
   legalMoves.forEach(move => {
     const target = document.querySelector(`[data-square="${move.to}"]`);
@@ -479,11 +496,13 @@ function renderBoard() {
     }
   });
 
+  // Add selection highlight
   if (selectedSquare) {
     const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
     if (selectedEl) selectedEl.classList.add('selected');
   }
 
+  // Add recent move highlights
   if (lastMove) {
     const fromSquare = document.querySelector(`[data-square="${lastMove.from}"]`);
     const toSquare = document.querySelector(`[data-square="${lastMove.to}"]`);
@@ -533,6 +552,9 @@ function flipBoard() {
   const rows = board.querySelectorAll('.row');
   const rowsArray = Array.from(rows);
   
+  // Clear the board first to prevent visual glitches
+  board.innerHTML = '';
+  
   if (boardFlipped) {
     // Reverse the order of rows
     rowsArray.reverse().forEach(row => board.appendChild(row));
@@ -541,6 +563,7 @@ function flipBoard() {
     rowsArray.reverse().forEach(row => board.appendChild(row));
   }
   
+  // Re-render the board with pieces
   renderBoard();
 }
 
