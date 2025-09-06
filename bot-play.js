@@ -450,7 +450,7 @@ const homeBtn = document.getElementById("home-btn");
 function renderBoard() {
   const positions = chess.board();
   
-  // First, clear all visual indicators
+  // Clear all visual indicators first
   board.querySelectorAll('.square').forEach(square => {
     square.classList.remove('selected', 'highlight', 'recent-move');
     // Remove move dots
@@ -460,41 +460,47 @@ function renderBoard() {
     }
   });
   
-  // Then update pieces
+  // Update pieces efficiently
   board.querySelectorAll('.square').forEach(square => {
     const squareName = square.getAttribute('data-square');
     const file = squareName.charCodeAt(0) - 97;
     const rank = 8 - parseInt(squareName[1]);
     const piece = positions[rank][file];
 
-    // Only update if piece has changed
     const existingImg = square.querySelector('img');
+    
     if (piece) {
       const key = piece.color + piece.type.toUpperCase();
-      if (!existingImg || existingImg.src !== pieceImages[key]) {
+      const expectedSrc = pieceImages[key];
+      
+      // Only update if the piece image is different
+      if (!existingImg || existingImg.src !== expectedSrc) {
         square.innerHTML = '';
         const img = document.createElement('img');
-        img.src = pieceImages[key];
+        img.src = expectedSrc;
         img.alt = key;
         img.draggable = true;
         img.dataset.square = squareName;
         square.appendChild(img);
       }
     } else if (existingImg) {
+      // Remove piece if square is empty
       square.innerHTML = '';
     }
   });
 
   // Add move dots for legal moves
-  const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
-  legalMoves.forEach(move => {
-    const target = document.querySelector(`[data-square="${move.to}"]`);
-    if (target) {
-      const dot = document.createElement('div');
-      dot.classList.add('move-dot');
-      target.appendChild(dot);
-    }
-  });
+  if (selectedSquare) {
+    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
+    legalMoves.forEach(move => {
+      const target = document.querySelector(`[data-square="${move.to}"]`);
+      if (target) {
+        const dot = document.createElement('div');
+        dot.classList.add('move-dot');
+        target.appendChild(dot);
+      }
+    });
+  }
 
   // Add selection highlight
   if (selectedSquare) {
