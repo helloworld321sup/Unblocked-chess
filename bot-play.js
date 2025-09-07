@@ -411,9 +411,12 @@ function evaluateBoard(game) {
         let value = getPieceValue(square.type);
         let pstBonus = getPST(square, row, col);
         
-        // Advanced evaluation for hard difficulty
+        // Simple advanced evaluation for hard difficulty only
         if (AI.useAdvancedEval) {
-          pstBonus += getAdvancedEvaluation(square, row, col, game);
+          // Only add center control bonus - keep it simple
+          if ((row >= 3 && row <= 4) && (col >= 3 && col <= 4)) {
+            pstBonus += square.type === 'p' ? 5 : 2;
+          }
         }
         
         total += square.color === 'w' ? value + pstBonus : -(value + pstBonus);
@@ -424,50 +427,7 @@ function evaluateBoard(game) {
   return total;
 }
 
-// Advanced evaluation features for hard difficulty (simplified to prevent bad moves)
-function getAdvancedEvaluation(piece, row, col, game) {
-  let bonus = 0;
-  
-  // Center control bonus (conservative)
-  if ((row >= 3 && row <= 4) && (col >= 3 && col <= 4)) {
-    bonus += piece.type === 'p' ? 10 : 5;
-  }
-  
-  // Simple mobility for major pieces only
-  if (piece.type === 'q' || piece.type === 'r' || piece.type === 'b') {
-    const square = String.fromCharCode(97 + col) + (8 - row);
-    const moves = game.moves({ square, verbose: true });
-    bonus += moves.length * 1; // Reduced mobility bonus
-  }
-  
-  // King safety (conservative)
-  if (piece.type === 'k') {
-    const square = String.fromCharCode(97 + col) + (8 - row);
-    const kingMoves = game.moves({ square, verbose: true });
-    bonus -= kingMoves.length * 2; // Reduced king safety penalty
-  }
-  
-  // Simple pawn structure
-  if (piece.type === 'p') {
-    const file = String.fromCharCode(97 + col);
-    const rank = 8 - row;
-    
-    // Connected pawns (simplified)
-    for (let offset = -1; offset <= 1; offset += 2) {
-      const adjFile = String.fromCharCode(97 + col + offset);
-      if (adjFile >= 'a' && adjFile <= 'h') {
-        const adjSquare = adjFile + rank;
-        const adjPiece = game.get(adjSquare);
-        if (adjPiece && adjPiece.type === 'p' && adjPiece.color === piece.color) {
-          bonus += 10; // Reduced connected pawn bonus
-          break;
-        }
-      }
-    }
-  }
-  
-  return bonus;
-}
+// Removed complex advanced evaluation - keeping it simple like Sebastian Lague recommends
 
 function getPieceValue(type) {
   switch (type) {
@@ -500,27 +460,21 @@ function getPST(piece, row, col) {
 function orderMoves(ch) {
   const moves = ch.moves({ verbose: true });
   return moves.sort((a, b) => {
-    // 1. Captures (best captures first)
-    const aCap = a.captured ? (PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece]) : -1;
-    const bCap = b.captured ? (PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece]) : -1;
+    // 1. Captures (best captures first) - most important for alpha-beta pruning
+    const aCap = a.captured ? (PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece]) : -9999;
+    const bCap = b.captured ? (PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece]) : -9999;
     if (aCap !== bCap) return bCap - aCap;
     
     // 2. Promotions
     if (a.promotion && !b.promotion) return -1;
     if (!a.promotion && b.promotion) return 1;
     
-    // 3. Center moves (e4, d4, e5, d5)
-    const centerSquares = ['e4', 'd4', 'e5', 'd5'];
-    const aCenter = centerSquares.includes(a.to) ? 1 : 0;
-    const bCenter = centerSquares.includes(b.to) ? 1 : 0;
-    if (aCenter !== bCenter) return bCenter - aCenter;
-    
-    // 4. Piece value (move higher value pieces first)
+    // 3. Piece value (move higher value pieces first)
     return PIECE_VALUES[b.piece] - PIECE_VALUES[a.piece];
   });
 }
 
-function search(depth, alpha, beta) {
+function search(depth, alpha, beta, isMaximizing) {
   // Time check
   if (Date.now() - searchStartTime > MAX_SEARCH_TIME) {
     return { score: evaluateBoard(chess) };
@@ -537,22 +491,23 @@ function search(depth, alpha, beta) {
     }
   }
   
-  if (depth === 0) return { score: quiescenceSearch(alpha, beta) };
-  if (chess.in_checkmate()) return { score: chess.turn() === 'w' ? -999999 : 999999 };
+  if (depth === 0) return { score: evaluateBoard(chess) };
+  if (chess.in_checkmate()) return { score: isMaximizing ? -999999 : 999999 };
   if (chess.in_stalemate() || chess.in_draw()) return { score: 0 };
 
   let bestMove = null;
   let originalAlpha = alpha;
+  const moves = orderMoves(chess);
   
-  if (chess.turn() === 'w') {
+  if (isMaximizing) {
     let best = -Infinity;
-    for (const m of orderMoves(chess)) {
+    for (const m of moves) {
       chess.move(m);
-      const { score } = search(depth - 1, alpha, beta);
+      const { score } = search(depth - 1, alpha, beta, false);
       chess.undo();
       if (score > best) { best = score; bestMove = m; }
       if (score > alpha) alpha = score;
-      if (alpha >= beta) break;
+      if (alpha >= beta) break; // Beta cutoff
     }
     
     // Store in transposition table
@@ -560,13 +515,13 @@ function search(depth, alpha, beta) {
     return { score: best, move: bestMove };
   } else {
     let best = Infinity;
-    for (const m of orderMoves(chess)) {
+    for (const m of moves) {
       chess.move(m);
-      const { score } = search(depth - 1, alpha, beta);
+      const { score } = search(depth - 1, alpha, beta, true);
       chess.undo();
       if (score < best) { best = score; bestMove = m; }
       if (score < beta) beta = score;
-      if (alpha >= beta) break;
+      if (alpha >= beta) break; // Alpha cutoff
     }
     
     // Store in transposition table
@@ -593,43 +548,7 @@ function storeTransposition(key, score, depth, alpha, beta) {
   transpositionTable.set(key, { score, depth, type });
 }
 
-// Quiescence search for better tactical play (fixed)
-function quiescenceSearch(alpha, beta, depth = 0) {
-  // Prevent infinite recursion
-  if (depth > 6) return evaluateBoard(chess);
-  
-  // Time check
-  if (Date.now() - searchStartTime > MAX_SEARCH_TIME) {
-    return evaluateBoard(chess);
-  }
-  
-  const standPat = evaluateBoard(chess);
-  if (standPat >= beta) return beta;
-  if (standPat > alpha) alpha = standPat;
-  
-  // Only look at captures (remove checks to prevent infinite loops)
-  const moves = chess.moves({ verbose: true }).filter(move => 
-    move.captured && PIECE_VALUES[move.captured] >= PIECE_VALUES[move.piece] - 50
-  );
-  
-  // Order captures by value
-  moves.sort((a, b) => {
-    const aVal = a.captured ? PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece] : 0;
-    const bVal = b.captured ? PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece] : 0;
-    return bVal - aVal;
-  });
-  
-  for (const move of moves) {
-    chess.move(move);
-    const score = -quiescenceSearch(-beta, -alpha, depth + 1);
-    chess.undo();
-    
-    if (score >= beta) return beta;
-    if (score > alpha) alpha = score;
-  }
-  
-  return alpha;
-}
+// Removed quiescence search - it was causing problems
 
 function findBestMove() {
   searchStartTime = Date.now();
@@ -637,33 +556,22 @@ function findBestMove() {
   // Clear transposition table for new search
   transpositionTable.clear();
   
-  // Iterative deepening for better move quality within time limit
+  // Simple iterative deepening
   let bestMove = null;
-  let bestScore = -Infinity;
   let actualDepth = 0;
   
   // Start with depth 1 and work up to AI.depth
   for (let depth = 1; depth <= AI.depth; depth++) {
-    const result = search(depth, -Infinity, Infinity);
+    const isMaximizing = chess.turn() === 'w';
+    const result = search(depth, -Infinity, Infinity, isMaximizing);
     
     // If we have time, use this result
-    if (Date.now() - searchStartTime < MAX_SEARCH_TIME * 0.9) {
+    if (Date.now() - searchStartTime < MAX_SEARCH_TIME * 0.8) {
       bestMove = result.move;
-      bestScore = result.score;
       actualDepth = depth;
     } else {
       // Time's up, use previous result
       break;
-    }
-  }
-  
-  // If we still have time and no good move, try one more depth
-  if (Date.now() - searchStartTime < MAX_SEARCH_TIME * 0.7 && actualDepth < AI.depth) {
-    const result = search(actualDepth + 1, -Infinity, Infinity);
-    if (result.move) {
-      bestMove = result.move;
-      bestScore = result.score;
-      actualDepth++;
     }
   }
   
