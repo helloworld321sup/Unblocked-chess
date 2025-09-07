@@ -65,6 +65,47 @@ function renderBoard() {
       square.appendChild(img);
     }
   });
+  
+  // Update castling rights based on king positions
+  updateCastlingRights();
+}
+
+function updateCastlingRights() {
+  const positions = chess.board();
+  
+  // Check white king position
+  const whiteKing = positions[7][4]; // e1 square
+  const whiteKingsideCheckbox = document.getElementById('white-kingside');
+  const whiteQueensideCheckbox = document.getElementById('white-queenside');
+  
+  if (!whiteKing || whiteKing.type !== 'k' || whiteKing.color !== 'w') {
+    // White king not on e1, disable castling
+    whiteKingsideCheckbox.checked = false;
+    whiteQueensideCheckbox.checked = false;
+    whiteKingsideCheckbox.disabled = true;
+    whiteQueensideCheckbox.disabled = true;
+  } else {
+    // White king on e1, enable castling
+    whiteKingsideCheckbox.disabled = false;
+    whiteQueensideCheckbox.disabled = false;
+  }
+  
+  // Check black king position
+  const blackKing = positions[0][4]; // e8 square
+  const blackKingsideCheckbox = document.getElementById('black-kingside');
+  const blackQueensideCheckbox = document.getElementById('black-queenside');
+  
+  if (!blackKing || blackKing.type !== 'k' || blackKing.color !== 'b') {
+    // Black king not on e8, disable castling
+    blackKingsideCheckbox.checked = false;
+    blackQueensideCheckbox.checked = false;
+    blackKingsideCheckbox.disabled = true;
+    blackQueensideCheckbox.disabled = true;
+  } else {
+    // Black king on e8, enable castling
+    blackKingsideCheckbox.disabled = false;
+    blackQueensideCheckbox.disabled = false;
+  }
 }
 
 function updateMessage(message, type = 'info') {
