@@ -775,18 +775,17 @@ body {
 }
 
 /* Settings Page Styles */
-.settings-page {
-  background-color: #686868;
-  color: white;
-  font-family: Arial, sans-serif;
+body.settings-page {
+  overflow: auto;
+  height: auto;
   min-height: 100vh;
-  padding: 20px;
 }
 
 .settings-container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 2rem;
+  color: white;
 }
 
 .settings-container h1 {
@@ -794,7 +793,6 @@ body {
   font-size: 2.5rem;
   margin-bottom: 2rem;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-  color: #f0d9b5;
 }
 
 .settings-section {
@@ -806,98 +804,45 @@ body {
 }
 
 .settings-section h2 {
-  color: #f0d9b5;
+  margin-top: 0;
   margin-bottom: 1rem;
-  font-size: 1.5rem;
+  color: #fff;
 }
 
 .settings-section p {
+  margin-bottom: 1rem;
   color: #ccc;
-  margin-bottom: 1.5rem;
-  line-height: 1.4;
 }
 
-/* Color Options */
 .color-options {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
   gap: 15px;
-  flex-wrap: wrap;
-  justify-content: center;
+  margin-top: 1rem;
 }
 
 .color-option {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
   cursor: pointer;
   border: 3px solid transparent;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .color-option:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+  border-color: #fff;
 }
 
-.color-option.selected {
-  border-color: #f0d9b5;
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(240, 217, 181, 0.5);
+.color-option.active {
+  border-color: #4CAF50;
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
 }
 
-/* Difficulty Options */
-.difficulty-options {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.difficulty-option {
-  background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
-  border-radius: 12px;
-  padding: 1.5rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-  min-width: 150px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-.difficulty-option:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-}
-
-.difficulty-option.selected {
-  border-color: #f0d9b5;
-  background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
-  box-shadow: 0 0 15px rgba(240, 217, 181, 0.3);
-}
-
-.difficulty-preview {
-  margin-bottom: 1rem;
-}
-
-.difficulty-icon {
-  font-size: 2rem;
-}
-
-.difficulty-option span {
-  display: block;
-  color: #f0d9b5;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-}
-
-.difficulty-option small {
-  color: #ccc;
-  font-size: 0.9rem;
-}
-
-/* Setting Items */
 .setting-item {
   margin-bottom: 1rem;
 }
@@ -907,182 +852,194 @@ body {
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  color: #ccc;
   font-size: 1.1rem;
-}
-
-.setting-item input[type="checkbox"] {
-  display: none;
 }
 
 .toggle-slider {
   position: relative;
   width: 50px;
   height: 25px;
-  background-color: #4a4a4a;
+  background-color: #ccc;
   border-radius: 25px;
-  transition: all 0.3s ease;
-  border: 2px solid #666;
+  transition: background-color 0.3s;
 }
 
 .toggle-slider::before {
   content: '';
   position: absolute;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background-color: white;
   top: 2px;
   left: 2px;
-  width: 17px;
-  height: 17px;
-  background-color: white;
-  border-radius: 50%;
-  transition: all 0.3s ease;
+  transition: transform 0.3s;
 }
 
-.setting-item input[type="checkbox"]:checked + .toggle-slider {
-  background-color: #4800ff;
-  border-color: #6000ff;
+#sound-toggle {
+  display: none;
 }
 
-.setting-item input[type="checkbox"]:checked + .toggle-slider::before {
+#sound-toggle:checked + .toggle-slider {
+  background-color: #4CAF50;
+}
+
+#sound-toggle:checked + .toggle-slider::before {
   transform: translateX(25px);
 }
 
-/* Piece Options */
 .piece-options {
   display: flex;
-  gap: 30px;
-  justify-content: center;
+  gap: 2rem;
+  margin-top: 1rem;
   flex-wrap: wrap;
 }
 
 .piece-option {
-  background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
-  border-radius: 12px;
-  padding: 1.5rem;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 1rem;
+  border: 2px solid transparent;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 2px solid transparent;
-  min-width: 150px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  background: rgba(255,255,255,0.1);
 }
 
 .piece-option:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  border-color: #fff;
+  background: rgba(255,255,255,0.2);
 }
 
-.piece-option.selected {
-  border-color: #f0d9b5;
-  background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
-  box-shadow: 0 0 15px rgba(240, 217, 181, 0.3);
+.piece-option.active {
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.2);
 }
 
 .piece-preview {
   display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-bottom: 1rem;
+  gap: 5px;
 }
 
 .piece-preview img {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
 }
 
-.piece-option span {
-  color: #f0d9b5;
+.difficulty-options {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.difficulty-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 1.5rem 1rem;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255,255,255,0.1);
+  min-width: 120px;
+}
+
+.difficulty-option:hover {
+  border-color: #fff;
+  background: rgba(255,255,255,0.2);
+}
+
+.difficulty-option.active {
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.2);
+}
+
+.difficulty-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+}
+
+.difficulty-icon {
+  font-size: 24px;
+}
+
+.difficulty-option span {
   font-weight: bold;
   font-size: 1.1rem;
 }
 
-/* Settings Actions */
+.difficulty-option small {
+  color: #ccc;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .settings-actions {
   display: flex;
-  gap: 20px;
+  gap: 1rem;
   justify-content: center;
   margin-top: 2rem;
-  flex-wrap: wrap;
 }
 
 .settings-btn {
-  background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
-  color: white;
-  border: none;
   padding: 12px 24px;
+  border: none;
   border-radius: 8px;
   font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
   min-width: 150px;
 }
 
-.settings-btn:hover {
-  background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-}
-
 .settings-btn.primary {
-  background: linear-gradient(145deg, #4800ff, #6000ff);
-  border-color: #fff;
+  background: linear-gradient(145deg, #4CAF50, #45a049);
+  color: white;
 }
 
 .settings-btn.primary:hover {
-  background: linear-gradient(145deg, #6000ff, #8000ff);
-  box-shadow: 0 0 15px rgba(72, 0, 255, 0.5);
+  background: linear-gradient(145deg, #45a049, #3d8b40);
+  transform: translateY(-2px);
 }
 
 .settings-btn.secondary {
-  background: linear-gradient(145deg, #666, #444);
+  background: linear-gradient(145deg, #f44336, #da190b);
+  color: white;
 }
 
 .settings-btn.secondary:hover {
-  background: linear-gradient(145deg, #777, #555);
+  background: linear-gradient(145deg, #da190b, #c1170a);
+  transform: translateY(-2px);
 }
 
-/* Mobile responsiveness for settings */
+/* Settings page responsive */
 @media (max-width: 768px) {
   .settings-container {
-    padding: 10px;
-  }
-  
-  .settings-container h1 {
-    font-size: 2rem;
+    padding: 1rem;
   }
   
   .settings-section {
     padding: 1.5rem;
   }
   
-  .color-options {
-    gap: 10px;
-  }
-  
-  .color-option {
-    width: 40px;
-    height: 40px;
-  }
-  
-  .difficulty-options,
   .piece-options {
     flex-direction: column;
     align-items: center;
   }
   
-  .difficulty-option,
-  .piece-option {
-    min-width: 200px;
-  }
-  
   .settings-actions {
     flex-direction: column;
     align-items: center;
-  }
-  
-  .settings-btn {
-    width: 100%;
-    max-width: 250px;
   }
 }
