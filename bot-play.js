@@ -77,7 +77,7 @@ function getAIConfig() {
       useOpeningBook = true;
       break;
     case 'hard':
-      depth = 4;
+      depth = 5;
       useAdvancedEval = true;
       useOpeningBook = true;
       break;
@@ -399,6 +399,9 @@ const MAX_TABLE_SIZE = 100000; // Limit memory usage
 // Killer moves heuristic - moves that caused beta cutoffs
 const killerMoves = new Map(); // depth -> [move1, move2]
 
+// History heuristic - tracks how good moves have been
+const historyTable = new Map(); // moveString -> score
+
 // Time management
 let searchStartTime = 0;
 const MAX_SEARCH_TIME = 2500; // 2.5 seconds max per move - balanced
@@ -488,10 +491,18 @@ function getPST(piece, row, col) {
 function orderMoves(ch, depth) {
   const moves = ch.moves({ verbose: true });
   return moves.sort((a, b) => {
-    // 1. Captures (best captures first) - most important for alpha-beta pruning
-    const aCap = a.captured ? (PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece]) : -9999;
-    const bCap = b.captured ? (PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece]) : -9999;
-    if (aCap !== bCap) return bCap - aCap;
+    // 1. Captures using MVV-LVA (Most Valuable Victim - Least Valuable Attacker)
+    if (a.captured && b.captured) {
+      const aMVV = PIECE_VALUES[a.captured];
+      const bMVV = PIECE_VALUES[b.captured];
+      if (aMVV !== bMVV) return bMVV - aMVV; // Higher value victim first
+      
+      const aLVA = PIECE_VALUES[a.piece];
+      const bLVA = PIECE_VALUES[b.piece];
+      return aLVA - bLVA; // Lower value attacker first
+    }
+    if (a.captured && !b.captured) return -1;
+    if (!a.captured && b.captured) return 1;
     
     // 2. Killer moves (moves that caused beta cutoffs at this depth)
     const aKiller = isKillerMove(a, depth) ? 1 : 0;
@@ -502,7 +513,12 @@ function orderMoves(ch, depth) {
     if (a.promotion && !b.promotion) return -1;
     if (!a.promotion && b.promotion) return 1;
     
-    // 4. Piece value (move higher value pieces first)
+    // 4. History heuristic (moves that have been good in the past)
+    const aHistory = getHistoryScore(a);
+    const bHistory = getHistoryScore(b);
+    if (aHistory !== bHistory) return bHistory - aHistory;
+    
+    // 5. Piece value (move higher value pieces first)
     return PIECE_VALUES[b.piece] - PIECE_VALUES[a.piece];
   });
 }
@@ -529,6 +545,18 @@ function addKillerMove(move, depth) {
     killers.shift(); // Remove oldest
   }
   killers.push(moveStr);
+}
+
+function getHistoryScore(move) {
+  const moveStr = move.from + move.to + (move.promotion || '');
+  return historyTable.get(moveStr) || 0;
+}
+
+function updateHistoryScore(move, depth) {
+  const moveStr = move.from + move.to + (move.promotion || '');
+  const currentScore = historyTable.get(moveStr) || 0;
+  const bonus = depth * depth; // Deeper cutoffs get higher bonuses
+  historyTable.set(moveStr, currentScore + bonus);
 }
 
 function search(depth, alpha, beta, isMaximizing) {
@@ -566,7 +594,10 @@ function search(depth, alpha, beta, isMaximizing) {
       if (score > alpha) alpha = score;
       if (alpha >= beta) {
         // Beta cutoff - this is a killer move
-        if (!m.captured) addKillerMove(m, depth);
+        if (!m.captured) {
+          addKillerMove(m, depth);
+          updateHistoryScore(m, depth);
+        }
         break;
       }
     }
@@ -584,7 +615,10 @@ function search(depth, alpha, beta, isMaximizing) {
       if (score < beta) beta = score;
       if (alpha >= beta) {
         // Alpha cutoff - this is a killer move
-        if (!m.captured) addKillerMove(m, depth);
+        if (!m.captured) {
+          addKillerMove(m, depth);
+          updateHistoryScore(m, depth);
+        }
         break;
       }
     }
@@ -654,9 +688,10 @@ function quiescenceSearch(alpha, beta, depth) {
 function findBestMove() {
   searchStartTime = Date.now();
   
-  // Clear transposition table and killer moves for new search
+  // Clear transposition table, killer moves, and history for new search
   transpositionTable.clear();
   killerMoves.clear();
+  historyTable.clear();
   
   // Simple iterative deepening
   let bestMove = null;
