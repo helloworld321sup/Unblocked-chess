@@ -396,6 +396,9 @@ const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 const transpositionTable = new Map();
 const MAX_TABLE_SIZE = 100000; // Limit memory usage
 
+// Killer moves heuristic - moves that caused beta cutoffs
+const killerMoves = new Map(); // depth -> [move1, move2]
+
 // Time management
 let searchStartTime = 0;
 const MAX_SEARCH_TIME = 2500; // 2.5 seconds max per move - balanced
@@ -411,11 +414,36 @@ function evaluateBoard(game) {
         let value = getPieceValue(square.type);
         let pstBonus = getPST(square, row, col);
         
-        // Simple advanced evaluation for hard difficulty only
+        // Advanced evaluation for hard difficulty
         if (AI.useAdvancedEval) {
-          // Only add center control bonus - keep it simple
+          // Center control bonus
           if ((row >= 3 && row <= 4) && (col >= 3 && col <= 4)) {
-            pstBonus += square.type === 'p' ? 5 : 2;
+            pstBonus += square.type === 'p' ? 8 : 3;
+          }
+          
+          // King safety (penalty for exposed king)
+          if (square.type === 'k') {
+            const squareName = String.fromCharCode(97 + col) + (8 - row);
+            const kingMoves = game.moves({ square: squareName, verbose: true });
+            pstBonus -= kingMoves.length * 1.5; // Penalty for exposed king
+          }
+          
+          // Pawn structure bonuses
+          if (square.type === 'p') {
+            // Connected pawns
+            const file = String.fromCharCode(97 + col);
+            const rank = 8 - row;
+            for (let offset = -1; offset <= 1; offset += 2) {
+              const adjFile = String.fromCharCode(97 + col + offset);
+              if (adjFile >= 'a' && adjFile <= 'h') {
+                const adjSquare = adjFile + rank;
+                const adjPiece = game.get(adjSquare);
+                if (adjPiece && adjPiece.type === 'p' && adjPiece.color === square.color) {
+                  pstBonus += 8; // Connected pawn bonus
+                  break;
+                }
+              }
+            }
           }
         }
         
@@ -457,7 +485,7 @@ function getPST(piece, row, col) {
 }
 
 
-function orderMoves(ch) {
+function orderMoves(ch, depth) {
   const moves = ch.moves({ verbose: true });
   return moves.sort((a, b) => {
     // 1. Captures (best captures first) - most important for alpha-beta pruning
@@ -465,13 +493,42 @@ function orderMoves(ch) {
     const bCap = b.captured ? (PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece]) : -9999;
     if (aCap !== bCap) return bCap - aCap;
     
-    // 2. Promotions
+    // 2. Killer moves (moves that caused beta cutoffs at this depth)
+    const aKiller = isKillerMove(a, depth) ? 1 : 0;
+    const bKiller = isKillerMove(b, depth) ? 1 : 0;
+    if (aKiller !== bKiller) return bKiller - aKiller;
+    
+    // 3. Promotions
     if (a.promotion && !b.promotion) return -1;
     if (!a.promotion && b.promotion) return 1;
     
-    // 3. Piece value (move higher value pieces first)
+    // 4. Piece value (move higher value pieces first)
     return PIECE_VALUES[b.piece] - PIECE_VALUES[a.piece];
   });
+}
+
+function isKillerMove(move, depth) {
+  const killers = killerMoves.get(depth);
+  if (!killers) return false;
+  const moveStr = move.from + move.to + (move.promotion || '');
+  return killers.includes(moveStr);
+}
+
+function addKillerMove(move, depth) {
+  if (!killerMoves.has(depth)) {
+    killerMoves.set(depth, []);
+  }
+  const killers = killerMoves.get(depth);
+  const moveStr = move.from + move.to + (move.promotion || '');
+  
+  // Don't add if already present
+  if (killers.includes(moveStr)) return;
+  
+  // Keep only 2 killer moves per depth
+  if (killers.length >= 2) {
+    killers.shift(); // Remove oldest
+  }
+  killers.push(moveStr);
 }
 
 function search(depth, alpha, beta, isMaximizing) {
@@ -491,13 +548,13 @@ function search(depth, alpha, beta, isMaximizing) {
     }
   }
   
-  if (depth === 0) return { score: evaluateBoard(chess) };
+  if (depth === 0) return { score: quiescenceSearch(alpha, beta, 0) };
   if (chess.in_checkmate()) return { score: isMaximizing ? -999999 : 999999 };
   if (chess.in_stalemate() || chess.in_draw()) return { score: 0 };
 
   let bestMove = null;
   let originalAlpha = alpha;
-  const moves = orderMoves(chess);
+  const moves = orderMoves(chess, depth);
   
   if (isMaximizing) {
     let best = -Infinity;
@@ -507,7 +564,11 @@ function search(depth, alpha, beta, isMaximizing) {
       chess.undo();
       if (score > best) { best = score; bestMove = m; }
       if (score > alpha) alpha = score;
-      if (alpha >= beta) break; // Beta cutoff
+      if (alpha >= beta) {
+        // Beta cutoff - this is a killer move
+        if (!m.captured) addKillerMove(m, depth);
+        break;
+      }
     }
     
     // Store in transposition table
@@ -521,7 +582,11 @@ function search(depth, alpha, beta, isMaximizing) {
       chess.undo();
       if (score < best) { best = score; bestMove = m; }
       if (score < beta) beta = score;
-      if (alpha >= beta) break; // Alpha cutoff
+      if (alpha >= beta) {
+        // Alpha cutoff - this is a killer move
+        if (!m.captured) addKillerMove(m, depth);
+        break;
+      }
     }
     
     // Store in transposition table
@@ -548,13 +613,50 @@ function storeTransposition(key, score, depth, alpha, beta) {
   transpositionTable.set(key, { score, depth, type });
 }
 
-// Removed quiescence search - it was causing problems
+// Quiescence search for better tactical play (properly implemented)
+function quiescenceSearch(alpha, beta, depth) {
+  // Prevent infinite recursion
+  if (depth > 4) return evaluateBoard(chess);
+  
+  // Time check
+  if (Date.now() - searchStartTime > MAX_SEARCH_TIME) {
+    return evaluateBoard(chess);
+  }
+  
+  const standPat = evaluateBoard(chess);
+  if (standPat >= beta) return beta;
+  if (standPat > alpha) alpha = standPat;
+  
+  // Only look at captures that are not losing trades
+  const moves = chess.moves({ verbose: true }).filter(move => 
+    move.captured && PIECE_VALUES[move.captured] >= PIECE_VALUES[move.piece] - 25
+  );
+  
+  // Order captures by value
+  moves.sort((a, b) => {
+    const aVal = a.captured ? PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece] : 0;
+    const bVal = b.captured ? PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece] : 0;
+    return bVal - aVal;
+  });
+  
+  for (const move of moves) {
+    chess.move(move);
+    const score = -quiescenceSearch(-beta, -alpha, depth + 1);
+    chess.undo();
+    
+    if (score >= beta) return beta;
+    if (score > alpha) alpha = score;
+  }
+  
+  return alpha;
+}
 
 function findBestMove() {
   searchStartTime = Date.now();
   
-  // Clear transposition table for new search
+  // Clear transposition table and killer moves for new search
   transpositionTable.clear();
+  killerMoves.clear();
   
   // Simple iterative deepening
   let bestMove = null;
