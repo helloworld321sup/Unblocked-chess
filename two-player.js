@@ -5,6 +5,15 @@ let lastMove = null;
 let moveCount = 1;
 let undoneMoves = [];
 
+// Apply board color from settings
+function applyBoardColor() {
+  const boardColor = localStorage.getItem('boardColor') || '#d67959';
+  document.documentElement.style.setProperty('--black-square-color', boardColor);
+}
+
+// Apply board color on page load
+applyBoardColor();
+
 // --- UI assets ---
 // Load settings from localStorage
 function getPieceImages() {
