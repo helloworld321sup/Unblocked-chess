@@ -716,16 +716,17 @@ function search(depth, alpha, beta, isMaximizing) {
   
   // Null move pruning - if we can't improve by passing, we're probably winning
   if (depth >= 3 && !chess.in_check() && !isInEndgame()) {
-    // Make a null move (pass turn)
-    const nullMove = chess.move(null);
-    if (nullMove) {
-      const nullScore = -search(depth - 1 - 2, -beta, -beta + 1, !isMaximizing).score;
-      chess.undo();
-      
-      if (nullScore >= beta) {
-        return { score: beta }; // Beta cutoff
-      }
-    }
+    // Make a null move (pass turn) - this might not work with chess.js
+    // Let's disable null move pruning for now to fix the bot
+    // const nullMove = chess.move(null);
+    // if (nullMove) {
+    //   const nullScore = -search(depth - 1 - 2, -beta, -beta + 1, !isMaximizing).score;
+    //   chess.undo();
+    //   
+    //   if (nullScore >= beta) {
+    //     return { score: beta }; // Beta cutoff
+    //   }
+    // }
   }
 
   let bestMove = null;
@@ -908,20 +909,35 @@ function findBestMove() {
 
 function makeAIMove() {
   console.log('makeAIMove called, turn:', chess.turn(), 'AI.side:', AI.side, 'playerColor:', playerColor);
-  if (chess.game_over()) return;
-  if (chess.turn() !== AI.side) return;
+  if (chess.game_over()) {
+    console.log('Game is over, not making AI move');
+    return;
+  }
+  if (chess.turn() !== AI.side) {
+    console.log('Not AI turn, current turn:', chess.turn(), 'AI side:', AI.side);
+    return;
+  }
 
   let move;
   const bookUci = getOpeningMove();
+  console.log('Opening book move:', bookUci);
+  
   if (bookUci) {
+    console.log('Using opening book move:', bookUci);
     move = applyUci(bookUci);
   } else {
+    console.log('No opening book move, searching for best move...');
     const best = findBestMove();
-    if (!best) return;
+    console.log('Best move found:', best);
+    if (!best) {
+      console.log('No best move found, this is a problem!');
+      return;
+    }
     move = chess.move(best);
   }
 
   if (move) {
+    console.log('AI move successful:', move);
     lastMove = move;
     playMoveSound(move);
     undoneMoves = [];
@@ -929,6 +945,8 @@ function makeAIMove() {
     renderBoard();
     updateGameStatus();
     console.log('AI move completed, new turn:', chess.turn(), 'should be player turn:', playerColor);
+  } else {
+    console.log('AI move failed!');
   }
 }
 
