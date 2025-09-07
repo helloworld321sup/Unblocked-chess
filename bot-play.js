@@ -436,7 +436,7 @@ function evaluateBoard(game) {
         
         if (isAttacked && !isDefended) {
           // Piece is hanging - massive penalty
-          pstBonus -= value * 0.8; // 80% of piece value penalty
+          pstBonus -= value * 1.2; // 120% of piece value penalty - even bigger!
         }
         
         // Advanced evaluation for hard difficulty
@@ -699,15 +699,32 @@ function wouldMoveHangPiece(game, move) {
   const tempMove = game.move(move);
   if (!tempMove) return false;
   
-  // Check if the moved piece is now hanging
-  const isAttacked = isSquareAttacked(game, move.to, originalPiece.color === 'w' ? 'b' : 'w');
-  const isDefended = isSquareAttacked(game, move.to, originalPiece.color);
+  // Check if ANY piece of the same color would be hanging after this move
+  const board = game.board();
+  const pieceColor = originalPiece.color;
+  
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = board[row][col];
+      if (square && square.color === pieceColor) {
+        const squareName = String.fromCharCode(97 + col) + (8 - row);
+        const isAttacked = isSquareAttacked(game, squareName, pieceColor === 'w' ? 'b' : 'w');
+        const isDefended = isSquareAttacked(game, squareName, pieceColor);
+        
+        if (isAttacked && !isDefended) {
+          // Undo the move and return true
+          game.undo();
+          return true;
+        }
+      }
+    }
+  }
   
   // Undo the move
   game.undo();
   
-  // Return true if piece would be hanging
-  return isAttacked && !isDefended;
+  // No pieces would be hanging
+  return false;
 }
 
 function findEnemyKing(game, friendlyColor) {
