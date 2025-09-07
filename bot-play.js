@@ -78,86 +78,80 @@ const BOOK_PLY_LIMIT = 16;
 // You can add lines to BOOK_LINES to grow the book fast.
 
 const BOOK_LINES = [
-// === e4 e5: Ruy Lopez (Closed / Open / Berlin / Exchange / Cozio / Steinitz / Schliemann) ===
-"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8 d4 Nbd7",
-"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 d3 b5 Bb3 d6 a4 Bd7 Nbd2 O-O Re1",
-"e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6 O-O f6 d4 exd4 Qxd4 Qxd4 Nxd4 Bd7 Nc3 O-O-O",
-"e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6 Bxc6 dxc6 dxe5 Nf5 Qxd8+ Kxd8",
-"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 d6 c3 Bd7 O-O Nf6 Re1 g6 d4 Bg7",
-"e4 e5 Nf3 Nc6 Bb5 f5 d3 fxe4 dxe4 Nf6 O-O Bc5 Nc3 d6 Bg5",
-"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 d3 d6 c3 g6 O-O Bg7 Re1 O-O Nbd2",
-"e4 e5 Nf3 Nc6 Bb5 d6 d4 Bd7 O-O Nf6 Nc3 Be7 Re1 O-O h3 Re8",
-"e4 e5 Nf3 Nc6 Bb5 g6 c3 a6 Ba4 Bg7 d4 b5 Bb3 d6 O-O Nf6 Re1 O-O",
-"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 Bxc6 dxc6 O-O Bd6 d4 Nd7 Nc3 O-O Be3",
-"e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 d4 exd4 e5 Ne4 O-O Be7 c3 d5",
-// Italian / Two Knights / Evans / Giuoco
-"e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d4 exd4 cxd4 Bb4+ Bd2 Bxd2+ Nbxd2 d5",
-"e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Qe7 O-O d6 d4 Bb6 a4 a6 h3 Nf6 Re1 O-O",
-"e4 e5 Nf3 Nc6 Bc4 Bc5 b4 Bxb4 c3 Ba5 d4 exd4 O-O d3 Qxd3 Nge7",
-"e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 d4 exd4 O-O Be7 Nf3",
-"e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 O-O d6 c3 a6 Bb3 Ba7 Nbd2 O-O Re1",
-"e4 e5 Nf3 Nc6 Bc4 Bc5 d3 Nf6 Nc3 d6 a3 a6 Ba2 Ba7 h3 O-O Be3",
-// Scotch / Scotch Gambit / Four Knights / Petrov
-"e4 e5 Nf3 Nc6 d4 exd4 Nxd4 Nf6 Nc3 Bb4 Nxc6 bxc6 Bd3 d5 O-O",
-"e4 e5 Nf3 Nc6 d4 exd4 Bc4 Nf6 O-O Nxe4 Re1 d5 Bxd5 Qxd5 Nc3",
-"e4 e5 Nf3 Nc6 Nc3 Nf6 Bb5 Bb4 O-O O-O d3 d6 Bg5 Be6",
-"e4 e5 Nf3 Nf6 Nxe5 d6 Nf3 Nxe4 d4 d5 Bd3 Bd6 O-O O-O c4 c6",
-// King’s Gambit (Classical, Fischer, Modern)
-"e4 e5 f4 exf4 Nf3 g5 h4 g4 Ne5 Nf6 d4 d6 Nd3 Nxe4 Qe2 Qe7",
-"e4 e5 f4 exf4 Nf3 d5 exd5 Nf6 Bb5+ c6 dxc6 Nxc6 d4 Bd6 O-O O-O",
-"e4 e5 f4 exf4 Nf3 g6 d4 Bg7 Bxf4 d5 Nc3 dxe4 Nxe4 Ne7",
-// Center Game / Vienna / Bishop’s Opening
-"e4 e5 d4 exd4 Qxd4 Nc6 Qe3 Nf6 Nc3 Bb4 Bd2 O-O O-O-O d6",
-"e4 e5 Nc3 Nf6 f4 d5 fxe5 Nxe4 Nf3 Be7 d4 O-O Bd3",
-"e4 e5 Bc4 Nf6 d3 c6 Nf3 d5 Bb3 Bb4+ c3 Bd6 O-O O-O",
+  // --- e4 open games ---
+  "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8 d4 Nbd7",
+  "e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d4 exd4 cxd4 Bb4+ Bd2 Bxd2+ Nbxd2 d5 exd5 Nxd5",
+  "e4 e5 Nf3 Nc6 d4 exd4 Nxd4 Nf6 Nc3 Bb4 Nxc6 bxc6 Bd3 d5 O-O O-O Qf3 Re8",
+  "e4 e5 Nf3 Nc6 d3 Nf6 c3 d5 Nbd2 a5 Be2 Be7 O-O O-O",
+  "e4 e5 Bc4 Nf6 d3 c6 Nf3 d5 Bb3 Bb4+ c3 Bd6",
+  // Scotch
+  "e4 e5 Nf3 Nc6 d4 exd4 Nxd4 Bc5 Be3 Qf6 c3 Nge7",
+  // Four Knights
+  "e4 e5 Nf3 Nc6 Nc3 Nf6 Bb5 Bb4 O-O O-O d3 d6 Bg5",
+  // King's Gambit
+  "e4 e5 f4 exxf4 Nf3 g5 h4 g4 Ne5 Nf6 d4 d6 Nd3 Nxe4",
 
+  // --- Sicilian ---
+  "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be2 e5 Nb3 Be7",
+  "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 g6 c4 Bg7 Be3 Nf6 Nc3 O-O",
+  "e4 c5 Nf3 e6 d4 cxd4 Nxd4 a6 c4 Nf6 Nc3 Qc7 Be2 Be7",
+  "e4 c5 c3 d5 exd5 Qxd5 d4 Nf6 Nf3 Bg4 Be2 e6 O-O Nc6",
+  "e4 c5 d4 cxd4 c3 dxc3 Nxc3 Nc6 Nf3 d6 Bc4 e6",
+  // Dragon
+  "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6",
 
-// === Sicilian: Najdorf / Dragon / Sveshnikov / Classical / Accelerated / Kan / Taimanov / Alapin / Morra ===
-"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Bg5 e6 f4 Qc7 Qf3 Nbd7",
-"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Be2",
-"e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 e5 Ndb5 d6 Bg5 a6 Na3 Be6",
-"e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 e5 Nb5 d6 c4 Be7 N1c3 a6 Na3 Nf6",
-"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 Nc6 Be2 e6 O-O Be7 Be3 O-O",
-"e4 c5 Nf3 e6 d4 cxd4 Nxd4 a6 c4 Nf6 Nc3 Qc7 Be2 Be7 O-O d6",
-"e4 c5 Nf3 e6 d4 cxd4 Nxd4 a6 Be2 d6 O-O Nf6 Nc3 Be7 a4 Nc6",
-"e4 c5 Nf3 Nc6 a3 e6 d4 cxd4 Nxd4 Nf6 Nc3 Qc7 Be2 a6 O-O",
-"e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be2 e5 Nb3 Be7 Be3",
-"e4 c5 c3 d5 exd5 Qxd5 d4 Nf6 Nf3 Bg4 Be2 e6 O-O Nc6 Be3",
-"e4 c5 d4 cxd4 c3 dxc3 Nxc3 Nc6 Nf3 e6 Bc4 Nf6 O-O d6 Qe2",
-"e4 c5 d4 cxd4 Nf3 Nc6 c3 dxc3 Nxc3 e6 Bc4 Nf6 O-O d6 Qe2 a6",
-"e4 c5 b4 cxb4 a3 d5 exd5 Qxd5 Nf3 e5 c4 Qe6 Be2 Nc6 d3",
-// Rossolimo / Moscow / Grand Prix
-"e4 c5 Nf3 Nc6 Bb5 g6 O-O Bg7 Re1 e5 b4 Nxb4 c3 Nc6 d4",
-"e4 c5 Nc3 Nc6 f4 g6 Nf3 Bg7 Bc4 e6 O-O Nge7 d3 d5 Bb3",
-"e4 c5 Nf3 d6 Bb5+ Bd7 Bxd7+ Qxd7 O-O Nf6 Re1 Nc6 c4 g6 Nc3 Bg7",
+  // --- French ---
+  "e4 e6 d4 d5 Nc3 Nf6 Bg5 Be7 e5 Nfd7 h4 a6 Qg4",
+  "e4 e6 d4 d5 Nd2 Nf6 e5 Nfd7 Bd3 c5 c3 Nc6 Ne2",
+  "e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Qb6 a3 a5 Be2",
+  "e4 e6 d4 d5 exd5 exd5 Nf3 Nf6 Bd3 Be7 O-O O-O",
 
+  // --- Caro-Kann ---
+  "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5 Ng3 Bg6 h4 h6 Nf3 Nd7",
+  "e4 c6 d4 d5 e5 Bf5 Nf3 e6 Be2 c5 O-O Nc6 c3",
+  "e4 c6 d4 d5 exd5 cxd5 Bd3 Nc6 c3 Nf6 Bf4 Bg4",
 
-// === French: Winawer / Classical / Rubinstein / Advance / Exchange ===
-"e4 e6 d4 d5 Nc3 Bb4 e5 c5 a3 Bxc3+ bxc3 Ne7 Qg4 Kf8 h4 Qa5 Bd2",
-"e4 e6 d4 d5 Nc3 Nf6 Bg5 Be7 e5 Nfd7 h4 a6 Qg4 Kf8 O-O-O",
-"e4 e6 d4 d5 Nd2 dxe4 Nxe4 Nd7 Nf3 Ngf6 Bd3 Be7 O-O O-O",
-"e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Bd7 a3 a5 Bd3 Qb6 O-O",
-"e4 e6 d4 d5 exd5 exd5 Nf3 Nf6 Bd3 Be7 O-O O-O Re1 c5",
+  // --- Pirc/Modern ---
+  "e4 d6 d4 Nf6 Nc3 g6 Nf3 Bg7 Be2 O-O O-O a6 a4",
+  "e4 g6 d4 Bg7 Nc3 d6 Nf3 a6 a4 b6 Be2 Bb7 O-O",
 
+  // --- Scandinavian ---
+  "e4 d5 exd5 Qxd5 Nc3 Qa5 d4 c6 Nf3 Nf6 Bc4 Bf5 O-O e6",
 
-// === Caro-Kann: Advance / Classical / Panov / Two Knights ===
-"e4 c6 d4 d5 e5 Bf5 Nf3 e6 Be2 c5 O-O Nc6 c3 a6 Be3",
-"e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5 Ng3 Bg6 h4 h6 Nf3 Nd7 e6",
-"e4 c6 d4 d5 exd5 cxd5 Bd3 Nc6 c3 Nf6 Bf4 Bg4 Qb3 Qd7",
-"e4 c6 d4 d5 Nf3 dxe4 Ne5 Nd7 Bf4 Ngf6 Be2 e6 O-O Be7",
+  // --- Alekhine ---
+  "e4 Nf6 e5 Nd5 d4 d6 Nf3 Bg4 Be2 e6 O-O Be7 c4",
 
+  // --- d4: Queen's Gambit / Indian Defenses ---
+  "d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O Nf3 h6 Bh4 b6",
+  "d4 d5 c4 c6 Nf3 Nf6 Nc3 e6 e3 Nbd7 Bd3 dxc4 Bxc4 b5",
+  "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6",
+  "d4 Nf6 c4 g6 Nc3 d5 Nf3 Bg7 Qb3 dxc4 Qxc4 O-O e4",
+  "d4 Nf6 c4 e6 Nc3 Bb4 e3 O-O Bd3 d5 Nf3 c5 O-O",
+  "d4 Nf6 c4 e6 Nc3 d5 Nf3 Be7 Bf4 O-O e3 Nbd8 Rc1",
+  "d4 e6 c4 f5 Nc3 Nf6 Nf3 b6 g3 Bb7 Bg2 Be7 O-O O-O",
+  "d4 Nf6 c4 c5 d5 e6 Nc3 exd5 cxd5 d6 e4 g6 Nf3 Bg7",
+  "d4 Nf6 c4 c5 d5 b5 cxb5 a6 b6 e6 Nc3 exd5 Nxd5 Bb7",
 
-// === Pirc / Modern / Philidor ===
-"e4 d6 d4 Nf6 Nc3 g6 Nf3 Bg7 Be2 O-O O-O a6 a4 Nc6 Be3",
-"e4 g6 d4 Bg7 Nc3 d6 f4 Nf6 Nf3 O-O Bd3 Na6 O-O c5 d5",
-"e4 d6 d4 Nf6 Nc3 e5 Nf3 Nbd7 Bc4 Be7 O-O O-O a4 c6 Re1",
-"e4 e5 Nf3 d6 d4 Nf6 Nc3 Nbd7 Bc4 Be7 O-O O-O a4 c6 Re1 Qc7",
+  // --- Catalan ---
+  "d4 Nf6 c4 e6 g3 d5 Bg2 Be7 Nf3 O-O O-O dxc4 Qc2 a6",
 
+  // --- English / Reti ---
+  "c4 e5 Nc3 Nf6 Nf3 Nc6 g3 d5 cxd5 Nxd5 Bg2 Be7 O-O",
+  "c4 c5 Nc3 Nc6 g3 g6 Bg2 Bg7 e3 e6 Nge2 Nge7 d4",
+  "c4 Nf6 g3 g6 Bg2 Bg7 Nc3 O-O d3 d6 e4 c5 Nge2 Nc6",
+  "Nf3 d5 g3 Nf6 Bg2 e6 O-O Be7 d3 O-O Nbd2 c5 e4 Nc6",
 
-// === Scandinavian / Alekhine / Nimzowitsch Defence ===
-"e4 d5 exd5 Qxd5 Nc3 Qa5 d4 c6 Nf3 Nf6 Bc4 Bf5 O-O e6 Be3",
-"e4 d5 exd5 Nf6 d4 Nxd5 c4 Nb6 Nc3 g6 Nf3 Bg7 Be2 O-O O-O",
-"e4 Nf6 e5 Nd5 d4 d6 Nf3 Bg4 Be2 e6 O-O Be7 c4 Nb6 Nc3 O-O",
+  // --- London / Colle / Tromp ---
+  "d4 d5 Nf3 Nf6 Bf4 e6 e3 c5 c3 Nc6 Nbd2 Bd6 Bg3 O-O",
+  "d4 Nf6 Nf3 g6 Bf4 Bg7 e3 O-O h3 d6 Be2 Nbd7 O-O",
+  "d4 Nf6 Bg5 e6 e4 h6 Bxf6 Qxf6 Nf3 d6 Nc3 g6 Be2 Bg7",
+
+  // --- Misc sidelines to widen book ---
+  "e4 e5 d4 exd4 Qxd4 Nc6 Qe3 Nf6 Nc3 Bb4 Bd2 O-O O-O-O",
+  "e4 c5 b4 cxb4 a3 d5 exd5 Qxd5 Nf3 e5 c4 Qe6 Be2",
+  "d4 f5 c4 Nf6 Nc3 e6 Nf3 Bb4 g3 O-O Bg2 d6 O-O Qe8",
+  "c4 e6 Nc3 d5 d4 Nf6 Nf3 Be7 Bg5 O-O e3 h6 Bh4 b6",
+  "Nf3 d5 d4 c6 c4 Nf6 Nc3 e6 e3 Nbd7 Qc2 Bd6 Bd3 O-O",
 ];
 
 // Pawn
@@ -310,17 +304,6 @@ const pst_king = [
   [ 20, 30, 10,  0,  0, 10, 30, 20]
 ];
 
-// King (endgame)
-const pst_king_endgame = [
-  [-50,-40,-30,-20,-20,-30,-40,-50],
-  [-30,-20,-10,  0,  0,-10,-20,-30],
-  [-30,-10, 20, 30, 30, 20,-10,-30],
-  [-30,-10, 30, 40, 40, 30,-10,-30],
-  [-30,-10, 30, 40, 40, 30,-10,-30],
-  [-30,-10, 20, 30, 30, 20,-10,-30],
-  [-30,-30,  0,  0,  0,  0,-30,-30],
-  [-50,-30,-30,-30,-30,-30,-30,-50]
-];
 
 // Build a map: key = UCI history string (e2e4 e7e5 ...), value = array of next UCI moves from those lines
 function buildOpeningBook(lines) {
@@ -364,26 +347,6 @@ function applyUci(uci) {
   const promotion = uci.length === 5 ? uci[4] : undefined;
   return chess.move({ from, to, promotion });
 }
-
-function getPST(square, row, col) {
-  const type = square.type;
-  const color = square.color;
-  const endgame = isEndgame(chess);
-
-  let table;
-  switch (type) {
-    case 'p': table = pst_pawn; break;
-    case 'n': table = pst_knight; break;
-    case 'b': table = pst_bishop; break;
-    case 'r': table = pst_rook; break;
-    case 'q': table = pst_queen; break;
-    case 'k': table = endgame ? pst_king_endgame : pst_king; break;
-  }
-
-  // Flip for black
-  return color === 'w' ? table[row][col] : table[7 - row][col];
-}
-
 
 // ============================================================================
 //                               SEARCH (minimax)
@@ -737,24 +700,6 @@ function resign() {
   showGameOverPopup('Game Resigned', 'You resigned. Bot wins!');
 }
 
-function isEndgame(game) {
-  let material = 0;
-  const board = game.board();
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const square = board[row][col];
-      if (square) {
-        if (square.type !== 'p' && square.type !== 'k') {
-          material += getPieceValue(square.type);
-        }
-      }
-    }
-  }
-  // Arbitrary cutoff: if material is below ~1400 (a rook + minor), call it endgame
-  return material <= 1400;
-}
-
-
 // --- Click input ---
 board.addEventListener('click', e => {
   if (gameOverPopup.style.display === 'flex') return; // Don't allow moves when popup is open
@@ -904,6 +849,30 @@ console.log('Initial setup - playerColor:', playerColor, 'AI.side:', AI.side, 'c
 const boardColor = localStorage.getItem('boardColor') || '#4800ff';
 document.documentElement.style.setProperty('--black-square-color', boardColor);
 
+// Check for custom position from setup
+const customPosition = localStorage.getItem('customPosition');
+if (customPosition) {
+  try {
+    const position = JSON.parse(customPosition);
+    chess.load(position.fen);
+    
+    // Set turn
+    if (position.turn) {
+      // Override the turn from FEN if specified
+      const fenParts = position.fen.split(' ');
+      fenParts[1] = position.turn;
+      chess.load(fenParts.join(' '));
+    }
+    
+    // Clear the custom position from storage
+    localStorage.removeItem('customPosition');
+    
+    console.log('Loaded custom position:', position.fen);
+  } catch (e) {
+    console.error('Error loading custom position:', e);
+  }
+}
+
 // Initial render
 renderBoard();
 updateGameStatus();
@@ -915,4 +884,3 @@ if (playerColor === 'black' && chess.turn() === 'w') {
 } else if (playerColor === 'white' && chess.turn() === 'b') {
   console.log('Player chose white, AI should move first but turn is black - this might be an issue');
 }
-
