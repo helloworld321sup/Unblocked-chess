@@ -398,7 +398,7 @@ const MAX_TABLE_SIZE = 100000; // Limit memory usage
 
 // Time management
 let searchStartTime = 0;
-const MAX_SEARCH_TIME = 4000; // 4 seconds max per move for better quality
+const MAX_SEARCH_TIME = 2500; // 2.5 seconds max per move - balanced
 
 function evaluateBoard(game) {
   let total = 0;
@@ -424,66 +424,46 @@ function evaluateBoard(game) {
   return total;
 }
 
-// Advanced evaluation features for hard difficulty (optimized for speed)
+// Advanced evaluation features for hard difficulty (simplified to prevent bad moves)
 function getAdvancedEvaluation(piece, row, col, game) {
   let bonus = 0;
   
-  // Center control bonus (fast lookup)
+  // Center control bonus (conservative)
   if ((row >= 3 && row <= 4) && (col >= 3 && col <= 4)) {
-    bonus += piece.type === 'p' ? 15 : 8; // Increased center control importance
+    bonus += piece.type === 'p' ? 10 : 5;
   }
   
-  // Mobility for all pieces (but calculated efficiently)
-  const square = String.fromCharCode(97 + col) + (8 - row);
-  const moves = game.moves({ square, verbose: true });
-  
-  // Different mobility bonuses for different pieces
-  switch (piece.type) {
-    case 'q': bonus += moves.length * 3; break; // Queen mobility very important
-    case 'r': bonus += moves.length * 2; break; // Rook mobility important
-    case 'b': bonus += moves.length * 2; break; // Bishop mobility important
-    case 'n': bonus += moves.length * 1.5; break; // Knight mobility less important
-    case 'p': bonus += moves.length * 0.5; break; // Pawn mobility less important
+  // Simple mobility for major pieces only
+  if (piece.type === 'q' || piece.type === 'r' || piece.type === 'b') {
+    const square = String.fromCharCode(97 + col) + (8 - row);
+    const moves = game.moves({ square, verbose: true });
+    bonus += moves.length * 1; // Reduced mobility bonus
   }
   
-  // King safety (only for king)
+  // King safety (conservative)
   if (piece.type === 'k') {
+    const square = String.fromCharCode(97 + col) + (8 - row);
     const kingMoves = game.moves({ square, verbose: true });
-    bonus -= kingMoves.length * 4; // Increased king safety penalty
+    bonus -= kingMoves.length * 2; // Reduced king safety penalty
   }
   
-  // Pawn structure bonuses
+  // Simple pawn structure
   if (piece.type === 'p') {
     const file = String.fromCharCode(97 + col);
     const rank = 8 - row;
     
-    // Connected pawns
+    // Connected pawns (simplified)
     for (let offset = -1; offset <= 1; offset += 2) {
       const adjFile = String.fromCharCode(97 + col + offset);
       if (adjFile >= 'a' && adjFile <= 'h') {
         const adjSquare = adjFile + rank;
         const adjPiece = game.get(adjSquare);
         if (adjPiece && adjPiece.type === 'p' && adjPiece.color === piece.color) {
-          bonus += 20; // Increased connected pawn bonus
+          bonus += 10; // Reduced connected pawn bonus
           break;
         }
       }
     }
-    
-    // Passed pawn bonus
-    let isPassed = true;
-    const enemyColor = piece.color === 'w' ? 'b' : 'w';
-    for (let r = row + (piece.color === 'w' ? 1 : -1); r >= 0 && r < 8; r += (piece.color === 'w' ? 1 : -1)) {
-      for (let c = Math.max(0, col - 1); c <= Math.min(7, col + 1); c++) {
-        const checkSquare = game.get(String.fromCharCode(97 + c) + (8 - r));
-        if (checkSquare && checkSquare.type === 'p' && checkSquare.color === enemyColor) {
-          isPassed = false;
-          break;
-        }
-      }
-      if (!isPassed) break;
-    }
-    if (isPassed) bonus += 30; // Passed pawn bonus
   }
   
   return bonus;
@@ -613,8 +593,11 @@ function storeTransposition(key, score, depth, alpha, beta) {
   transpositionTable.set(key, { score, depth, type });
 }
 
-// Quiescence search for better tactical play
-function quiescenceSearch(alpha, beta) {
+// Quiescence search for better tactical play (fixed)
+function quiescenceSearch(alpha, beta, depth = 0) {
+  // Prevent infinite recursion
+  if (depth > 6) return evaluateBoard(chess);
+  
   // Time check
   if (Date.now() - searchStartTime > MAX_SEARCH_TIME) {
     return evaluateBoard(chess);
@@ -624,9 +607,9 @@ function quiescenceSearch(alpha, beta) {
   if (standPat >= beta) return beta;
   if (standPat > alpha) alpha = standPat;
   
-  // Only look at captures and checks
+  // Only look at captures (remove checks to prevent infinite loops)
   const moves = chess.moves({ verbose: true }).filter(move => 
-    move.captured || chess.in_check()
+    move.captured && PIECE_VALUES[move.captured] >= PIECE_VALUES[move.piece] - 50
   );
   
   // Order captures by value
@@ -638,7 +621,7 @@ function quiescenceSearch(alpha, beta) {
   
   for (const move of moves) {
     chess.move(move);
-    const score = -quiescenceSearch(-beta, -alpha);
+    const score = -quiescenceSearch(-beta, -alpha, depth + 1);
     chess.undo();
     
     if (score >= beta) return beta;
