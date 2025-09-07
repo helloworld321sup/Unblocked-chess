@@ -6,6 +6,15 @@ let moveCount = 1;
 let undoneMoves = [];
 let boardFlipped = false;
 
+// Apply board color from settings
+function applyBoardColor() {
+  const boardColor = localStorage.getItem('boardColor') || '#d67959';
+  document.documentElement.style.setProperty('--black-square-color', boardColor);
+}
+
+// Apply board color on page load
+applyBoardColor();
+
 // --- UI assets ---
 // Load settings from localStorage
 function getPieceImages() {
@@ -884,3 +893,4 @@ if (playerColor === 'black' && chess.turn() === 'w') {
 } else if (playerColor === 'white' && chess.turn() === 'b') {
   console.log('Player chose white, AI should move first but turn is black - this might be an issue');
 }
+
