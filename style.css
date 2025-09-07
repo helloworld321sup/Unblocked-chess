@@ -402,8 +402,8 @@ body {
   }
   
   .preview-piece {
-    width: 400px;
-    height: 400px;
+    width: 90px !important;
+    height: 90px !important;
     object-fit: contain;
   }
   
