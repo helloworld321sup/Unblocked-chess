@@ -398,7 +398,7 @@ const MAX_TABLE_SIZE = 100000; // Limit memory usage
 
 // Time management
 let searchStartTime = 0;
-const MAX_SEARCH_TIME = 2000; // 2 seconds max per move
+const MAX_SEARCH_TIME = 4000; // 4 seconds max per move for better quality
 
 function evaluateBoard(game) {
   let total = 0;
@@ -430,40 +430,60 @@ function getAdvancedEvaluation(piece, row, col, game) {
   
   // Center control bonus (fast lookup)
   if ((row >= 3 && row <= 4) && (col >= 3 && col <= 4)) {
-    bonus += piece.type === 'p' ? 10 : 5;
+    bonus += piece.type === 'p' ? 15 : 8; // Increased center control importance
   }
   
-  // Only calculate mobility for major pieces (faster)
-  if (piece.type === 'q' || piece.type === 'r' || piece.type === 'b' || piece.type === 'n') {
-    const square = String.fromCharCode(97 + col) + (8 - row);
-    const moves = game.moves({ square, verbose: true });
-    bonus += moves.length * 2;
+  // Mobility for all pieces (but calculated efficiently)
+  const square = String.fromCharCode(97 + col) + (8 - row);
+  const moves = game.moves({ square, verbose: true });
+  
+  // Different mobility bonuses for different pieces
+  switch (piece.type) {
+    case 'q': bonus += moves.length * 3; break; // Queen mobility very important
+    case 'r': bonus += moves.length * 2; break; // Rook mobility important
+    case 'b': bonus += moves.length * 2; break; // Bishop mobility important
+    case 'n': bonus += moves.length * 1.5; break; // Knight mobility less important
+    case 'p': bonus += moves.length * 0.5; break; // Pawn mobility less important
   }
   
   // King safety (only for king)
   if (piece.type === 'k') {
-    const square = String.fromCharCode(97 + col) + (8 - row);
     const kingMoves = game.moves({ square, verbose: true });
-    bonus -= kingMoves.length * 3;
+    bonus -= kingMoves.length * 4; // Increased king safety penalty
   }
   
-  // Simplified pawn structure (only check adjacent files)
+  // Pawn structure bonuses
   if (piece.type === 'p') {
     const file = String.fromCharCode(97 + col);
     const rank = 8 - row;
     
-    // Check left and right files only
+    // Connected pawns
     for (let offset = -1; offset <= 1; offset += 2) {
       const adjFile = String.fromCharCode(97 + col + offset);
       if (adjFile >= 'a' && adjFile <= 'h') {
         const adjSquare = adjFile + rank;
         const adjPiece = game.get(adjSquare);
         if (adjPiece && adjPiece.type === 'p' && adjPiece.color === piece.color) {
-          bonus += 15;
-          break; // Only count once
+          bonus += 20; // Increased connected pawn bonus
+          break;
         }
       }
     }
+    
+    // Passed pawn bonus
+    let isPassed = true;
+    const enemyColor = piece.color === 'w' ? 'b' : 'w';
+    for (let r = row + (piece.color === 'w' ? 1 : -1); r >= 0 && r < 8; r += (piece.color === 'w' ? 1 : -1)) {
+      for (let c = Math.max(0, col - 1); c <= Math.min(7, col + 1); c++) {
+        const checkSquare = game.get(String.fromCharCode(97 + c) + (8 - r));
+        if (checkSquare && checkSquare.type === 'p' && checkSquare.color === enemyColor) {
+          isPassed = false;
+          break;
+        }
+      }
+      if (!isPassed) break;
+    }
+    if (isPassed) bonus += 30; // Passed pawn bonus
   }
   
   return bonus;
@@ -537,7 +557,7 @@ function search(depth, alpha, beta) {
     }
   }
   
-  if (depth === 0) return { score: evaluateBoard(chess) };
+  if (depth === 0) return { score: quiescenceSearch(alpha, beta) };
   if (chess.in_checkmate()) return { score: chess.turn() === 'w' ? -999999 : 999999 };
   if (chess.in_stalemate() || chess.in_draw()) return { score: 0 };
 
@@ -593,6 +613,41 @@ function storeTransposition(key, score, depth, alpha, beta) {
   transpositionTable.set(key, { score, depth, type });
 }
 
+// Quiescence search for better tactical play
+function quiescenceSearch(alpha, beta) {
+  // Time check
+  if (Date.now() - searchStartTime > MAX_SEARCH_TIME) {
+    return evaluateBoard(chess);
+  }
+  
+  const standPat = evaluateBoard(chess);
+  if (standPat >= beta) return beta;
+  if (standPat > alpha) alpha = standPat;
+  
+  // Only look at captures and checks
+  const moves = chess.moves({ verbose: true }).filter(move => 
+    move.captured || chess.in_check()
+  );
+  
+  // Order captures by value
+  moves.sort((a, b) => {
+    const aVal = a.captured ? PIECE_VALUES[a.captured] - PIECE_VALUES[a.piece] : 0;
+    const bVal = b.captured ? PIECE_VALUES[b.captured] - PIECE_VALUES[b.piece] : 0;
+    return bVal - aVal;
+  });
+  
+  for (const move of moves) {
+    chess.move(move);
+    const score = -quiescenceSearch(-beta, -alpha);
+    chess.undo();
+    
+    if (score >= beta) return beta;
+    if (score > alpha) alpha = score;
+  }
+  
+  return alpha;
+}
+
 function findBestMove() {
   searchStartTime = Date.now();
   
@@ -602,22 +657,34 @@ function findBestMove() {
   // Iterative deepening for better move quality within time limit
   let bestMove = null;
   let bestScore = -Infinity;
+  let actualDepth = 0;
   
   // Start with depth 1 and work up to AI.depth
   for (let depth = 1; depth <= AI.depth; depth++) {
     const result = search(depth, -Infinity, Infinity);
     
     // If we have time, use this result
-    if (Date.now() - searchStartTime < MAX_SEARCH_TIME * 0.8) {
+    if (Date.now() - searchStartTime < MAX_SEARCH_TIME * 0.9) {
       bestMove = result.move;
       bestScore = result.score;
+      actualDepth = depth;
     } else {
       // Time's up, use previous result
       break;
     }
   }
   
-  console.log(`AI search completed in ${Date.now() - searchStartTime}ms, depth: ${AI.depth}`);
+  // If we still have time and no good move, try one more depth
+  if (Date.now() - searchStartTime < MAX_SEARCH_TIME * 0.7 && actualDepth < AI.depth) {
+    const result = search(actualDepth + 1, -Infinity, Infinity);
+    if (result.move) {
+      bestMove = result.move;
+      bestScore = result.score;
+      actualDepth++;
+    }
+  }
+  
+  console.log(`AI search completed in ${Date.now() - searchStartTime}ms, depth: ${actualDepth}/${AI.depth}`);
   return bestMove || null;
 }
 
