@@ -475,7 +475,48 @@ body {
   }
   
   /* Responsive Design */
+  
+  /* Large tablets and small desktops */
+  @media (max-width: 1024px) {
+    .home-container h1 {
+      font-size: 2.5rem;
+    }
+    
+    .game-options {
+      gap: 1.5rem;
+    }
+    
+    .option-card {
+      min-width: 220px;
+      padding: 1.5rem;
+    }
+    
+    .square {
+      width: 70px;
+      height: 70px;
+    }
+    
+    .square img {
+      width: 67px;
+      height: 67px;
+    }
+    
+    .color-options {
+      gap: 3rem;
+    }
+    
+    .color-card {
+      min-width: 260px;
+      max-width: 300px;
+    }
+  }
+  
+  /* Tablets */
   @media (max-width: 768px) {
+    body {
+      overflow-x: hidden;
+    }
+    
     .home-container h1 {
       font-size: 2rem;
     }
@@ -483,10 +524,12 @@ body {
     .game-options {
       flex-direction: column;
       align-items: center;
+      gap: 1rem;
     }
     
     .option-card {
       min-width: 200px;
+      padding: 1.5rem;
     }
     
     .square {
@@ -511,6 +554,7 @@ body {
     
     .popup-content {
       padding: 1.5rem;
+      margin: 1rem;
     }
     
     .popup-buttons {
@@ -521,6 +565,10 @@ body {
     .popup-btn {
       width: 100%;
       max-width: 200px;
+    }
+    
+    .color-selection-container {
+      padding: 1rem;
     }
     
     .color-selection-container h1 {
@@ -536,6 +584,203 @@ body {
     .color-card {
       min-width: 280px;
       max-width: 320px;
+    }
+    
+    .preview-piece {
+      width: 80px !important;
+      height: 80px !important;
+    }
+    
+    /* Setup position mobile */
+    .setup-main {
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .setup-controls {
+      width: 100%;
+      max-width: 400px;
+    }
+    
+    .piece-selector {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    
+    .piece-btn {
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+  }
+  
+  /* Mobile phones */
+  @media (max-width: 480px) {
+    .home-container h1 {
+      font-size: 1.8rem;
+    }
+    
+    .option-card {
+      min-width: 180px;
+      padding: 1rem;
+    }
+    
+    .option-card h2 {
+      font-size: 1.2rem;
+    }
+    
+    .option-card p {
+      font-size: 0.9rem;
+    }
+    
+    .play-btn {
+      padding: 10px 20px;
+      font-size: 1rem;
+    }
+    
+    .square {
+      width: 50px;
+      height: 50px;
+    }
+    
+    .square img {
+      width: 47px;
+      height: 47px;
+    }
+    
+    .controls button {
+      font-size: 35px;
+      padding: 6px 30px;
+    }
+    
+    #resign-button, #flip-button {
+      font-size: 25px;
+      padding: 10px 15px;
+    }
+    
+    .popup-content {
+      padding: 1rem;
+      margin: 0.5rem;
+    }
+    
+    .popup h2 {
+      font-size: 1.5rem;
+    }
+    
+    .color-selection-container {
+      padding: 0.5rem;
+    }
+    
+    .color-selection-container h1 {
+      font-size: 1.8rem;
+    }
+    
+    .color-selection-container p {
+      font-size: 1rem;
+    }
+    
+    .color-card {
+      min-width: 250px;
+      max-width: 280px;
+      padding: 1.5rem;
+    }
+    
+    .color-card h2 {
+      font-size: 1.3rem;
+    }
+    
+    .color-card p {
+      font-size: 0.9rem;
+    }
+    
+    .preview-piece {
+      width: 70px !important;
+      height: 70px !important;
+    }
+    
+    .color-btn {
+      padding: 10px 20px;
+      font-size: 1rem;
+    }
+    
+    .back-button {
+      padding: 10px 20px;
+      font-size: 1rem;
+    }
+    
+    /* Setup position mobile */
+    .setup-header h1 {
+      font-size: 2rem;
+    }
+    
+    .setup-header p {
+      font-size: 1rem;
+    }
+    
+    .piece-selector {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    
+    .piece-btn {
+      padding: 6px;
+      font-size: 0.8rem;
+    }
+    
+    .clear-btn {
+      padding: 8px 12px;
+      font-size: 0.9rem;
+    }
+    
+    .settings-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    
+    .setup-actions {
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .action-btn {
+      padding: 10px 20px;
+      font-size: 1rem;
+    }
+  }
+  
+  /* Very small screens */
+  @media (max-width: 360px) {
+    .home-container h1 {
+      font-size: 1.5rem;
+    }
+    
+    .option-card {
+      min-width: 160px;
+      padding: 0.8rem;
+    }
+    
+    .square {
+      width: 45px;
+      height: 45px;
+    }
+    
+    .square img {
+      width: 42px;
+      height: 42px;
+    }
+    
+    .color-card {
+      min-width: 220px;
+      max-width: 250px;
+      padding: 1rem;
+    }
+    
+    .preview-piece {
+      width: 60px !important;
+      height: 60px !important;
+    }
+    
+    .piece-selector {
+      grid-template-columns: repeat(2, 1fr);
     }
   }
   
