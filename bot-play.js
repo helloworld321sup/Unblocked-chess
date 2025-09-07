@@ -475,11 +475,13 @@ function evaluateBoard(game) {
             }
           }
           
-          // Pawn structure bonuses
+          // Pawn structure evaluation
           if (square.type === 'p') {
-            // Connected pawns
             const file = String.fromCharCode(97 + col);
             const rank = 8 - row;
+            
+            // Connected pawns bonus
+            let hasConnectedPawn = false;
             for (let offset = -1; offset <= 1; offset += 2) {
               const adjFile = String.fromCharCode(97 + col + offset);
               if (adjFile >= 'a' && adjFile <= 'h') {
@@ -487,9 +489,25 @@ function evaluateBoard(game) {
                 const adjPiece = game.get(adjSquare);
                 if (adjPiece && adjPiece.type === 'p' && adjPiece.color === square.color) {
                   pstBonus += 12; // Connected pawn bonus
+                  hasConnectedPawn = true;
                   break;
                 }
               }
+            }
+            
+            // Isolated pawn penalty
+            if (!hasConnectedPawn && isIsolatedPawn(square, row, col, game)) {
+              pstBonus -= 20; // Isolated pawn penalty
+            }
+            
+            // Doubled pawn penalty
+            if (isDoubledPawn(square, row, col, game)) {
+              pstBonus -= 15; // Doubled pawn penalty
+            }
+            
+            // Backward pawn penalty
+            if (isBackwardPawn(square, row, col, game)) {
+              pstBonus -= 10; // Backward pawn penalty
             }
             
             // Passed pawn bonus
@@ -548,11 +566,16 @@ function getPST(piece, row, col) {
 function orderMoves(ch, depth) {
   const moves = ch.moves({ verbose: true });
   return moves.sort((a, b) => {
-    // 0. SAFETY FIRST: Avoid moves that hang pieces
+    // 0. SAFETY FIRST: Avoid moves that hang pieces or create pawn weaknesses
     const aHangsPiece = wouldMoveHangPiece(ch, a);
     const bHangsPiece = wouldMoveHangPiece(ch, b);
+    const aCreatesWeakness = wouldMoveCreatePawnWeakness(ch, a);
+    const bCreatesWeakness = wouldMoveCreatePawnWeakness(ch, b);
+    
     if (aHangsPiece && !bHangsPiece) return 1; // b is safer
     if (!aHangsPiece && bHangsPiece) return -1; // a is safer
+    if (aCreatesWeakness && !bCreatesWeakness) return 1; // b is better
+    if (!aCreatesWeakness && bCreatesWeakness) return -1; // a is better
     
     // 1. Captures using MVV-LVA (Most Valuable Victim - Least Valuable Attacker)
     if (a.captured && b.captured) {
@@ -666,6 +689,68 @@ function isPassedPawn(pawn, row, col, game) {
   return true;
 }
 
+function isIsolatedPawn(pawn, row, col, game) {
+  const file = String.fromCharCode(97 + col);
+  const enemyColor = pawn.color === 'w' ? 'b' : 'w';
+  
+  // Check if there are any friendly pawns on adjacent files
+  for (let offset = -1; offset <= 1; offset += 2) {
+    const adjFile = String.fromCharCode(97 + col + offset);
+    if (adjFile >= 'a' && adjFile <= 'h') {
+      // Check all ranks for friendly pawns on this file
+      for (let r = 0; r < 8; r++) {
+        const square = game.get(adjFile + (8 - r));
+        if (square && square.type === 'p' && square.color === pawn.color) {
+          return false; // Found a friendly pawn on adjacent file
+        }
+      }
+    }
+  }
+  
+  return true; // No friendly pawns on adjacent files
+}
+
+function isDoubledPawn(pawn, row, col, game) {
+  const file = String.fromCharCode(97 + col);
+  
+  // Check if there are other friendly pawns on the same file
+  for (let r = 0; r < 8; r++) {
+    if (r === row) continue; // Skip current pawn
+    const square = game.get(file + (8 - r));
+    if (square && square.type === 'p' && square.color === pawn.color) {
+      return true; // Found another pawn on same file
+    }
+  }
+  
+  return false;
+}
+
+function isBackwardPawn(pawn, row, col, game) {
+  const file = String.fromCharCode(97 + col);
+  const enemyColor = pawn.color === 'w' ? 'b' : 'w';
+  const direction = pawn.color === 'w' ? 1 : -1;
+  
+  // Check if pawn can advance without being blocked by enemy pawns
+  for (let r = row + direction; r >= 0 && r < 8; r += direction) {
+    // Check same file
+    const sameFile = game.get(file + (8 - r));
+    if (sameFile && sameFile.type === 'p' && sameFile.color === enemyColor) {
+      return true; // Blocked by enemy pawn
+    }
+    
+    // Check adjacent files for enemy pawns that can attack
+    for (let c = Math.max(0, col - 1); c <= Math.min(7, col + 1); c++) {
+      if (c === col) continue;
+      const adjSquare = game.get(String.fromCharCode(97 + c) + (8 - r));
+      if (adjSquare && adjSquare.type === 'p' && adjSquare.color === enemyColor) {
+        return true; // Can be attacked by enemy pawn
+      }
+    }
+  }
+  
+  return false;
+}
+
 function isSquareAttacked(game, square, byColor) {
   // Check if any piece of the given color attacks the square
   const board = game.board();
@@ -725,6 +810,44 @@ function wouldMoveHangPiece(game, move) {
   
   // No pieces would be hanging
   return false;
+}
+
+function wouldMoveCreatePawnWeakness(game, move) {
+  // Check if a pawn move would create structural weaknesses
+  if (move.piece !== 'p') return false;
+  
+  const originalPiece = game.get(move.from);
+  if (!originalPiece) return false;
+  
+  // Make the move temporarily
+  const tempMove = game.move(move);
+  if (!tempMove) return false;
+  
+  // Check if this move creates pawn weaknesses
+  const board = game.board();
+  const pieceColor = originalPiece.color;
+  let createsWeakness = false;
+  
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = board[row][col];
+      if (square && square.type === 'p' && square.color === pieceColor) {
+        // Check if this pawn is now isolated, doubled, or backward
+        if (isIsolatedPawn(square, row, col, game) || 
+            isDoubledPawn(square, row, col, game) || 
+            isBackwardPawn(square, row, col, game)) {
+          createsWeakness = true;
+          break;
+        }
+      }
+    }
+    if (createsWeakness) break;
+  }
+  
+  // Undo the move
+  game.undo();
+  
+  return createsWeakness;
 }
 
 function findEnemyKing(game, friendlyColor) {
