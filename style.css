@@ -367,25 +367,20 @@ body {
   
   .color-options {
     display: flex;
-    gap: 4rem;
+    gap: 2rem;
     justify-content: center;
     flex-wrap: wrap;
     margin-bottom: 3rem;
-    align-items: stretch;
   }
   
   .color-card {
     background: linear-gradient(145deg, #2c2c2c, #3c3c3c);
     border-radius: 20px;
-    padding: 2.5rem;
+    padding: 2rem;
     box-shadow: 0 8px 16px rgba(0,0,0,0.3);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    min-width: 280px;
-    max-width: 320px;
+    min-width: 250px;
     border: 3px solid transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
   }
   
   .color-card:hover {
@@ -402,47 +397,39 @@ body {
   }
   
   .piece-preview {
-    margin-bottom: 1.5rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
+    margin-bottom: 1rem;
+    text-align: center;
   }
   
   .preview-piece {
-    width: 120px;
-    height: 120px;
+    width: 100px;
+    height: 100px;
     object-fit: contain;
-    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
   }
   
   .color-card h2 {
     color: #f0d9b5;
     margin-bottom: 0.5rem;
-    font-size: 1.6rem;
-    text-align: center;
+    font-size: 1.5rem;
   }
   
   .color-card p {
     color: #ccc;
-    margin-bottom: 2rem;
-    font-size: 1.1rem;
-    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
   }
   
   .color-btn {
     background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
     color: white;
     border: none;
-    padding: 14px 28px;
+    padding: 12px 24px;
     border-radius: 8px;
     font-size: 1.1rem;
-    font-weight: bold;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     width: 100%;
-    margin-top: auto;
   }
   
   .color-btn:hover {
@@ -535,18 +522,11 @@ body {
     .color-options {
       flex-direction: column;
       align-items: center;
-      gap: 2.5rem;
+      gap: 2rem;
     }
     
     .color-card {
-      min-width: 280px;
-      max-width: 320px;
-      padding: 2rem;
-    }
-    
-    .preview-piece {
-      width: 100px;
-      height: 100px;
+      min-width: 200px;
     }
   }
   
