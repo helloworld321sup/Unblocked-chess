@@ -341,6 +341,18 @@ const pst_king = [
   [ 20, 30, 10,  0,  0, 10, 30, 20]
 ];
 
+// King (endgame) - much more aggressive and centralized
+const pst_king_endgame = [
+  [-50,-40,-30,-20,-20,-30,-40,-50],
+  [-40,-20,-10,  0,  0,-10,-20,-40],
+  [-30,-10, 20, 30, 30, 20,-10,-30],
+  [-20,  0, 30, 40, 40, 30,  0,-20],
+  [-20,  0, 30, 40, 40, 30,  0,-20],
+  [-30,-10, 20, 30, 30, 20,-10,-30],
+  [-40,-20,-10,  0,  0,-10,-20,-40],
+  [-50,-40,-30,-20,-20,-30,-40,-50]
+];
+
 
 // Build a map: key = UCI history string (e2e4 e7e5 ...), value = array of next UCI moves from those lines
 function buildOpeningBook(lines) {
@@ -404,7 +416,7 @@ const historyTable = new Map(); // moveString -> score
 
 // Time management
 let searchStartTime = 0;
-const MAX_SEARCH_TIME = 2500; // 2.5 seconds max per move - balanced
+const MAX_SEARCH_TIME = 4000; // 4 seconds max per move for advanced search
 
 function evaluateBoard(game) {
   let total = 0;
@@ -421,14 +433,37 @@ function evaluateBoard(game) {
         if (AI.useAdvancedEval) {
           // Center control bonus
           if ((row >= 3 && row <= 4) && (col >= 3 && col <= 4)) {
-            pstBonus += square.type === 'p' ? 8 : 3;
+            pstBonus += square.type === 'p' ? 12 : 5;
           }
           
-          // King safety (penalty for exposed king)
+          // King evaluation
           if (square.type === 'k') {
             const squareName = String.fromCharCode(97 + col) + (8 - row);
             const kingMoves = game.moves({ square: squareName, verbose: true });
-            pstBonus -= kingMoves.length * 1.5; // Penalty for exposed king
+            
+            if (isInEndgame()) {
+              // King activity in endgame - much more aggressive
+              pstBonus += kingMoves.length * 5; // Higher bonus for king activity
+              
+              // King centralization bonus in endgame
+              const centerDistance = Math.abs(row - 3.5) + Math.abs(col - 3.5);
+              pstBonus += (7 - centerDistance) * 3; // Closer to center = better
+              
+              // King opposition (distance to enemy king)
+              const enemyKing = findEnemyKing(game, square.color);
+              if (enemyKing) {
+                const distance = Math.abs(row - enemyKing.row) + Math.abs(col - enemyKing.col);
+                pstBonus += (8 - distance) * 2; // Closer to enemy king = better
+                
+                // Opposition bonus (controlling squares in front of enemy king)
+                if (isInOpposition(square, enemyKing, game)) {
+                  pstBonus += 20; // Opposition bonus
+                }
+              }
+            } else {
+              // King safety in opening/midgame
+              pstBonus -= kingMoves.length * 2; // Penalty for exposed king
+            }
           }
           
           // Pawn structure bonuses
@@ -442,11 +477,23 @@ function evaluateBoard(game) {
                 const adjSquare = adjFile + rank;
                 const adjPiece = game.get(adjSquare);
                 if (adjPiece && adjPiece.type === 'p' && adjPiece.color === square.color) {
-                  pstBonus += 8; // Connected pawn bonus
+                  pstBonus += 12; // Connected pawn bonus
                   break;
                 }
               }
             }
+            
+            // Passed pawn bonus
+            if (isPassedPawn(square, row, col, game)) {
+              pstBonus += 25; // Passed pawn bonus
+            }
+          }
+          
+          // Piece mobility
+          if (square.type === 'q' || square.type === 'r' || square.type === 'b' || square.type === 'n') {
+            const squareName = String.fromCharCode(97 + col) + (8 - row);
+            const moves = game.moves({ square: squareName, verbose: true });
+            pstBonus += moves.length * 1.5; // Mobility bonus
           }
         }
         
@@ -482,7 +529,9 @@ function getPST(piece, row, col) {
     case 'b': return pst_bishop[r][c];
     case 'r': return pst_rook[r][c];
     case 'q': return pst_queen[r][c];
-    case 'k': return pst_king[r][c];
+    case 'k': 
+      // Use endgame king table if in endgame
+      return isInEndgame() ? pst_king_endgame[r][c] : pst_king[r][c];
   }
   return 0;
 }
@@ -559,6 +608,91 @@ function updateHistoryScore(move, depth) {
   historyTable.set(moveStr, currentScore + bonus);
 }
 
+function isInEndgame() {
+  const board = chess.board();
+  let pieceCount = 0;
+  let queenCount = 0;
+  
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = board[row][col];
+      if (square !== null) {
+        pieceCount++;
+        if (square.type === 'q') queenCount++;
+      }
+    }
+  }
+  
+  // Endgame if few pieces or no queens
+  return pieceCount <= 12 || queenCount === 0;
+}
+
+function isPassedPawn(pawn, row, col, game) {
+  const enemyColor = pawn.color === 'w' ? 'b' : 'w';
+  const direction = pawn.color === 'w' ? 1 : -1;
+  
+  // Check if pawn can advance without being blocked
+  for (let r = row + direction; r >= 0 && r < 8; r += direction) {
+    // Check same file
+    const sameFile = game.get(String.fromCharCode(97 + col) + (8 - r));
+    if (sameFile && sameFile.type === 'p' && sameFile.color === enemyColor) {
+      return false;
+    }
+    
+    // Check adjacent files
+    for (let c = Math.max(0, col - 1); c <= Math.min(7, col + 1); c++) {
+      if (c === col) continue;
+      const adjSquare = game.get(String.fromCharCode(97 + c) + (8 - r));
+      if (adjSquare && adjSquare.type === 'p' && adjSquare.color === enemyColor) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
+function findEnemyKing(game, friendlyColor) {
+  const board = game.board();
+  const enemyColor = friendlyColor === 'w' ? 'b' : 'w';
+  
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = board[row][col];
+      if (square && square.type === 'k' && square.color === enemyColor) {
+        return { row, col, color: enemyColor };
+      }
+    }
+  }
+  return null;
+}
+
+function isInOpposition(king, enemyKing, game) {
+  // Opposition: kings are on the same rank, file, or diagonal with no pieces between
+  const sameRank = king.row === enemyKing.row;
+  const sameFile = king.col === enemyKing.col;
+  const sameDiagonal = Math.abs(king.row - enemyKing.row) === Math.abs(king.col - enemyKing.col);
+  
+  if (!sameRank && !sameFile && !sameDiagonal) return false;
+  
+  // Check if there are pieces between the kings
+  const rowStep = sameRank ? 0 : (enemyKing.row > king.row ? 1 : -1);
+  const colStep = sameFile ? 0 : (enemyKing.col > king.col ? 1 : -1);
+  
+  let currentRow = king.row + rowStep;
+  let currentCol = king.col + colStep;
+  
+  while (currentRow !== enemyKing.row || currentCol !== enemyKing.col) {
+    const square = game.get(String.fromCharCode(97 + currentCol) + (8 - currentRow));
+    if (square) return false; // Piece between kings
+    
+    currentRow += rowStep;
+    currentCol += colStep;
+  }
+  
+  return true;
+}
+
 function search(depth, alpha, beta, isMaximizing) {
   // Time check
   if (Date.now() - searchStartTime > MAX_SEARCH_TIME) {
@@ -579,6 +713,20 @@ function search(depth, alpha, beta, isMaximizing) {
   if (depth === 0) return { score: quiescenceSearch(alpha, beta, 0) };
   if (chess.in_checkmate()) return { score: isMaximizing ? -999999 : 999999 };
   if (chess.in_stalemate() || chess.in_draw()) return { score: 0 };
+  
+  // Null move pruning - if we can't improve by passing, we're probably winning
+  if (depth >= 3 && !chess.in_check() && !isInEndgame()) {
+    // Make a null move (pass turn)
+    const nullMove = chess.move(null);
+    if (nullMove) {
+      const nullScore = -search(depth - 1 - 2, -beta, -beta + 1, !isMaximizing).score;
+      chess.undo();
+      
+      if (nullScore >= beta) {
+        return { score: beta }; // Beta cutoff
+      }
+    }
+  }
 
   let bestMove = null;
   let originalAlpha = alpha;
@@ -586,9 +734,21 @@ function search(depth, alpha, beta, isMaximizing) {
   
   if (isMaximizing) {
     let best = -Infinity;
-    for (const m of moves) {
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
       chess.move(m);
-      const { score } = search(depth - 1, alpha, beta, false);
+      
+      let score;
+      // Late Move Reduction - reduce depth for later moves
+      if (i > 3 && depth > 2 && !m.captured && !m.promotion && !chess.in_check()) {
+        score = search(depth - 2, alpha, alpha + 1, false).score;
+        if (score > alpha) {
+          score = search(depth - 1, alpha, beta, false).score;
+        }
+      } else {
+        score = search(depth - 1, alpha, beta, false).score;
+      }
+      
       chess.undo();
       if (score > best) { best = score; bestMove = m; }
       if (score > alpha) alpha = score;
@@ -607,9 +767,21 @@ function search(depth, alpha, beta, isMaximizing) {
     return { score: best, move: bestMove };
   } else {
     let best = Infinity;
-    for (const m of moves) {
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
       chess.move(m);
-      const { score } = search(depth - 1, alpha, beta, true);
+      
+      let score;
+      // Late Move Reduction - reduce depth for later moves
+      if (i > 3 && depth > 2 && !m.captured && !m.promotion && !chess.in_check()) {
+        score = search(depth - 2, beta - 1, beta, true).score;
+        if (score < beta) {
+          score = search(depth - 1, alpha, beta, true).score;
+        }
+      } else {
+        score = search(depth - 1, alpha, beta, true).score;
+      }
+      
       chess.undo();
       if (score < best) { best = score; bestMove = m; }
       if (score < beta) beta = score;
@@ -693,14 +865,32 @@ function findBestMove() {
   killerMoves.clear();
   historyTable.clear();
   
-  // Simple iterative deepening
+  // Aspiration windows for better search
   let bestMove = null;
   let actualDepth = 0;
+  let alpha = -Infinity;
+  let beta = Infinity;
   
   // Start with depth 1 and work up to AI.depth
   for (let depth = 1; depth <= AI.depth; depth++) {
     const isMaximizing = chess.turn() === 'w';
-    const result = search(depth, -Infinity, Infinity, isMaximizing);
+    
+    // Aspiration window - narrow search around previous best score
+    if (depth > 1) {
+      const window = 50; // Aspiration window size
+      alpha = Math.max(-Infinity, bestMove ? evaluateBoard(chess) - window : -Infinity);
+      beta = Math.min(Infinity, bestMove ? evaluateBoard(chess) + window : Infinity);
+    }
+    
+    let result;
+    try {
+      result = search(depth, alpha, beta, isMaximizing);
+    } catch (e) {
+      // Aspiration window failed, search with full window
+      alpha = -Infinity;
+      beta = Infinity;
+      result = search(depth, alpha, beta, isMaximizing);
+    }
     
     // If we have time, use this result
     if (Date.now() - searchStartTime < MAX_SEARCH_TIME * 0.8) {
