@@ -367,7 +367,7 @@ body {
   
   .color-options {
     display: flex;
-    gap: 2rem;
+    gap: 3rem;
     justify-content: center;
     flex-wrap: wrap;
     margin-bottom: 3rem;
@@ -402,8 +402,8 @@ body {
   }
   
   .preview-piece {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     object-fit: contain;
   }
   
