@@ -3,6 +3,15 @@ const board = document.querySelector('.chess-board');
 let selectedPiece = null;
 let boardFlipped = false;
 
+// Apply board color from settings
+function applyBoardColor() {
+  const boardColor = localStorage.getItem('boardColor') || '#d67959';
+  document.documentElement.style.setProperty('--black-square-color', boardColor);
+}
+
+// Apply board color on page load
+applyBoardColor();
+
 // Load settings from localStorage
 function getPieceImages() {
   const style = localStorage.getItem('pieceStyle') || 'classic';
