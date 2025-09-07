@@ -429,6 +429,16 @@ function evaluateBoard(game) {
         let value = getPieceValue(square.type);
         let pstBonus = getPST(square, row, col);
         
+        // CRITICAL: Check if piece is hanging (attacked and undefended)
+        const squareName = String.fromCharCode(97 + col) + (8 - row);
+        const isAttacked = isSquareAttacked(game, squareName, square.color === 'w' ? 'b' : 'w');
+        const isDefended = isSquareAttacked(game, squareName, square.color);
+        
+        if (isAttacked && !isDefended) {
+          // Piece is hanging - massive penalty
+          pstBonus -= value * 0.8; // 80% of piece value penalty
+        }
+        
         // Advanced evaluation for hard difficulty
         if (AI.useAdvancedEval) {
           // Center control bonus
@@ -438,7 +448,6 @@ function evaluateBoard(game) {
           
           // King evaluation
           if (square.type === 'k') {
-            const squareName = String.fromCharCode(97 + col) + (8 - row);
             const kingMoves = game.moves({ square: squareName, verbose: true });
             
             if (isInEndgame()) {
@@ -491,7 +500,6 @@ function evaluateBoard(game) {
           
           // Piece mobility
           if (square.type === 'q' || square.type === 'r' || square.type === 'b' || square.type === 'n') {
-            const squareName = String.fromCharCode(97 + col) + (8 - row);
             const moves = game.moves({ square: squareName, verbose: true });
             pstBonus += moves.length * 1.5; // Mobility bonus
           }
@@ -540,6 +548,12 @@ function getPST(piece, row, col) {
 function orderMoves(ch, depth) {
   const moves = ch.moves({ verbose: true });
   return moves.sort((a, b) => {
+    // 0. SAFETY FIRST: Avoid moves that hang pieces
+    const aHangsPiece = wouldMoveHangPiece(ch, a);
+    const bHangsPiece = wouldMoveHangPiece(ch, b);
+    if (aHangsPiece && !bHangsPiece) return 1; // b is safer
+    if (!aHangsPiece && bHangsPiece) return -1; // a is safer
+    
     // 1. Captures using MVV-LVA (Most Valuable Victim - Least Valuable Attacker)
     if (a.captured && b.captured) {
       const aMVV = PIECE_VALUES[a.captured];
@@ -650,6 +664,50 @@ function isPassedPawn(pawn, row, col, game) {
   }
   
   return true;
+}
+
+function isSquareAttacked(game, square, byColor) {
+  // Check if any piece of the given color attacks the square
+  const board = game.board();
+  
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = board[row][col];
+      if (piece && piece.color === byColor) {
+        const pieceSquare = String.fromCharCode(97 + col) + (8 - row);
+        const moves = game.moves({ square: pieceSquare, verbose: true });
+        
+        // Check if any move from this piece captures the target square
+        for (const move of moves) {
+          if (move.to === square) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  
+  return false;
+}
+
+function wouldMoveHangPiece(game, move) {
+  // Check if making this move would hang a piece
+  const originalPiece = game.get(move.from);
+  if (!originalPiece) return false;
+  
+  // Make the move temporarily
+  const tempMove = game.move(move);
+  if (!tempMove) return false;
+  
+  // Check if the moved piece is now hanging
+  const isAttacked = isSquareAttacked(game, move.to, originalPiece.color === 'w' ? 'b' : 'w');
+  const isDefended = isSquareAttacked(game, move.to, originalPiece.color);
+  
+  // Undo the move
+  game.undo();
+  
+  // Return true if piece would be hanging
+  return isAttacked && !isDefended;
 }
 
 function findEnemyKing(game, friendlyColor) {
