@@ -113,8 +113,18 @@ function flipBoard() {
 }
 
 function startGame() {
-  // Validate position
-  if (!chess.validate()) {
+  console.log('startGame called');
+  updateMessage('Starting game...', 'info');
+  
+  // Validate position - check if the position is legal
+  try {
+    const fen = chess.fen();
+    const testChess = new Chess(fen);
+    if (testChess.in_checkmate() || testChess.in_stalemate()) {
+      updateMessage('Position results in immediate checkmate or stalemate. Please adjust.', 'error');
+      return;
+    }
+  } catch (e) {
     updateMessage('Invalid position! Please check your setup.', 'error');
     return;
   }
@@ -218,7 +228,10 @@ board.addEventListener('click', (e) => {
 document.getElementById('clear-board-btn').addEventListener('click', clearBoard);
 document.getElementById('reset-position-btn').addEventListener('click', resetToStart);
 document.getElementById('flip-board-btn').addEventListener('click', flipBoard);
-document.getElementById('start-game-btn').addEventListener('click', startGame);
+document.getElementById('start-game-btn').addEventListener('click', () => {
+  console.log('Start game button clicked');
+  startGame();
+});
 document.getElementById('home-btn').addEventListener('click', () => {
   window.location.href = 'index.html';
 });
