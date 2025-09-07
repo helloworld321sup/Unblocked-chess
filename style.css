@@ -149,7 +149,7 @@ body {
   }
   
   .black {
-    background-color: #d67959;
+    background-color: var(--black-square-color, #d67959);
   }
   
   .square.selected {
