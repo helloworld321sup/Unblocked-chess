@@ -310,6 +310,17 @@ const pst_king = [
   [ 20, 30, 10,  0,  0, 10, 30, 20]
 ];
 
+// King (endgame)
+const pst_king_endgame = [
+  [-50,-40,-30,-20,-20,-30,-40,-50],
+  [-30,-20,-10,  0,  0,-10,-20,-30],
+  [-30,-10, 20, 30, 30, 20,-10,-30],
+  [-30,-10, 30, 40, 40, 30,-10,-30],
+  [-30,-10, 30, 40, 40, 30,-10,-30],
+  [-30,-10, 20, 30, 30, 20,-10,-30],
+  [-30,-30,  0,  0,  0,  0,-30,-30],
+  [-50,-30,-30,-30,-30,-30,-30,-50]
+];
 
 // Build a map: key = UCI history string (e2e4 e7e5 ...), value = array of next UCI moves from those lines
 function buildOpeningBook(lines) {
@@ -353,6 +364,26 @@ function applyUci(uci) {
   const promotion = uci.length === 5 ? uci[4] : undefined;
   return chess.move({ from, to, promotion });
 }
+
+function getPST(square, row, col) {
+  const type = square.type;
+  const color = square.color;
+  const endgame = isEndgame(chess);
+
+  let table;
+  switch (type) {
+    case 'p': table = pst_pawn; break;
+    case 'n': table = pst_knight; break;
+    case 'b': table = pst_bishop; break;
+    case 'r': table = pst_rook; break;
+    case 'q': table = pst_queen; break;
+    case 'k': table = endgame ? pst_king_endgame : pst_king; break;
+  }
+
+  // Flip for black
+  return color === 'w' ? table[row][col] : table[7 - row][col];
+}
+
 
 // ============================================================================
 //                               SEARCH (minimax)
@@ -705,6 +736,24 @@ function flipBoard() {
 function resign() {
   showGameOverPopup('Game Resigned', 'You resigned. Bot wins!');
 }
+
+function isEndgame(game) {
+  let material = 0;
+  const board = game.board();
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = board[row][col];
+      if (square) {
+        if (square.type !== 'p' && square.type !== 'k') {
+          material += getPieceValue(square.type);
+        }
+      }
+    }
+  }
+  // Arbitrary cutoff: if material is below ~1400 (a rook + minor), call it endgame
+  return material <= 1400;
+}
+
 
 // --- Click input ---
 board.addEventListener('click', e => {
