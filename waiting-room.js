@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Display room information
   function displayRoomInfo() {
-    roomTitle.textContent = `Room ${currentRoom.roomId.slice(-6)}`;
+    roomTitle.textContent = `Room ${currentRoom.id.slice(-6)}`;
     gamesCount.textContent = `${currentRoom.gamesCount} game${currentRoom.gamesCount > 1 ? 's' : ''}`;
     firstPlayer.textContent = currentRoom.firstPlayer;
     sideRotation.textContent = currentRoom.sideRotation;
@@ -94,8 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Check room status for updates
   function checkRoomStatus() {
-    const rooms = JSON.parse(localStorage.getItem('multiplayerRooms') || '[]');
-    const room = rooms.find(r => r.roomId === currentRoom.roomId);
+    const room = window.multiplayerServer.getRoom(currentRoom.id);
     
     if (!room) {
       // Room was deleted
@@ -167,17 +166,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Update room status to playing
-    const rooms = JSON.parse(localStorage.getItem('multiplayerRooms') || '[]');
-    const roomIndex = rooms.findIndex(r => r.roomId === currentRoom.roomId);
+    const updatedRoom = window.multiplayerServer.updateRoomStatus(currentRoom.id, 'playing');
     
-    if (roomIndex !== -1) {
-      rooms[roomIndex].status = 'playing';
-      rooms[roomIndex].currentGame = 1;
-      rooms[roomIndex].gameHistory = [];
-      localStorage.setItem('multiplayerRooms', JSON.stringify(rooms));
+    if (updatedRoom) {
+      updatedRoom.currentGame = 1;
+      updatedRoom.gameHistory = [];
       
       // Update current room
-      currentRoom = rooms[roomIndex];
+      currentRoom = updatedRoom;
       localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
       
       // Redirect to game
@@ -190,9 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (confirm('Are you sure you want to leave the room?')) {
       // Clean up room if host leaves
       if (playerRole === 'host') {
-        const rooms = JSON.parse(localStorage.getItem('multiplayerRooms') || '[]');
-        const updatedRooms = rooms.filter(r => r.roomId !== currentRoom.roomId);
-        localStorage.setItem('multiplayerRooms', JSON.stringify(updatedRooms));
+        window.multiplayerServer.removeRoom(currentRoom.id);
       }
       
       // Clear session data
