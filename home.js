@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const twoPlayerBtn = document.getElementById('two-player-btn');
   const botPlayBtn = document.getElementById('bot-play-btn');
   const setupPositionBtn = document.getElementById('setup-position-btn');
+  const multiplayerBtn = document.getElementById('multiplayer-btn');
   const settingsBtn = document.getElementById('settings-btn');
 
   twoPlayerBtn.addEventListener('click', function() {
@@ -15,6 +16,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
   setupPositionBtn.addEventListener('click', function() {
     window.location.href = 'setup-position.html';
+  });
+
+  multiplayerBtn.addEventListener('click', function() {
+    window.location.href = 'multiplayer.html';
   });
 
   settingsBtn.addEventListener('click', function() {
