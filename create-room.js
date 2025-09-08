@@ -49,26 +49,29 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
-    // Create room using server
-    const room = window.multiplayerServer.createRoom(roomSettings);
-    
-    // Store current room info for this session
-    localStorage.setItem('currentRoom', JSON.stringify(room));
-    localStorage.setItem('playerRole', 'host');
+    // Create room using Firebase server
+    window.multiplayerServer.createRoom(roomSettings).then((room) => {
+      // Store current room info for this session
+      localStorage.setItem('currentRoom', JSON.stringify(room));
+      localStorage.setItem('playerRole', 'host');
 
-    // Show room info for private rooms
-    if (room.roomType === 'private') {
-      displayCode.textContent = room.roomCode;
-      roomInfo.style.display = 'block';
-      
-      // Auto-redirect after 3 seconds
-      setTimeout(() => {
+      // Show room info for private rooms
+      if (room.roomType === 'private') {
+        displayCode.textContent = room.roomCode;
+        roomInfo.style.display = 'block';
+        
+        // Auto-redirect after 3 seconds
+        setTimeout(() => {
+          window.location.href = 'waiting-room.html';
+        }, 3000);
+      } else {
+        // Direct redirect for public rooms
         window.location.href = 'waiting-room.html';
-      }, 3000);
-    } else {
-      // Direct redirect for public rooms
-      window.location.href = 'waiting-room.html';
-    }
+      }
+    }).catch((error) => {
+      console.error('Error creating room:', error);
+      alert('Failed to create room. Please try again.');
+    });
   });
 
   // Back button
