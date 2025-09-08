@@ -7,6 +7,7 @@ let playerRole = null;
 let gameStartTime = null;
 let gameTimer = null;
 let moveCount = 0;
+let boardFlipped = false;
 
 // Apply board color from settings
 function applyBoardColor() {
@@ -85,6 +86,13 @@ function loadRoomData() {
   currentRoom = JSON.parse(roomData);
   playerRole = role;
 
+  // Check if room has both players
+  if (!currentRoom.guestId) {
+    alert('No opponent found. Redirecting to waiting room.');
+    window.location.href = 'waiting-room.html';
+    return;
+  }
+
   // Display room information
   displayRoomInfo();
   
@@ -106,17 +114,31 @@ function displayRoomInfo() {
 
 // Set up player information
 function setupPlayerInfo() {
-  const isHostWhite = (currentRoom.firstPlayer === 'host') || 
-                     (currentRoom.firstPlayer === 'random' && Math.random() < 0.5);
+  // Determine who plays white based on room settings
+  let isHostWhite = false;
+  
+  if (currentRoom.firstPlayer === 'host') {
+    isHostWhite = true;
+  } else if (currentRoom.firstPlayer === 'guest') {
+    isHostWhite = false;
+  } else if (currentRoom.firstPlayer === 'random') {
+    // Use a consistent random seed based on room ID
+    const seed = currentRoom.roomId.split('_')[1];
+    isHostWhite = parseInt(seed) % 2 === 0;
+  }
+  
+  // Store player colors
+  currentRoom.hostColor = isHostWhite ? 'w' : 'b';
+  currentRoom.guestColor = isHostWhite ? 'b' : 'w';
   
   if (playerRole === 'host') {
-    document.getElementById('white-player-name').textContent = 'You';
-    document.getElementById('black-player-name').textContent = 'Opponent';
+    document.getElementById('white-player-name').textContent = isHostWhite ? 'You' : 'Opponent';
+    document.getElementById('black-player-name').textContent = isHostWhite ? 'Opponent' : 'You';
     document.getElementById('white-player-role').textContent = 'Host';
     document.getElementById('black-player-role').textContent = 'Guest';
   } else {
-    document.getElementById('white-player-name').textContent = 'Opponent';
-    document.getElementById('black-player-name').textContent = 'You';
+    document.getElementById('white-player-name').textContent = isHostWhite ? 'Opponent' : 'You';
+    document.getElementById('black-player-name').textContent = isHostWhite ? 'You' : 'Opponent';
     document.getElementById('white-player-role').textContent = 'Host';
     document.getElementById('black-player-role').textContent = 'Guest';
   }
@@ -195,8 +217,8 @@ function handleSquareClick(event) {
   
   // Check if it's the player's turn
   const currentPlayer = chess.turn();
-  const isMyTurn = (currentPlayer === 'w' && playerRole === 'host') || 
-                   (currentPlayer === 'b' && playerRole === 'guest');
+  const myColor = playerRole === 'host' ? currentRoom.hostColor : currentRoom.guestColor;
+  const isMyTurn = currentPlayer === myColor;
   
   if (!isMyTurn) {
     return;
@@ -359,14 +381,41 @@ function setupEventListeners() {
 
 // Flip board
 function flipBoard() {
-  // This would flip the board view
-  console.log('Flip board');
+  boardFlipped = !boardFlipped;
+  
+  // Rotate the board 180 degrees
+  if (boardFlipped) {
+    board.style.transform = 'rotate(180deg)';
+  } else {
+    board.style.transform = 'rotate(0deg)';
+  }
 }
 
 // Resign
 function resign() {
   if (confirm('Are you sure you want to resign?')) {
-    handleGameOver();
+    // Set the game as resigned
+    const winner = chess.turn() === 'w' ? 'Black wins' : 'White wins';
+    const reason = 'Resignation';
+    
+    // Show game over modal
+    const modal = document.getElementById('game-over-modal');
+    const title = document.getElementById('game-over-title');
+    const message = document.getElementById('game-over-message');
+    const winnerSpan = document.getElementById('winner');
+    const endReason = document.getElementById('end-reason');
+    
+    title.textContent = 'Game Over';
+    message.textContent = winner;
+    winnerSpan.textContent = winner;
+    endReason.textContent = reason;
+    
+    modal.style.display = 'block';
+    
+    // Stop timer
+    if (gameTimer) {
+      clearInterval(gameTimer);
+    }
   }
 }
 
