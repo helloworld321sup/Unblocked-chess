@@ -27,8 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    const rooms = JSON.parse(localStorage.getItem('multiplayerRooms') || '[]');
-    const room = rooms.find(r => r.roomCode === roomCode && r.roomType === 'private' && r.status === 'waiting');
+    const room = window.multiplayerServer.findRoomByCode(roomCode);
     
     if (room) {
       selectedRoom = room;
@@ -50,12 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Load and display public rooms
   function loadPublicRooms() {
-    const rooms = JSON.parse(localStorage.getItem('multiplayerRooms') || '[]');
-    const publicRooms = rooms.filter(room => 
-      room.roomType === 'public' && 
-      room.status === 'waiting' &&
-      !room.guestId // Room is not full
-    );
+    const publicRooms = window.multiplayerServer.getPublicRooms();
 
     publicRoomsList.innerHTML = '';
 
@@ -77,11 +71,11 @@ document.addEventListener('DOMContentLoaded', function() {
     roomDiv.className = 'room-item';
     roomDiv.innerHTML = `
       <div class="room-info">
-        <h4>Room ${room.roomId.slice(-6)}</h4>
+        <h4>Room ${room.id.slice(-6)}</h4>
         <p>${room.gamesCount} game${room.gamesCount > 1 ? 's' : ''} • ${room.firstPlayer} plays white first</p>
         <p>Side rotation: ${room.sideRotation}</p>
       </div>
-      <button class="join-room-btn" data-room-id="${room.roomId}">Join</button>
+      <button class="join-room-btn" data-room-id="${room.id}">Join</button>
     `;
 
     // Add click handler
@@ -114,17 +108,13 @@ document.addEventListener('DOMContentLoaded', function() {
   function joinSelectedRoom() {
     if (!selectedRoom) return;
 
-    // Add guest to room
-    const rooms = JSON.parse(localStorage.getItem('multiplayerRooms') || '[]');
-    const roomIndex = rooms.findIndex(r => r.roomId === selectedRoom.roomId);
+    // Join room using server
+    const playerId = generatePlayerId();
+    const updatedRoom = window.multiplayerServer.joinRoom(selectedRoom.id, playerId);
     
-    if (roomIndex !== -1) {
-      rooms[roomIndex].guestId = generatePlayerId();
-      rooms[roomIndex].status = 'ready';
-      localStorage.setItem('multiplayerRooms', JSON.stringify(rooms));
-      
+    if (updatedRoom) {
       // Store current room info for this session
-      localStorage.setItem('currentRoom', JSON.stringify(rooms[roomIndex]));
+      localStorage.setItem('currentRoom', JSON.stringify(updatedRoom));
       localStorage.setItem('playerRole', 'guest');
       
       // Redirect to waiting room
