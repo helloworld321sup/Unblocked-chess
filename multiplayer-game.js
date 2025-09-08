@@ -139,6 +139,9 @@ function createBoard() {
   board.innerHTML = '';
   
   for (let row = 0; row < 8; row++) {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'row';
+    
     for (let col = 0; col < 8; col++) {
       const square = document.createElement('div');
       square.className = 'square';
@@ -155,8 +158,10 @@ function createBoard() {
       // Add click event
       square.addEventListener('click', handleSquareClick);
       
-      board.appendChild(square);
+      rowDiv.appendChild(square);
     }
+    
+    board.appendChild(rowDiv);
   }
 }
 
