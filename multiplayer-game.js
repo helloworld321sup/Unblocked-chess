@@ -102,7 +102,7 @@ function loadRoomData() {
 
 // Display room information
 function displayRoomInfo() {
-  document.getElementById('room-id').textContent = currentRoom.roomId.slice(-6);
+  document.getElementById('room-id').textContent = currentRoom.id.slice(-6);
   document.getElementById('game-number').textContent = `Game ${currentRoom.currentGame || 1}`;
   document.getElementById('total-games').textContent = `of ${currentRoom.gamesCount}`;
   
@@ -123,7 +123,7 @@ function setupPlayerInfo() {
     isHostWhite = false;
   } else if (currentRoom.firstPlayer === 'random') {
     // Use a consistent random seed based on room ID
-    const seed = currentRoom.roomId.split('_')[1];
+    const seed = currentRoom.id.split('_')[1];
     isHostWhite = parseInt(seed) % 2 === 0;
   }
   
