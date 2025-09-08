@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Join Room - Chess Game</title>
+  <link rel="icon" href="Unblocked-Chess Favicon.png" type="image/png">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="join-room-container">
+    <h1>Join Room</h1>
+    <p>Find and join an existing game room</p>
+    
+    <div class="join-options">
+      <!-- Public Rooms Section -->
+      <div class="join-section">
+        <h2>Public Rooms</h2>
+        <p>Join any available public room</p>
+        
+        <div id="public-rooms" class="rooms-list">
+          <div class="no-rooms" id="no-public-rooms">
+            <p>No public rooms available</p>
+            <button id="refresh-public-btn" class="refresh-btn">Refresh</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Private Room Section -->
+      <div class="join-section">
+        <h2>Private Room</h2>
+        <p>Enter a room code to join a private room</p>
+        
+        <div class="private-room-form">
+          <div class="input-group">
+            <input type="text" id="private-room-code" class="room-code-input" placeholder="Enter room code" maxlength="8">
+            <button id="join-private-btn" class="join-btn">Join Private Room</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="join-actions">
+      <button id="back-btn" class="back-button">← Back</button>
+    </div>
+    
+    <!-- Room Details Modal -->
+    <div id="room-details-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Room Details</h3>
+          <button id="close-modal-btn" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="room-detail">
+            <label>Games:</label>
+            <span id="modal-games-count"></span>
+          </div>
+          <div class="room-detail">
+            <label>First Player:</label>
+            <span id="modal-first-player"></span>
+          </div>
+          <div class="room-detail">
+            <label>Side Rotation:</label>
+            <span id="modal-side-rotation"></span>
+          </div>
+          <div class="room-detail">
+            <label>Room Type:</label>
+            <span id="modal-room-type"></span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="confirm-join-btn" class="action-btn primary">Join Room</button>
+          <button id="cancel-join-btn" class="action-btn secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="join-room.js"></script>
+</body>
+</html>
