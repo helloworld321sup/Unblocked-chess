@@ -94,18 +94,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Check room status for updates
   function checkRoomStatus() {
-    const room = window.multiplayerServer.getRoom(currentRoom.id);
-    
-    if (!room) {
-      // Room was deleted
-      alert('Room no longer exists. Redirecting to multiplayer.');
-      window.location.href = 'multiplayer.html';
-      return;
-    }
+    window.multiplayerServer.getRoom(currentRoom.id).then((room) => {
+      if (!room) {
+        // Room was deleted
+        alert('Room no longer exists. Redirecting to multiplayer.');
+        window.location.href = 'multiplayer.html';
+        return;
+      }
 
-    // Update current room data
-    currentRoom = room;
-    localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
+      // Update current room data
+      currentRoom = room;
+      localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
 
     // Check if guest joined
     if (room.guestId && !guestPlayer.style.display || guestPlayer.style.display === 'none') {
@@ -123,11 +122,14 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
-    // Check if game started
-    if (room.status === 'playing') {
-      clearInterval(checkInterval);
-      window.location.href = 'multiplayer-game.html';
-    }
+      // Check if game started
+      if (room.status === 'playing') {
+        clearInterval(checkInterval);
+        window.location.href = 'multiplayer-game.html';
+      }
+    }).catch((error) => {
+      console.error('Error checking room status:', error);
+    });
   }
 
   // Copy room code to clipboard
@@ -166,19 +168,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Update room status to playing
-    const updatedRoom = window.multiplayerServer.updateRoomStatus(currentRoom.id, 'playing');
-    
-    if (updatedRoom) {
-      updatedRoom.currentGame = 1;
-      updatedRoom.gameHistory = [];
+    window.multiplayerServer.updateRoomStatus(currentRoom.id, 'playing').then((updatedRoom) => {
+      if (updatedRoom) {
+        updatedRoom.currentGame = 1;
+        updatedRoom.gameHistory = [];
+        
+        // Update current room
+        currentRoom = updatedRoom;
+        localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
       
-      // Update current room
-      currentRoom = updatedRoom;
-      localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
-      
-      // Redirect to game
-      window.location.href = 'multiplayer-game.html';
-    }
+        // Redirect to game
+        window.location.href = 'multiplayer-game.html';
+      }
+    }).catch((error) => {
+      console.error('Error starting game:', error);
+      alert('Failed to start game. Please try again.');
+    });
   }
 
   // Leave the room
@@ -186,7 +191,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (confirm('Are you sure you want to leave the room?')) {
       // Clean up room if host leaves
       if (playerRole === 'host') {
-        window.multiplayerServer.removeRoom(currentRoom.id);
+        window.multiplayerServer.removeRoom(currentRoom.id).then(() => {
+          console.log('Room removed successfully');
+        }).catch((error) => {
+          console.error('Error removing room:', error);
+        });
       }
       
       // Clear session data
