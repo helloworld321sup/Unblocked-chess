@@ -27,14 +27,17 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    const room = window.multiplayerServer.findRoomByCode(roomCode);
-    
-    if (room) {
-      selectedRoom = room;
-      showRoomDetails(room);
-    } else {
-      alert('Room not found or already full. Please check the code and try again.');
-    }
+    window.multiplayerServer.findRoomByCode(roomCode).then((room) => {
+      if (room) {
+        selectedRoom = room;
+        showRoomDetails(room);
+      } else {
+        alert('Room not found or already full. Please check the code and try again.');
+      }
+    }).catch((error) => {
+      console.error('Error finding room:', error);
+      alert('Error finding room. Please try again.');
+    });
   });
 
   // Modal controls
@@ -49,20 +52,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Load and display public rooms
   function loadPublicRooms() {
-    const publicRooms = window.multiplayerServer.getPublicRooms();
+    window.multiplayerServer.getPublicRooms().then((publicRooms) => {
+      publicRoomsList.innerHTML = '';
 
-    publicRoomsList.innerHTML = '';
-
-    if (publicRooms.length === 0) {
-      noPublicRooms.style.display = 'block';
-    } else {
-      noPublicRooms.style.display = 'none';
-      
-      publicRooms.forEach(room => {
-        const roomElement = createRoomElement(room);
-        publicRoomsList.appendChild(roomElement);
-      });
-    }
+      if (publicRooms.length === 0) {
+        noPublicRooms.style.display = 'block';
+      } else {
+        noPublicRooms.style.display = 'none';
+        
+        publicRooms.forEach(room => {
+          const roomElement = createRoomElement(room);
+          publicRoomsList.appendChild(roomElement);
+        });
+      }
+    }).catch((error) => {
+      console.error('Error loading public rooms:', error);
+      publicRoomsList.innerHTML = '<p class="error">Error loading rooms</p>';
+    });
   }
 
   // Create room element for display
@@ -108,20 +114,23 @@ document.addEventListener('DOMContentLoaded', function() {
   function joinSelectedRoom() {
     if (!selectedRoom) return;
 
-    // Join room using server
+    // Join room using Firebase server
     const playerId = generatePlayerId();
-    const updatedRoom = window.multiplayerServer.joinRoom(selectedRoom.id, playerId);
-    
-    if (updatedRoom) {
-      // Store current room info for this session
-      localStorage.setItem('currentRoom', JSON.stringify(updatedRoom));
-      localStorage.setItem('playerRole', 'guest');
-      
-      // Redirect to waiting room
-      window.location.href = 'waiting-room.html';
-    } else {
-      alert('Room no longer available');
-    }
+    window.multiplayerServer.joinRoom(selectedRoom.id, playerId).then((updatedRoom) => {
+      if (updatedRoom) {
+        // Store current room info for this session
+        localStorage.setItem('currentRoom', JSON.stringify(updatedRoom));
+        localStorage.setItem('playerRole', 'guest');
+        
+        // Redirect to waiting room
+        window.location.href = 'waiting-room.html';
+      } else {
+        alert('Room no longer available');
+      }
+    }).catch((error) => {
+      console.error('Error joining room:', error);
+      alert('Failed to join room. Please try again.');
+    });
   }
 
   // Helper function
