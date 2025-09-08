@@ -1,0 +1,420 @@
+// Multiplayer Game functionality
+const chess = new Chess();
+const board = document.querySelector('.chess-board');
+let selectedSquare = null;
+let currentRoom = null;
+let playerRole = null;
+let gameStartTime = null;
+let gameTimer = null;
+let moveCount = 0;
+
+// Apply board color from settings
+function applyBoardColor() {
+  const boardColor = localStorage.getItem('boardColor') || '#d67959';
+  document.documentElement.style.setProperty('--black-square-color', boardColor);
+}
+
+// Apply board color on page load
+applyBoardColor();
+
+// Load settings from localStorage
+function getPieceImages() {
+  const style = localStorage.getItem('pieceStyle') || 'classic';
+  
+  if (style === 'modern') {
+    return {
+      wP: "https://assets-themes.chess.com/image/ejgfv/150/wp.png",
+      wR: "https://assets-themes.chess.com/image/ejgfv/150/wr.png",
+      wN: "https://assets-themes.chess.com/image/ejgfv/150/wn.png",
+      wB: "https://assets-themes.chess.com/image/ejgfv/150/wb.png",
+      wQ: "https://assets-themes.chess.com/image/ejgfv/150/wq.png",
+      wK: "https://assets-themes.chess.com/image/ejgfv/150/wk.png",
+      bP: "https://assets-themes.chess.com/image/ejgfv/150/bp.png",
+      bR: "https://assets-themes.chess.com/image/ejgfv/150/br.png",
+      bN: "https://assets-themes.chess.com/image/ejgfv/150/bn.png",
+      bB: "https://assets-themes.chess.com/image/ejgfv/150/bb.png",
+      bQ: "https://assets-themes.chess.com/image/ejgfv/150/bq.png",
+      bK: "https://assets-themes.chess.com/image/ejgfv/150/bk.png",
+    };
+  } else {
+    // Classic pieces (default)
+    return {
+      wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
+      wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
+      wN: "https://static.stands4.com/images/symbol/3408_white-knight.png",
+      wB: "https://static.stands4.com/images/symbol/3407_white-bishop.png",
+      wQ: "https://static.stands4.com/images/symbol/3405_white-queen.png",
+      wK: "https://static.stands4.com/images/symbol/3404_white-king.png",
+      bP: "https://static.stands4.com/images/symbol/3403_black-pawn.png",
+      bR: "https://static.stands4.com/images/symbol/3400_black-rook.png",
+      bN: "https://static.stands4.com/images/symbol/3402_black-knight.png",
+      bB: "https://static.stands4.com/images/symbol/3401_black-bishop.png",
+      bQ: "https://static.stands4.com/images/symbol/3399_black-queen.png",
+      bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
+    };
+  }
+}
+
+const pieceImages = getPieceImages();
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Load room data
+  loadRoomData();
+  
+  // Initialize game
+  initializeGame();
+  
+  // Set up event listeners
+  setupEventListeners();
+  
+  // Start game timer
+  startGameTimer();
+});
+
+// Load room data from localStorage
+function loadRoomData() {
+  const roomData = localStorage.getItem('currentRoom');
+  const role = localStorage.getItem('playerRole');
+  
+  if (!roomData || !role) {
+    alert('No room data found. Redirecting to multiplayer.');
+    window.location.href = 'multiplayer.html';
+    return;
+  }
+
+  currentRoom = JSON.parse(roomData);
+  playerRole = role;
+
+  // Display room information
+  displayRoomInfo();
+  
+  // Set up player information
+  setupPlayerInfo();
+}
+
+// Display room information
+function displayRoomInfo() {
+  document.getElementById('room-id').textContent = currentRoom.roomId.slice(-6);
+  document.getElementById('game-number').textContent = `Game ${currentRoom.currentGame || 1}`;
+  document.getElementById('total-games').textContent = `of ${currentRoom.gamesCount}`;
+  
+  if (currentRoom.roomType === 'private' && currentRoom.roomCode) {
+    document.getElementById('room-code-display').style.display = 'inline';
+    document.getElementById('room-code').textContent = currentRoom.roomCode;
+  }
+}
+
+// Set up player information
+function setupPlayerInfo() {
+  const isHostWhite = (currentRoom.firstPlayer === 'host') || 
+                     (currentRoom.firstPlayer === 'random' && Math.random() < 0.5);
+  
+  if (playerRole === 'host') {
+    document.getElementById('white-player-name').textContent = 'You';
+    document.getElementById('black-player-name').textContent = 'Opponent';
+    document.getElementById('white-player-role').textContent = 'Host';
+    document.getElementById('black-player-role').textContent = 'Guest';
+  } else {
+    document.getElementById('white-player-name').textContent = 'Opponent';
+    document.getElementById('black-player-name').textContent = 'You';
+    document.getElementById('white-player-role').textContent = 'Host';
+    document.getElementById('black-player-role').textContent = 'Guest';
+  }
+}
+
+// Initialize the game
+function initializeGame() {
+  // Create the chess board
+  createBoard();
+  
+  // Render the initial position
+  renderBoard();
+  
+  // Update game status
+  updateGameStatus();
+}
+
+// Create the chess board
+function createBoard() {
+  board.innerHTML = '';
+  
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = document.createElement('div');
+      square.className = 'square';
+      square.dataset.row = row;
+      square.dataset.col = col;
+      
+      // Add alternating colors
+      if ((row + col) % 2 === 0) {
+        square.classList.add('white');
+      } else {
+        square.classList.add('black');
+      }
+      
+      // Add click event
+      square.addEventListener('click', handleSquareClick);
+      
+      board.appendChild(square);
+    }
+  }
+}
+
+// Render the board with pieces
+function renderBoard() {
+  const positions = chess.board();
+  
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+      const piece = positions[row][col];
+      
+      // Clear existing piece
+      square.innerHTML = '';
+      
+      if (piece) {
+        const pieceImg = document.createElement('img');
+        pieceImg.src = pieceImages[piece.color + piece.type.toUpperCase()];
+        pieceImg.alt = `${piece.color} ${piece.type}`;
+        square.appendChild(pieceImg);
+      }
+    }
+  }
+}
+
+// Handle square clicks
+function handleSquareClick(event) {
+  const row = parseInt(event.target.dataset.row);
+  const col = parseInt(event.target.dataset.col);
+  const square = `${String.fromCharCode(97 + col)}${8 - row}`;
+  
+  // Check if it's the player's turn
+  const currentPlayer = chess.turn();
+  const isMyTurn = (currentPlayer === 'w' && playerRole === 'host') || 
+                   (currentPlayer === 'b' && playerRole === 'guest');
+  
+  if (!isMyTurn) {
+    return;
+  }
+  
+  if (selectedSquare) {
+    // Try to make a move
+    const move = {
+      from: selectedSquare,
+      to: square,
+      promotion: 'q' // Auto-promote to queen
+    };
+    
+    const result = chess.move(move);
+    
+    if (result) {
+      // Move was successful
+      moveCount++;
+      updateMoveHistory(result);
+      renderBoard();
+      updateGameStatus();
+      
+      // Check for game over
+      if (chess.isGameOver()) {
+        handleGameOver();
+      }
+      
+      // Clear selection
+      clearSelection();
+    } else {
+      // Invalid move, select new square
+      selectSquare(square);
+    }
+  } else {
+    // Select square
+    selectSquare(square);
+  }
+}
+
+// Select a square
+function selectSquare(square) {
+  clearSelection();
+  
+  const row = 8 - parseInt(square[1]);
+  const col = square.charCodeAt(0) - 97;
+  const squareElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+  
+  if (squareElement) {
+    squareElement.classList.add('selected');
+    selectedSquare = square;
+  }
+}
+
+// Clear selection
+function clearSelection() {
+  document.querySelectorAll('.square').forEach(square => {
+    square.classList.remove('selected');
+  });
+  selectedSquare = null;
+}
+
+// Update game status
+function updateGameStatus() {
+  const turnElement = document.getElementById('current-turn');
+  const currentPlayer = chess.turn();
+  
+  if (currentPlayer === 'w') {
+    turnElement.textContent = 'White to move';
+  } else {
+    turnElement.textContent = 'Black to move';
+  }
+  
+  // Update move count
+  document.getElementById('move-count').textContent = moveCount;
+}
+
+// Update move history
+function updateMoveHistory(move) {
+  const movesList = document.getElementById('moves-list');
+  const moveElement = document.createElement('div');
+  moveElement.className = 'move-item';
+  moveElement.textContent = `${moveCount}. ${move.san}`;
+  movesList.appendChild(moveElement);
+  
+  // Scroll to bottom
+  movesList.scrollTop = movesList.scrollHeight;
+}
+
+// Handle game over
+function handleGameOver() {
+  const modal = document.getElementById('game-over-modal');
+  const title = document.getElementById('game-over-title');
+  const message = document.getElementById('game-over-message');
+  const winner = document.getElementById('winner');
+  const endReason = document.getElementById('end-reason');
+  
+  let result = '';
+  let reason = '';
+  
+  if (chess.isCheckmate()) {
+    result = chess.turn() === 'w' ? 'Black wins' : 'White wins';
+    reason = 'Checkmate';
+  } else if (chess.isDraw()) {
+    result = 'Draw';
+    reason = 'Draw';
+  } else if (chess.isStalemate()) {
+    result = 'Draw';
+    reason = 'Stalemate';
+  }
+  
+  title.textContent = 'Game Over';
+  message.textContent = result;
+  winner.textContent = result;
+  endReason.textContent = reason;
+  
+  modal.style.display = 'block';
+  
+  // Stop timer
+  if (gameTimer) {
+    clearInterval(gameTimer);
+  }
+}
+
+// Start game timer
+function startGameTimer() {
+  gameStartTime = Date.now();
+  
+  gameTimer = setInterval(() => {
+    const elapsed = Date.now() - gameStartTime;
+    const minutes = Math.floor(elapsed / 60000);
+    const seconds = Math.floor((elapsed % 60000) / 1000);
+    
+    document.getElementById('game-time').textContent = 
+      `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, 1000);
+}
+
+// Set up event listeners
+function setupEventListeners() {
+  // Flip board
+  document.getElementById('flip-board-btn').addEventListener('click', flipBoard);
+  
+  // Resign
+  document.getElementById('resign-btn').addEventListener('click', resign);
+  
+  // Leave game
+  document.getElementById('leave-game-btn').addEventListener('click', leaveGame);
+  
+  // Offer draw
+  document.getElementById('offer-draw-btn').addEventListener('click', offerDraw);
+  
+  // Undo move
+  document.getElementById('undo-move-btn').addEventListener('click', undoMove);
+  
+  // Game over modal buttons
+  document.getElementById('next-game-btn').addEventListener('click', nextGame);
+  document.getElementById('finish-match-btn').addEventListener('click', finishMatch);
+  document.getElementById('rematch-btn').addEventListener('click', rematch);
+}
+
+// Flip board
+function flipBoard() {
+  // This would flip the board view
+  console.log('Flip board');
+}
+
+// Resign
+function resign() {
+  if (confirm('Are you sure you want to resign?')) {
+    handleGameOver();
+  }
+}
+
+// Leave game
+function leaveGame() {
+  if (confirm('Are you sure you want to leave the game?')) {
+    // Clean up
+    if (gameTimer) {
+      clearInterval(gameTimer);
+    }
+    
+    // Remove room data
+    localStorage.removeItem('currentRoom');
+    localStorage.removeItem('playerRole');
+    
+    // Redirect
+    window.location.href = 'multiplayer.html';
+  }
+}
+
+// Offer draw
+function offerDraw() {
+  // This would send a draw offer to the opponent
+  console.log('Offer draw');
+}
+
+// Undo move
+function undoMove() {
+  // This would undo the last move (if allowed)
+  console.log('Undo move');
+}
+
+// Next game
+function nextGame() {
+  // This would start the next game in the match
+  console.log('Next game');
+}
+
+// Finish match
+function finishMatch() {
+  // This would end the match and show results
+  console.log('Finish match');
+}
+
+// Rematch
+function rematch() {
+  // This would start a new match with the same opponent
+  console.log('Rematch');
+}
+
+// Clean up on page unload
+window.addEventListener('beforeunload', function() {
+  if (gameTimer) {
+    clearInterval(gameTimer);
+  }
+});
