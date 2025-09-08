@@ -38,10 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
       firstPlayer: firstPlayerSelect.value,
       sideRotation: sideRotationSelect.value,
       roomType: document.querySelector('input[name="room-type"]:checked').value,
-      roomCode: roomCodeInput.value || null,
-      hostId: generatePlayerId(),
-      createdAt: Date.now(),
-      status: 'waiting'
+      roomCode: roomCodeInput.value || null
     };
 
     // Validate private room code
@@ -52,22 +49,16 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
-    // Save room to localStorage (simulating server storage)
-    const roomId = generateRoomId();
-    roomSettings.roomId = roomId;
-    
-    // Store room in localStorage
-    const rooms = JSON.parse(localStorage.getItem('multiplayerRooms') || '[]');
-    rooms.push(roomSettings);
-    localStorage.setItem('multiplayerRooms', JSON.stringify(rooms));
+    // Create room using server
+    const room = window.multiplayerServer.createRoom(roomSettings);
     
     // Store current room info for this session
-    localStorage.setItem('currentRoom', JSON.stringify(roomSettings));
+    localStorage.setItem('currentRoom', JSON.stringify(room));
     localStorage.setItem('playerRole', 'host');
 
     // Show room info for private rooms
-    if (roomSettings.roomType === 'private') {
-      displayCode.textContent = roomSettings.roomCode;
+    if (room.roomType === 'private') {
+      displayCode.textContent = room.roomCode;
       roomInfo.style.display = 'block';
       
       // Auto-redirect after 3 seconds
