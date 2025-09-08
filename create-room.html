@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Room - Chess Game</title>
+  <link rel="icon" href="Unblocked-Chess Favicon.png" type="image/png">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="create-room-container">
+    <h1>Create Room</h1>
+    <p>Set up your multiplayer chess room</p>
+    
+    <div class="room-settings">
+      <div class="setting-group">
+        <label for="games-count">Number of Games:</label>
+        <select id="games-count" class="setting-select">
+          <option value="1">1 Game</option>
+          <option value="2">2 Games</option>
+          <option value="3">3 Games</option>
+          <option value="4">4 Games</option>
+          <option value="5">5 Games</option>
+          <option value="6">6 Games</option>
+          <option value="7">7 Games</option>
+          <option value="8">8 Games</option>
+          <option value="9">9 Games</option>
+          <option value="10">10 Games</option>
+        </select>
+      </div>
+      
+      <div class="setting-group">
+        <label for="first-player">Who plays White first:</label>
+        <select id="first-player" class="setting-select">
+          <option value="host">Host (You)</option>
+          <option value="guest">Guest</option>
+          <option value="random">Random</option>
+        </select>
+      </div>
+      
+      <div class="setting-group">
+        <label for="side-rotation">Side Rotation:</label>
+        <select id="side-rotation" class="setting-select">
+          <option value="alternate">Alternate each game</option>
+          <option value="same">Keep same sides</option>
+        </select>
+      </div>
+      
+      <div class="setting-group">
+        <label for="room-type">Room Type:</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="room-type" value="public" checked>
+            <span class="radio-label">Public (Anyone can join)</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="room-type" value="private">
+            <span class="radio-label">Private (Code required)</span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="setting-group" id="room-code-group" style="display: none;">
+        <label for="room-code">Room Code:</label>
+        <div class="code-input-group">
+          <input type="text" id="room-code" class="code-input" placeholder="Enter room code" maxlength="8">
+          <button id="generate-code-btn" class="generate-btn">Generate</button>
+        </div>
+        <small class="code-hint">Use 4-8 characters (letters and numbers)</small>
+      </div>
+    </div>
+    
+    <div class="room-actions">
+      <button id="launch-room-btn" class="action-btn primary">Launch Room</button>
+      <button id="back-btn" class="action-btn secondary">← Back</button>
+    </div>
+    
+    <div id="room-info" class="room-info" style="display: none;">
+      <h3>Room Created!</h3>
+      <p>Room Code: <span id="display-code"></span></p>
+      <p>Share this code with friends to let them join your private room.</p>
+    </div>
+  </div>
+
+  <script src="create-room.js"></script>
+</body>
+</html>
