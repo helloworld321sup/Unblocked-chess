@@ -160,6 +160,12 @@ document.addEventListener('DOMContentLoaded', function() {
   function startGame() {
     if (playerRole !== 'host') return;
 
+    // Check if there's a guest in the room
+    if (!currentRoom.guestId) {
+      alert('Please wait for an opponent to join before starting the game.');
+      return;
+    }
+
     // Update room status to playing
     const rooms = JSON.parse(localStorage.getItem('multiplayerRooms') || '[]');
     const roomIndex = rooms.findIndex(r => r.roomId === currentRoom.roomId);
