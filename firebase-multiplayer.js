@@ -260,7 +260,7 @@ function initializeMultiplayerServer() {
   console.log('Firebase available:', typeof firebase);
   console.log('window.firebaseDatabase:', window.firebaseDatabase);
   
-  if (window.firebaseDatabase && typeof window.firebaseDatabase.ref === 'function') {
+  if (window.firebaseReady && window.firebaseDatabase && typeof window.firebaseDatabase.ref === 'function') {
     try {
       console.log('Creating FirebaseMultiplayer instance...');
       window.multiplayerServer = new FirebaseMultiplayer();
@@ -269,15 +269,41 @@ function initializeMultiplayerServer() {
     } catch (error) {
       console.error('Error initializing multiplayer server:', error);
       console.error('Error stack:', error.stack);
+      
+      // Add retry limit for catch block too
+      if (!window.multiplayerRetryCount) {
+        window.multiplayerRetryCount = 0;
+      }
+      window.multiplayerRetryCount++;
+      
+      if (window.multiplayerRetryCount > 50) {
+        console.error('❌ Failed to initialize multiplayer server after 50 attempts');
+        return;
+      }
+      
       setTimeout(initializeMultiplayerServer, 200);
     }
   } else {
     console.error('Firebase database not available or not properly initialized');
+    console.error('window.firebaseReady:', window.firebaseReady);
     console.error('window.firebaseDatabase type:', typeof window.firebaseDatabase);
     console.error('window.firebaseDatabase value:', window.firebaseDatabase);
     if (window.firebaseDatabase) {
       console.error('window.firebaseDatabase.ref type:', typeof window.firebaseDatabase.ref);
     }
+    
+    // Add a maximum retry limit to prevent infinite loops
+    if (!window.multiplayerRetryCount) {
+      window.multiplayerRetryCount = 0;
+    }
+    window.multiplayerRetryCount++;
+    
+    if (window.multiplayerRetryCount > 50) { // 10 seconds max
+      console.error('❌ Failed to initialize multiplayer server after 50 attempts');
+      console.error('🔧 SOLUTION: Check that firebase-config.js is loaded before firebase-multiplayer.js');
+      return;
+    }
+    
     // Try again after a short delay
     setTimeout(initializeMultiplayerServer, 200);
   }
