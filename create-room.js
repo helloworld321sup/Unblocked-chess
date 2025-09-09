@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Launch room
   launchRoomBtn.addEventListener('click', function() {
+    console.log('Launch room button clicked!');
+    console.log('Multiplayer server available:', typeof window.multiplayerServer);
+    
     const roomSettings = {
       gamesCount: parseInt(gamesCountSelect.value),
       firstPlayer: firstPlayerSelect.value,
@@ -40,6 +43,8 @@ document.addEventListener('DOMContentLoaded', function() {
       roomType: document.querySelector('input[name="room-type"]:checked').value,
       roomCode: roomCodeInput.value || null
     };
+
+    console.log('Room settings:', roomSettings);
 
     // Validate private room code
     if (roomSettings.roomType === 'private') {
@@ -49,8 +54,18 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
+    // Check if multiplayer server is available
+    if (!window.multiplayerServer) {
+      console.error('Multiplayer server not available!');
+      alert('Multiplayer server not initialized. Please refresh the page.');
+      return;
+    }
+
     // Create room using Firebase server
+    console.log('Attempting to create room...');
     window.multiplayerServer.createRoom(roomSettings).then((room) => {
+      console.log('Room created successfully:', room);
+      
       // Store current room info for this session
       localStorage.setItem('currentRoom', JSON.stringify(room));
       localStorage.setItem('playerRole', 'host');
@@ -66,6 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
       } else {
         // Direct redirect for public rooms
+        console.log('Redirecting to waiting room...');
         window.location.href = 'waiting-room.html';
       }
     }).catch((error) => {
