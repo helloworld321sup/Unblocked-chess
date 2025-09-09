@@ -175,16 +175,30 @@ class FirebaseMultiplayer {
 }
 
 // Create global server instance
-document.addEventListener('DOMContentLoaded', function() {
+function initializeMultiplayerServer() {
+  console.log('Attempting to initialize multiplayer server...');
   console.log('Firebase database available:', typeof window.firebaseDatabase);
   console.log('Firebase available:', typeof firebase);
   
-  if (window.firebaseDatabase) {
-    window.multiplayerServer = new FirebaseMultiplayer();
-    console.log('Multiplayer server initialized');
+  if (window.firebaseDatabase && typeof window.firebaseDatabase.ref === 'function') {
+    try {
+      window.multiplayerServer = new FirebaseMultiplayer();
+      console.log('Multiplayer server initialized successfully');
+    } catch (error) {
+      console.error('Error initializing multiplayer server:', error);
+      setTimeout(initializeMultiplayerServer, 200);
+    }
   } else {
-    console.error('Firebase database not available!');
+    console.error('Firebase database not available or not properly initialized');
+    // Try again after a short delay
+    setTimeout(initializeMultiplayerServer, 200);
   }
+}
+
+// Wait for all scripts to load, then initialize
+window.addEventListener('load', function() {
+  console.log('Window loaded, initializing multiplayer server...');
+  setTimeout(initializeMultiplayerServer, 100);
 });
 
 // Clean up old rooms every 5 minutes
