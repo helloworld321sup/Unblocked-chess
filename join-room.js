@@ -62,24 +62,35 @@ document.addEventListener('DOMContentLoaded', function() {
   // Load and display public rooms
   function loadPublicRooms() {
     console.log('🔍 Loading public rooms...');
+    console.log('📊 publicRoomsList element:', publicRoomsList);
+    console.log('📊 noPublicRooms element:', noPublicRooms);
+    
     window.multiplayerServer.getPublicRooms().then((publicRooms) => {
       console.log('📋 Public rooms received:', publicRooms);
+      console.log('📊 Number of rooms:', publicRooms.length);
       
       // Clear the rooms list
       publicRoomsList.innerHTML = '';
+      console.log('🧹 Cleared publicRoomsList');
 
       if (publicRooms.length === 0) {
         console.log('❌ No public rooms available');
         noPublicRooms.style.display = 'block';
+        console.log('📊 noPublicRooms display set to block');
       } else {
         console.log(`✅ Found ${publicRooms.length} public rooms`);
         noPublicRooms.style.display = 'none';
+        console.log('📊 noPublicRooms display set to none');
         
-        publicRooms.forEach(room => {
-          console.log('🏠 Adding room to list:', room);
+        publicRooms.forEach((room, index) => {
+          console.log(`🏠 Adding room ${index + 1} to list:`, room);
           const roomElement = createRoomElement(room);
           publicRoomsList.appendChild(roomElement);
+          console.log(`📊 Room ${index + 1} added to DOM`);
         });
+        
+        console.log('📊 Final publicRoomsList children count:', publicRoomsList.children.length);
+        console.log('📊 Final publicRoomsList innerHTML length:', publicRoomsList.innerHTML.length);
       }
     }).catch((error) => {
       console.error('❌ Error loading public rooms:', error);
