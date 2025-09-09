@@ -3,9 +3,21 @@
 
 class FirebaseMultiplayer {
   constructor() {
+    console.log('FirebaseMultiplayer constructor called');
+    console.log('window.firebaseDatabase:', window.firebaseDatabase);
+    
+    if (!window.firebaseDatabase) {
+      throw new Error('Firebase database not available');
+    }
+    
     this.database = window.firebaseDatabase;
     this.roomsRef = this.database.ref('rooms');
-    this.setupListeners();
+    console.log('roomsRef created:', this.roomsRef);
+    
+    // Don't set up listeners immediately - do it after a delay
+    setTimeout(() => {
+      this.setupListeners();
+    }, 100);
   }
 
   // Set up Firebase listeners
@@ -19,6 +31,13 @@ class FirebaseMultiplayer {
 
   // Create a new room
   createRoom(roomData) {
+    console.log('createRoom called with data:', roomData);
+    console.log('this.roomsRef:', this.roomsRef);
+    
+    if (!this.roomsRef) {
+      return Promise.reject(new Error('Rooms reference not initialized'));
+    }
+    
     const roomId = this.generateRoomId();
     const room = {
       ...roomData,
@@ -30,10 +49,15 @@ class FirebaseMultiplayer {
       gameData: null
     };
     
+    console.log('Room object to save:', room);
+    
     // Save to Firebase
     return this.roomsRef.child(roomId).set(room).then(() => {
-      console.log('Room created in Firebase:', room);
+      console.log('Room created in Firebase successfully:', room);
       return room;
+    }).catch((error) => {
+      console.error('Error saving room to Firebase:', error);
+      throw error;
     });
   }
 
