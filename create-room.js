@@ -57,9 +57,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if multiplayer server is available
     if (!window.multiplayerServer) {
       console.error('Multiplayer server not available!');
-      alert('Multiplayer server not initialized. Please refresh the page.');
+      console.log('Waiting for multiplayer server to initialize...');
+      
+      // Wait for server to be ready
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds max wait
+      
+      const waitForServer = setInterval(() => {
+        attempts++;
+        if (window.multiplayerServer) {
+          clearInterval(waitForServer);
+          console.log('Multiplayer server is now ready, proceeding...');
+          // Retry the room creation
+          createRoomWithSettings(roomSettings);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(waitForServer);
+          alert('Multiplayer server failed to initialize. Please refresh the page.');
+        }
+      }, 100);
+      
       return;
     }
+    
+    createRoomWithSettings(roomSettings);
+  });
+  
+  // Helper function to create room with settings
+  function createRoomWithSettings(roomSettings) {
 
     // Create room using Firebase server
     console.log('Attempting to create room...');
@@ -88,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error('Error creating room:', error);
       alert('Failed to create room. Please try again.');
     });
-  });
+  }
 
   // Back button
   backBtn.addEventListener('click', function() {
