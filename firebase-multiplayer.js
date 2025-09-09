@@ -175,9 +175,22 @@ class FirebaseMultiplayer {
 }
 
 // Create global server instance
-window.multiplayerServer = new FirebaseMultiplayer();
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Firebase database available:', typeof window.firebaseDatabase);
+  console.log('Firebase available:', typeof firebase);
+  
+  if (window.firebaseDatabase) {
+    window.multiplayerServer = new FirebaseMultiplayer();
+    console.log('Multiplayer server initialized');
+  } else {
+    console.error('Firebase database not available!');
+  }
+});
 
 // Clean up old rooms every 5 minutes
 setInterval(() => {
-  window.multiplayerServer.cleanupOldRooms();
+  if (window.multiplayerServer) {
+    window.multiplayerServer.cleanupOldRooms();
+  }
 }, 5 * 60 * 1000);
+
