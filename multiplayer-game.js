@@ -62,8 +62,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Load room data
   loadRoomData();
   
-  // Initialize game
-  initializeGame();
+  // Wait for Firebase multiplayer server to be ready
+  waitForMultiplayerServer();
   
   // Set up event listeners
   setupEventListeners();
@@ -71,6 +71,46 @@ document.addEventListener('DOMContentLoaded', function() {
   // Start game timer
   startGameTimer();
 });
+
+// Wait for multiplayer server to be ready
+function waitForMultiplayerServer() {
+  if (window.multiplayerServer) {
+    console.log('✅ Multiplayer server ready, initializing game...');
+    initializeGame();
+    setupFirebaseListeners();
+  } else {
+    console.log('⏳ Waiting for multiplayer server...');
+    setTimeout(waitForMultiplayerServer, 100);
+  }
+}
+
+// Set up Firebase listeners for real-time updates
+function setupFirebaseListeners() {
+  if (!window.multiplayerServer || !currentRoom) {
+    console.error('Multiplayer server or room data not available');
+    return;
+  }
+  
+  console.log('🔔 Setting up Firebase listeners for room:', currentRoom.id);
+  
+  // Listen for game state changes
+  const gameRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/currentGame`);
+  gameRef.on('value', (snapshot) => {
+    const gameData = snapshot.val();
+    if (gameData) {
+      console.log('🔄 Game state updated:', gameData);
+      updateGameFromFirebase(gameData);
+    }
+  });
+  
+  // Listen for moves
+  const movesRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/moves`);
+  movesRef.on('child_added', (snapshot) => {
+    const move = snapshot.val();
+    console.log('🔄 New move received:', move);
+    applyMoveFromFirebase(move);
+  });
+}
 
 // Load room data from localStorage
 function loadRoomData() {
@@ -240,6 +280,9 @@ function handleSquareClick(event) {
       updateMoveHistory(result);
       renderBoard();
       updateGameStatus();
+      
+      // Send move to Firebase
+      sendMoveToFirebase(result);
       
       // Check for game over
       if (chess.isGameOver()) {
@@ -464,6 +507,80 @@ function finishMatch() {
 function rematch() {
   // This would start a new match with the same opponent
   console.log('Rematch');
+}
+
+// Send move to Firebase
+function sendMoveToFirebase(move) {
+  if (!window.multiplayerServer || !currentRoom) {
+    console.error('Cannot send move: multiplayer server or room not available');
+    return;
+  }
+  
+  const moveData = {
+    from: move.from,
+    to: move.to,
+    piece: move.piece,
+    color: move.color,
+    san: move.san,
+    timestamp: Date.now(),
+    playerId: playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId
+  };
+  
+  console.log('📤 Sending move to Firebase:', moveData);
+  
+  const movesRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/moves`);
+  movesRef.push(moveData).then(() => {
+    console.log('✅ Move sent to Firebase successfully');
+  }).catch((error) => {
+    console.error('❌ Error sending move to Firebase:', error);
+  });
+}
+
+// Apply move from Firebase
+function applyMoveFromFirebase(move) {
+  // Don't apply moves that we sent ourselves
+  if (move.playerId === (playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId)) {
+    return;
+  }
+  
+  console.log('📥 Applying move from Firebase:', move);
+  
+  // Apply the move to the local chess instance
+  const result = chess.move({
+    from: move.from,
+    to: move.to,
+    promotion: move.promotion || 'q'
+  });
+  
+  if (result) {
+    moveCount++;
+    updateMoveHistory(result);
+    renderBoard();
+    updateGameStatus();
+    
+    // Check for game over
+    if (chess.isGameOver()) {
+      handleGameOver();
+    }
+  } else {
+    console.error('❌ Failed to apply move from Firebase:', move);
+  }
+}
+
+// Update game state from Firebase
+function updateGameFromFirebase(gameData) {
+  console.log('🔄 Updating game state from Firebase:', gameData);
+  
+  // Update game number if changed
+  if (gameData.gameNumber && gameData.gameNumber !== currentRoom.currentGame) {
+    currentRoom.currentGame = gameData.gameNumber;
+    document.getElementById('game-number').textContent = `Game ${gameData.gameNumber}`;
+  }
+  
+  // Update game status if provided
+  if (gameData.status) {
+    updateGameStatus();
+  }
 }
 
 // Clean up on page unload
