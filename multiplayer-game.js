@@ -186,6 +186,10 @@ function setupPlayerInfo() {
 
 // Initialize the game
 function initializeGame() {
+  console.log('🎮 Initializing game...');
+  console.log('📊 Current room:', currentRoom);
+  console.log('👤 Player role:', playerRole);
+  
   // Create the chess board
   createBoard();
   
@@ -194,10 +198,15 @@ function initializeGame() {
   
   // Update game status
   updateGameStatus();
+  
+  console.log('✅ Game initialized successfully!');
 }
 
 // Create the chess board
 function createBoard() {
+  console.log('🏗️ Creating chess board...');
+  console.log('📊 Board element:', board);
+  
   board.innerHTML = '';
   
   for (let row = 0; row < 8; row++) {
@@ -225,6 +234,9 @@ function createBoard() {
     
     board.appendChild(rowDiv);
   }
+  
+  console.log('✅ Board created with', board.children.length, 'rows');
+  console.log('✅ Total squares:', board.querySelectorAll('.square').length);
 }
 
 // Render the board with pieces
@@ -251,16 +263,30 @@ function renderBoard() {
 
 // Handle square clicks
 function handleSquareClick(event) {
+  console.log('🎯 Square clicked!', event.target);
+  
   const row = parseInt(event.target.dataset.row);
   const col = parseInt(event.target.dataset.col);
   const square = `${String.fromCharCode(97 + col)}${8 - row}`;
+  
+  console.log('📍 Clicked square:', square, 'row:', row, 'col:', col);
   
   // Check if it's the player's turn
   const currentPlayer = chess.turn();
   const myColor = playerRole === 'host' ? currentRoom.hostColor : currentRoom.guestColor;
   const isMyTurn = currentPlayer === myColor;
   
+  console.log('🎮 Turn check:', {
+    currentPlayer,
+    myColor,
+    isMyTurn,
+    playerRole,
+    hostColor: currentRoom.hostColor,
+    guestColor: currentRoom.guestColor
+  });
+  
   if (!isMyTurn) {
+    console.log('❌ Not your turn!');
     return;
   }
   
