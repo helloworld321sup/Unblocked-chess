@@ -51,12 +51,21 @@ class FirebaseMultiplayer {
     
     console.log('Room object to save:', room);
     
-    // Save to Firebase
-    return this.roomsRef.child(roomId).set(room).then(() => {
-      console.log('Room created in Firebase successfully:', room);
+    // First, test Firebase connection
+    return this.database.ref('.info/connected').once('value').then((snapshot) => {
+      if (snapshot.val() !== true) {
+        throw new Error('Firebase not connected');
+      }
+      console.log('✅ Firebase connection confirmed');
+      
+      // Save to Firebase
+      return this.roomsRef.child(roomId).set(room);
+    }).then(() => {
+      console.log('✅ Room created in Firebase successfully:', room);
       return room;
     }).catch((error) => {
-      console.error('Error saving room to Firebase:', error);
+      console.error('❌ Error creating room:', error);
+      console.error('Error details:', error.message);
       throw error;
     });
   }
