@@ -265,8 +265,19 @@ function renderBoard() {
 function handleSquareClick(event) {
   console.log('🎯 Square clicked!', event.target);
   
-  const row = parseInt(event.target.dataset.row);
-  const col = parseInt(event.target.dataset.col);
+  // Find the actual square element (in case we clicked on a piece image)
+  let squareElement = event.target;
+  while (squareElement && !squareElement.classList.contains('square')) {
+    squareElement = squareElement.parentElement;
+  }
+  
+  if (!squareElement) {
+    console.error('❌ Could not find square element');
+    return;
+  }
+  
+  const row = parseInt(squareElement.dataset.row);
+  const col = parseInt(squareElement.dataset.col);
   const square = `${String.fromCharCode(97 + col)}${8 - row}`;
   
   console.log('📍 Clicked square:', square, 'row:', row, 'col:', col);
@@ -335,9 +346,14 @@ function selectSquare(square) {
   const col = square.charCodeAt(0) - 97;
   const squareElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
   
+  console.log('🎯 Selecting square:', square, 'row:', row, 'col:', col, 'element:', squareElement);
+  
   if (squareElement) {
     squareElement.classList.add('selected');
     selectedSquare = square;
+    console.log('✅ Square selected:', square);
+  } else {
+    console.error('❌ Could not find square element for:', square);
   }
 }
 
