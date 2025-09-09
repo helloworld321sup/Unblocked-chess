@@ -16,6 +16,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // Load public rooms on page load
   loadPublicRooms();
 
+  // Set up real-time listener for room changes
+  if (window.multiplayerServer && window.multiplayerServer.roomsRef) {
+    console.log('🔔 Setting up real-time room listener...');
+    window.multiplayerServer.roomsRef.on('value', (snapshot) => {
+      console.log('🔄 Rooms changed, refreshing display...');
+      loadPublicRooms();
+    });
+  }
+
   // Refresh public rooms
   refreshPublicBtn.addEventListener('click', loadPublicRooms);
 
@@ -52,27 +61,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Load and display public rooms
   function loadPublicRooms() {
+    console.log('🔍 Loading public rooms...');
     window.multiplayerServer.getPublicRooms().then((publicRooms) => {
+      console.log('📋 Public rooms received:', publicRooms);
+      
+      // Clear the rooms list
       publicRoomsList.innerHTML = '';
 
       if (publicRooms.length === 0) {
+        console.log('❌ No public rooms available');
         noPublicRooms.style.display = 'block';
       } else {
+        console.log(`✅ Found ${publicRooms.length} public rooms`);
         noPublicRooms.style.display = 'none';
         
         publicRooms.forEach(room => {
+          console.log('🏠 Adding room to list:', room);
           const roomElement = createRoomElement(room);
           publicRoomsList.appendChild(roomElement);
         });
       }
     }).catch((error) => {
-      console.error('Error loading public rooms:', error);
-      publicRoomsList.innerHTML = '<p class="error">Error loading rooms</p>';
+      console.error('❌ Error loading public rooms:', error);
+      noPublicRooms.style.display = 'block';
+      noPublicRooms.innerHTML = '<p class="error">Error loading rooms</p>';
     });
   }
 
   // Create room element for display
   function createRoomElement(room) {
+    console.log('🏗️ Creating room element for:', room);
     const roomDiv = document.createElement('div');
     roomDiv.className = 'room-item';
     roomDiv.innerHTML = `
@@ -87,10 +105,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add click handler
     const joinBtn = roomDiv.querySelector('.join-room-btn');
     joinBtn.addEventListener('click', function() {
+      console.log('🎯 Join button clicked for room:', room.id);
       selectedRoom = room;
       showRoomDetails(room);
     });
 
+    console.log('✅ Room element created:', roomDiv);
     return roomDiv;
   }
 
