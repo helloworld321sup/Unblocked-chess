@@ -13,17 +13,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
   let selectedRoom = null;
 
-  // Load public rooms on page load
-  loadPublicRooms();
-
-  // Set up real-time listener for room changes
-  if (window.multiplayerServer && window.multiplayerServer.roomsRef) {
-    console.log('🔔 Setting up real-time room listener...');
-    window.multiplayerServer.roomsRef.on('value', (snapshot) => {
-      console.log('🔄 Rooms changed, refreshing display...');
+  // Wait for multiplayer server to be ready, then load rooms
+  function waitForServerAndLoadRooms() {
+    if (window.multiplayerServer) {
+      console.log('✅ Multiplayer server ready, loading rooms...');
       loadPublicRooms();
-    });
+      
+      // Set up real-time listener for room changes
+      if (window.multiplayerServer.roomsRef) {
+        console.log('🔔 Setting up real-time room listener...');
+        window.multiplayerServer.roomsRef.on('value', (snapshot) => {
+          console.log('🔄 Rooms changed, refreshing display...');
+          loadPublicRooms();
+        });
+      }
+    } else {
+      console.log('⏳ Waiting for multiplayer server...');
+      setTimeout(waitForServerAndLoadRooms, 100);
+    }
   }
+  
+  // Start waiting for server
+  waitForServerAndLoadRooms();
 
   // Refresh public rooms
   refreshPublicBtn.addEventListener('click', loadPublicRooms);
