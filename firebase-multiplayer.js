@@ -22,10 +22,27 @@ class FirebaseMultiplayer {
 
   // Set up Firebase listeners
   setupListeners() {
+    console.log('Setting up Firebase listeners...');
     // Listen for room changes
     this.roomsRef.on('value', (snapshot) => {
       const rooms = snapshot.val() || {};
-      console.log('Rooms updated from Firebase:', rooms);
+      console.log('🔄 Rooms updated from Firebase:', rooms);
+      console.log('📊 Total rooms:', Object.keys(rooms).length);
+      
+      // Log each room for debugging
+      Object.keys(rooms).forEach(roomId => {
+        console.log(`🏠 Room ${roomId}:`, rooms[roomId]);
+      });
+    });
+    
+    // Also listen for new rooms being added
+    this.roomsRef.on('child_added', (snapshot) => {
+      console.log('➕ New room added:', snapshot.key, snapshot.val());
+    });
+    
+    // Listen for room changes
+    this.roomsRef.on('child_changed', (snapshot) => {
+      console.log('🔄 Room updated:', snapshot.key, snapshot.val());
     });
   }
 
@@ -58,14 +75,28 @@ class FirebaseMultiplayer {
       }
       console.log('✅ Firebase connection confirmed');
       
-      // Save to Firebase
-      return this.roomsRef.child(roomId).set(room);
+      // Test write permissions first
+      return this.database.ref('test').set('test').then(() => {
+        console.log('✅ Write permissions confirmed');
+        // Clean up test
+        this.database.ref('test').remove();
+        
+        // Save to Firebase
+        return this.roomsRef.child(roomId).set(room);
+      });
     }).then(() => {
       console.log('✅ Room created in Firebase successfully:', room);
       return room;
     }).catch((error) => {
       console.error('❌ Error creating room:', error);
       console.error('Error details:', error.message);
+      
+      if (error.message.includes('PERMISSION_DENIED')) {
+        console.error('🔧 SOLUTION: Go to Firebase Console → Realtime Database → Rules');
+        console.error('🔧 Replace rules with: {"rules": {".read": true, ".write": true}}');
+        console.error('🔧 Then click "Publish"');
+      }
+      
       throw error;
     });
   }
@@ -74,12 +105,27 @@ class FirebaseMultiplayer {
   getPublicRooms() {
     return this.roomsRef.once('value').then((snapshot) => {
       const rooms = snapshot.val() || {};
-      const publicRooms = Object.values(rooms).filter(room => 
-        room.roomType === 'public' && 
-        room.status === 'waiting' && 
-        !room.guestId
-      );
-      console.log('Getting public rooms from Firebase:', publicRooms);
+      console.log('🔍 All rooms from Firebase:', rooms);
+      
+      const publicRooms = Object.values(rooms).filter(room => {
+        console.log('🔍 Checking room:', room);
+        console.log('  - roomType:', room.roomType);
+        console.log('  - status:', room.status);
+        console.log('  - guestId:', room.guestId);
+        
+        const isPublic = room.roomType === 'public';
+        const isWaiting = room.status === 'waiting';
+        const hasNoGuest = !room.guestId;
+        
+        console.log('  - isPublic:', isPublic);
+        console.log('  - isWaiting:', isWaiting);
+        console.log('  - hasNoGuest:', hasNoGuest);
+        console.log('  - PASSES FILTER:', isPublic && isWaiting && hasNoGuest);
+        
+        return isPublic && isWaiting && hasNoGuest;
+      });
+      
+      console.log('✅ Filtered public rooms:', publicRooms);
       return publicRooms;
     });
   }
