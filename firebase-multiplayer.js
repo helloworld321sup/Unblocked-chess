@@ -179,17 +179,26 @@ function initializeMultiplayerServer() {
   console.log('Attempting to initialize multiplayer server...');
   console.log('Firebase database available:', typeof window.firebaseDatabase);
   console.log('Firebase available:', typeof firebase);
+  console.log('window.firebaseDatabase:', window.firebaseDatabase);
   
   if (window.firebaseDatabase && typeof window.firebaseDatabase.ref === 'function') {
     try {
+      console.log('Creating FirebaseMultiplayer instance...');
       window.multiplayerServer = new FirebaseMultiplayer();
       console.log('Multiplayer server initialized successfully');
+      console.log('window.multiplayerServer:', window.multiplayerServer);
     } catch (error) {
       console.error('Error initializing multiplayer server:', error);
+      console.error('Error stack:', error.stack);
       setTimeout(initializeMultiplayerServer, 200);
     }
   } else {
     console.error('Firebase database not available or not properly initialized');
+    console.error('window.firebaseDatabase type:', typeof window.firebaseDatabase);
+    console.error('window.firebaseDatabase value:', window.firebaseDatabase);
+    if (window.firebaseDatabase) {
+      console.error('window.firebaseDatabase.ref type:', typeof window.firebaseDatabase.ref);
+    }
     // Try again after a short delay
     setTimeout(initializeMultiplayerServer, 200);
   }
