@@ -161,22 +161,11 @@ document.addEventListener('DOMContentLoaded', function() {
   function startGame() {
     if (playerRole !== 'host') return;
 
-    // Get the latest room data from Firebase before checking
-    window.multiplayerServer.getRoom(currentRoom.id).then((latestRoom) => {
-      if (!latestRoom) {
-        alert('Room not found. Please try again.');
-        return;
-      }
-
-      // Check if there's a guest in the room
-      if (!latestRoom.guestId) {
-        alert('Please wait for an opponent to join before starting the game.');
-        return;
-      }
-
-      // Update current room with latest data
-      currentRoom = latestRoom;
-      localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
+    // Check if there's a guest in the room (currentRoom is already updated by checkRoomStatus)
+    if (!currentRoom.guestId) {
+      alert('Please wait for an opponent to join before starting the game.');
+      return;
+    }
 
       // Update room status to playing
       window.multiplayerServer.updateRoomStatus(currentRoom.id, 'playing').then((updatedRoom) => {
