@@ -174,44 +174,11 @@ function loadRoomData() {
     return;
   }
 
-  // Refresh room data from Firebase to ensure we have the latest data
-  refreshRoomDataFromFirebase();
-  
   // Display room information
   displayRoomInfo();
   
   // Set up player information
   setupPlayerInfo();
-}
-
-// Refresh room data from Firebase
-function refreshRoomDataFromFirebase() {
-  if (!window.multiplayerServer || !currentRoom) {
-    console.log('⚠️ Cannot refresh room data: multiplayer server or room not available');
-    return;
-  }
-  
-  console.log('🔄 Refreshing room data from Firebase...');
-  
-  window.multiplayerServer.getRoom(currentRoom.id).then((latestRoom) => {
-    if (latestRoom) {
-      console.log('✅ Room data refreshed from Firebase:', latestRoom);
-      console.log('🎮 Games count from Firebase:', latestRoom.gamesCount);
-      console.log('🎮 Current game from Firebase:', latestRoom.currentGame);
-      
-      // Update current room with latest data
-      currentRoom = latestRoom;
-      localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
-      
-      // Update display
-      document.getElementById('game-number').textContent = `Game ${currentRoom.currentGame || 1}`;
-      document.getElementById('total-games').textContent = `of ${currentRoom.gamesCount}`;
-    } else {
-      console.error('❌ Failed to refresh room data from Firebase');
-    }
-  }).catch((error) => {
-    console.error('❌ Error refreshing room data:', error);
-  });
 }
 
 // Display room information
