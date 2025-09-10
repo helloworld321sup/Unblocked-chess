@@ -538,6 +538,14 @@ function handleGameOver() {
   winner.textContent = result;
   endReason.textContent = reason;
   
+  // Show/hide Next Game button based on whether there are more games
+  const nextGameBtn = document.getElementById('next-game-btn');
+  if (currentRoom && currentRoom.gamesCount > currentRoom.currentGame) {
+    nextGameBtn.style.display = 'block';
+  } else {
+    nextGameBtn.style.display = 'none';
+  }
+  
   modal.style.display = 'block';
   
   // Stop timer
@@ -712,14 +720,54 @@ function undoMove() {
 
 // Next game
 function nextGame() {
-  // This would start the next game in the match
-  console.log('Next game');
+  console.log('🎮 Starting next game...');
+  
+  if (!currentRoom) {
+    console.error('No current room found');
+    return;
+  }
+  
+  // Increment game number
+  currentRoom.currentGame++;
+  
+  // Reset the chess game
+  chess.reset();
+  moveCount = 0;
+  lastMove = null;
+  selectedSquare = null;
+  
+  // Update game number display
+  document.getElementById('game-number').textContent = `Game ${currentRoom.currentGame}`;
+  
+  // Update game status
+  updateGameStatus();
+  
+  // Re-render the board
+  renderBoard();
+  
+  // Update Firebase with new game number
+  if (window.multiplayerServer) {
+    const gameRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/currentGame`);
+    gameRef.set(currentRoom.currentGame);
+  }
+  
+  // Close the game over modal
+  const modal = document.getElementById('game-over-modal');
+  modal.style.display = 'none';
+  
+  console.log('✅ Next game started:', currentRoom.currentGame);
 }
 
 // Finish match
 function finishMatch() {
-  // Go to home screen
-  window.location.href = 'index.html';
+  // Check if there are more games to play
+  if (currentRoom && currentRoom.gamesCount > currentRoom.currentGame) {
+    // Start next game
+    nextGame();
+  } else {
+    // All games completed, go to home screen
+    window.location.href = 'index.html';
+  }
 }
 
 // Send move to Firebase
