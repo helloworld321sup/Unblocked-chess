@@ -126,6 +126,12 @@ document.addEventListener('DOMContentLoaded', function() {
       if (room.status === 'playing') {
         // Update localStorage with the latest room data before redirecting
         currentRoom = room;
+        
+        // Ensure currentGame is set to 1 if it's not already set
+        if (!currentRoom.currentGame) {
+          currentRoom.currentGame = 1;
+        }
+        
         localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
         
         clearInterval(checkInterval);
