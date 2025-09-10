@@ -124,6 +124,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Check if game started
       if (room.status === 'playing') {
+        // Update localStorage with the latest room data before redirecting
+        currentRoom = room;
+        localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
+        
         clearInterval(checkInterval);
         window.location.href = 'multiplayer-game.html';
       }
