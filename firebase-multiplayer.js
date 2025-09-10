@@ -1,738 +1,323 @@
-// Multiplayer Game functionality
-const chess = new Chess();
-const board = document.querySelector('.chess-board');
-let selectedSquare = null;
-let currentRoom = null;
-let playerRole = null;
-let gameStartTime = null;
-let gameTimer = null;
-let moveCount = 0;
-let boardFlipped = false;
+// Firebase-based multiplayer server
+// This provides real cross-computer multiplayer functionality
 
-// Apply board color from settings
-function applyBoardColor() {
-  const boardColor = localStorage.getItem('boardColor') || '#d67959';
-  document.documentElement.style.setProperty('--black-square-color', boardColor);
-}
+class FirebaseMultiplayer {
+  constructor() {
+    console.log('FirebaseMultiplayer constructor called');
+    console.log('window.firebaseDatabase:', window.firebaseDatabase);
+    
+    if (!window.firebaseDatabase) {
+      throw new Error('Firebase database not available');
+    }
+    
+    this.database = window.firebaseDatabase;
+    this.roomsRef = this.database.ref('rooms');
+    console.log('roomsRef created:', this.roomsRef);
+    
+    // Don't set up listeners immediately - do it after a delay
+    setTimeout(() => {
+      this.setupListeners();
+    }, 100);
+  }
 
-// Apply board color on page load
-applyBoardColor();
+  // Set up Firebase listeners
+  setupListeners() {
+    console.log('Setting up Firebase listeners...');
+    // Listen for room changes
+    this.roomsRef.on('value', (snapshot) => {
+      const rooms = snapshot.val() || {};
+      console.log('🔄 Rooms updated from Firebase:', rooms);
+      console.log('📊 Total rooms:', Object.keys(rooms).length);
+      
+      // Log each room for debugging
+      Object.keys(rooms).forEach(roomId => {
+        console.log(`🏠 Room ${roomId}:`, rooms[roomId]);
+      });
+    });
+    
+    // Also listen for new rooms being added
+    this.roomsRef.on('child_added', (snapshot) => {
+      console.log('➕ New room added:', snapshot.key, snapshot.val());
+    });
+    
+    // Listen for room changes
+    this.roomsRef.on('child_changed', (snapshot) => {
+      console.log('🔄 Room updated:', snapshot.key, snapshot.val());
+    });
+  }
 
-// Load settings from localStorage
-function getPieceImages() {
-  const style = localStorage.getItem('pieceStyle') || 'classic';
-  
-  if (style === 'modern') {
-    return {
-      wP: "https://assets-themes.chess.com/image/ejgfv/150/wp.png",
-      wR: "https://assets-themes.chess.com/image/ejgfv/150/wr.png",
-      wN: "https://assets-themes.chess.com/image/ejgfv/150/wn.png",
-      wB: "https://assets-themes.chess.com/image/ejgfv/150/wb.png",
-      wQ: "https://assets-themes.chess.com/image/ejgfv/150/wq.png",
-      wK: "https://assets-themes.chess.com/image/ejgfv/150/wk.png",
-      bP: "https://assets-themes.chess.com/image/ejgfv/150/bp.png",
-      bR: "https://assets-themes.chess.com/image/ejgfv/150/br.png",
-      bN: "https://assets-themes.chess.com/image/ejgfv/150/bn.png",
-      bB: "https://assets-themes.chess.com/image/ejgfv/150/bb.png",
-      bQ: "https://assets-themes.chess.com/image/ejgfv/150/bq.png",
-      bK: "https://assets-themes.chess.com/image/ejgfv/150/bk.png",
+  // Create a new room
+  createRoom(roomData) {
+    console.log('createRoom called with data:', roomData);
+    console.log('this.roomsRef:', this.roomsRef);
+    
+    if (!this.roomsRef) {
+      return Promise.reject(new Error('Rooms reference not initialized'));
+    }
+    
+    const roomId = this.generateRoomId();
+    const room = {
+      ...roomData,
+      id: roomId,
+      createdAt: Date.now(),
+      status: 'waiting',
+      hostId: this.generatePlayerId(),
+      guestId: null,
+      gameData: null
     };
-  } else {
-    // Classic pieces (default)
-    return {
-      wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
-      wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
-      wN: "https://static.stands4.com/images/symbol/3408_white-knight.png",
-      wB: "https://static.stands4.com/images/symbol/3407_white-bishop.png",
-      wQ: "https://static.stands4.com/images/symbol/3405_white-queen.png",
-      wK: "https://static.stands4.com/images/symbol/3404_white-king.png",
-      bP: "https://static.stands4.com/images/symbol/3403_black-pawn.png",
-      bR: "https://static.stands4.com/images/symbol/3400_black-rook.png",
-      bN: "https://static.stands4.com/images/symbol/3402_black-knight.png",
-      bB: "https://static.stands4.com/images/symbol/3401_black-bishop.png",
-      bQ: "https://static.stands4.com/images/symbol/3399_black-queen.png",
-      bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
-    };
+    
+    console.log('Room object to save:', room);
+    
+    // First, test Firebase connection
+    return this.database.ref('.info/connected').once('value').then((snapshot) => {
+      if (snapshot.val() !== true) {
+        throw new Error('Firebase not connected');
+      }
+      console.log('✅ Firebase connection confirmed');
+      
+      // Test write permissions first
+      return this.database.ref('test').set('test').then(() => {
+        console.log('✅ Write permissions confirmed');
+        // Clean up test
+        this.database.ref('test').remove();
+        
+        // Save to Firebase
+        return this.roomsRef.child(roomId).set(room);
+      });
+    }).then(() => {
+      console.log('✅ Room created in Firebase successfully:', room);
+      return room;
+    }).catch((error) => {
+      console.error('❌ Error creating room:', error);
+      console.error('Error details:', error.message);
+      
+      if (error.message.includes('PERMISSION_DENIED')) {
+        console.error('🔧 SOLUTION: Go to Firebase Console → Realtime Database → Rules');
+        console.error('🔧 Replace rules with: {"rules": {".read": true, ".write": true}}');
+        console.error('🔧 Then click "Publish"');
+      }
+      
+      throw error;
+    });
+  }
+
+  // Get all public rooms
+  getPublicRooms() {
+    return this.roomsRef.once('value').then((snapshot) => {
+      const rooms = snapshot.val() || {};
+      console.log('🔍 All rooms from Firebase:', rooms);
+      
+      const publicRooms = Object.values(rooms).filter(room => {
+        console.log('🔍 Checking room:', room);
+        console.log('  - roomType:', room.roomType);
+        console.log('  - status:', room.status);
+        console.log('  - guestId:', room.guestId);
+        
+        const isPublic = room.roomType === 'public';
+        const isWaiting = room.status === 'waiting';
+        const hasNoGuest = !room.guestId;
+        
+        console.log('  - isPublic:', isPublic);
+        console.log('  - isWaiting:', isWaiting);
+        console.log('  - hasNoGuest:', hasNoGuest);
+        console.log('  - PASSES FILTER:', isPublic && isWaiting && hasNoGuest);
+        
+        return isPublic && isWaiting && hasNoGuest;
+      });
+      
+      console.log('✅ Filtered public rooms:', publicRooms);
+      return publicRooms;
+    });
+  }
+
+  // Find room by code
+  findRoomByCode(code) {
+    return this.roomsRef.once('value').then((snapshot) => {
+      const rooms = snapshot.val() || {};
+      const room = Object.values(rooms).find(room => 
+        room.roomCode === code && 
+        room.roomType === 'private' && 
+        room.status === 'waiting'
+      );
+      return room || null;
+    });
+  }
+
+  // Join a room
+  joinRoom(roomId, playerId) {
+    const roomRef = this.roomsRef.child(roomId);
+    return roomRef.once('value').then((snapshot) => {
+      const room = snapshot.val();
+      if (room && !room.guestId) {
+        room.guestId = playerId;
+        room.status = 'ready';
+        return roomRef.update({
+          guestId: playerId,
+          status: 'ready'
+        }).then(() => {
+          console.log('Player joined room:', roomId);
+          return room;
+        });
+      }
+      return null;
+    });
+  }
+
+  // Get room by ID
+  getRoom(roomId) {
+    return this.roomsRef.child(roomId).once('value').then((snapshot) => {
+      return snapshot.val();
+    });
+  }
+
+  // Update room status
+  updateRoomStatus(roomId, status) {
+    const roomRef = this.roomsRef.child(roomId);
+    return roomRef.update({ status }).then(() => {
+      console.log('Room status updated:', roomId, status);
+      return this.getRoom(roomId);
+    });
+  }
+
+  // Remove room
+  removeRoom(roomId) {
+    return this.roomsRef.child(roomId).remove().then(() => {
+      console.log('Room removed:', roomId);
+    });
+  }
+
+  // Update game data
+  updateGameData(roomId, gameData) {
+    const roomRef = this.roomsRef.child(roomId);
+    return roomRef.update({ gameData }).then(() => {
+      console.log('Game data updated:', roomId);
+    });
+  }
+
+  // Listen for room changes
+  listenToRoom(roomId, callback) {
+    const roomRef = this.roomsRef.child(roomId);
+    roomRef.on('value', (snapshot) => {
+      const room = snapshot.val();
+      if (room) {
+        callback(room);
+      }
+    });
+    
+    // Return unsubscribe function
+    return () => roomRef.off('value');
+  }
+
+  // Listen for public rooms changes
+  listenToPublicRooms(callback) {
+    const publicRoomsRef = this.roomsRef.orderByChild('roomType').equalTo('public');
+    publicRoomsRef.on('value', (snapshot) => {
+      const rooms = snapshot.val() || {};
+      const publicRooms = Object.values(rooms).filter(room => 
+        room.status === 'waiting' && !room.guestId
+      );
+      callback(publicRooms);
+    });
+    
+    // Return unsubscribe function
+    return () => publicRoomsRef.off('value');
+  }
+
+  // Generate unique room ID
+  generateRoomId() {
+    return 'room_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  // Generate unique player ID
+  generatePlayerId() {
+    return 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  // Clean up old rooms (older than 1 hour)
+  cleanupOldRooms() {
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    return this.roomsRef.once('value').then((snapshot) => {
+      const rooms = snapshot.val() || {};
+      const updates = {};
+      
+      Object.keys(rooms).forEach(roomId => {
+        if (rooms[roomId].createdAt < oneHourAgo) {
+          updates[roomId] = null; // Mark for deletion
+        }
+      });
+      
+      if (Object.keys(updates).length > 0) {
+        return this.roomsRef.update(updates);
+      }
+    });
   }
 }
 
-const pieceImages = getPieceImages();
+// Create global server instance
+function initializeMultiplayerServer() {
+  console.log('Attempting to initialize multiplayer server...');
+  console.log('Firebase database available:', typeof window.firebaseDatabase);
+  console.log('Firebase available:', typeof firebase);
+  console.log('window.firebaseDatabase:', window.firebaseDatabase);
+  
+  if (window.firebaseReady && window.firebaseDatabase && typeof window.firebaseDatabase.ref === 'function') {
+    try {
+      console.log('Creating FirebaseMultiplayer instance...');
+      window.multiplayerServer = new FirebaseMultiplayer();
+      console.log('Multiplayer server initialized successfully');
+      console.log('window.multiplayerServer:', window.multiplayerServer);
+    } catch (error) {
+      console.error('Error initializing multiplayer server:', error);
+      console.error('Error stack:', error.stack);
+      
+      // Add retry limit for catch block too
+      if (!window.multiplayerRetryCount) {
+        window.multiplayerRetryCount = 0;
+      }
+      window.multiplayerRetryCount++;
+      
+      if (window.multiplayerRetryCount > 50) {
+        console.error('❌ Failed to initialize multiplayer server after 50 attempts');
+        return;
+      }
+      
+      setTimeout(initializeMultiplayerServer, 200);
+    }
+  } else {
+    console.error('Firebase database not available or not properly initialized');
+    console.error('window.firebaseReady:', window.firebaseReady);
+    console.error('window.firebaseDatabase type:', typeof window.firebaseDatabase);
+    console.error('window.firebaseDatabase value:', window.firebaseDatabase);
+    if (window.firebaseDatabase) {
+      console.error('window.firebaseDatabase.ref type:', typeof window.firebaseDatabase.ref);
+    }
+    
+    // Add a maximum retry limit to prevent infinite loops
+    if (!window.multiplayerRetryCount) {
+      window.multiplayerRetryCount = 0;
+    }
+    window.multiplayerRetryCount++;
+    
+    if (window.multiplayerRetryCount > 50) { // 10 seconds max
+      console.error('❌ Failed to initialize multiplayer server after 50 attempts');
+      console.error('🔧 SOLUTION: Check that firebase-config.js is loaded before firebase-multiplayer.js');
+      return;
+    }
+    
+    // Try again after a short delay
+    setTimeout(initializeMultiplayerServer, 200);
+  }
+}
 
-document.addEventListener('DOMContentLoaded', function() {
-  // Load room data
-  loadRoomData();
-  
-  // Wait for Firebase multiplayer server to be ready
-  waitForMultiplayerServer();
-  
-  // Set up event listeners
-  setupEventListeners();
-  
-  // Start game timer
-  startGameTimer();
+// Wait for all scripts to load, then initialize
+window.addEventListener('load', function() {
+  console.log('Window loaded, initializing multiplayer server...');
+  setTimeout(initializeMultiplayerServer, 100);
 });
 
-// Wait for multiplayer server to be ready
-function waitForMultiplayerServer() {
+// Clean up old rooms every 5 minutes
+setInterval(() => {
   if (window.multiplayerServer) {
-    console.log('✅ Multiplayer server ready, initializing game...');
-    initializeGame();
-    setupFirebaseListeners();
-  } else {
-    console.log('⏳ Waiting for multiplayer server...');
-    setTimeout(waitForMultiplayerServer, 100);
+    window.multiplayerServer.cleanupOldRooms();
   }
-}
-
-// Set up Firebase listeners for real-time updates
-function setupFirebaseListeners() {
-  if (!window.multiplayerServer || !currentRoom) {
-    console.error('Multiplayer server or room data not available');
-    return;
-  }
-  
-  console.log('🔔 Setting up Firebase listeners for room:', currentRoom.id);
-  
-  // Listen for game state changes
-  const gameRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/currentGame`);
-  gameRef.on('value', (snapshot) => {
-    const gameData = snapshot.val();
-    if (gameData) {
-      console.log('🔄 Game state updated:', gameData);
-      updateGameFromFirebase(gameData);
-    }
-  });
-  
-  // Listen for moves
-  const movesRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/moves`);
-  movesRef.on('child_added', (snapshot) => {
-    const move = snapshot.val();
-    console.log('🔄 New move received:', move);
-    applyMoveFromFirebase(move);
-  });
-}
-
-// Load room data from localStorage
-function loadRoomData() {
-  const roomData = localStorage.getItem('currentRoom');
-  const role = localStorage.getItem('playerRole');
-  
-  if (!roomData || !role) {
-    alert('No room data found. Redirecting to multiplayer.');
-    window.location.href = 'multiplayer.html';
-    return;
-  }
-
-  currentRoom = JSON.parse(roomData);
-  playerRole = role;
-
-  // Check if room has both players
-  if (!currentRoom.guestId) {
-    alert('No opponent found. Redirecting to waiting room.');
-    window.location.href = 'waiting-room.html';
-    return;
-  }
-
-  // Display room information
-  displayRoomInfo();
-  
-  // Set up player information
-  setupPlayerInfo();
-}
-
-// Display room information
-function displayRoomInfo() {
-  document.getElementById('room-id').textContent = currentRoom.id.slice(-6);
-  document.getElementById('game-number').textContent = `Game ${currentRoom.currentGame || 1}`;
-  document.getElementById('total-games').textContent = `of ${currentRoom.gamesCount}`;
-  
-  if (currentRoom.roomType === 'private' && currentRoom.roomCode) {
-    document.getElementById('room-code-display').style.display = 'inline';
-    document.getElementById('room-code').textContent = currentRoom.roomCode;
-  }
-}
-
-// Set up player information
-function setupPlayerInfo() {
-  // Determine who plays white based on room settings
-  let isHostWhite = false;
-  
-  if (currentRoom.firstPlayer === 'host') {
-    isHostWhite = true;
-  } else if (currentRoom.firstPlayer === 'guest') {
-    isHostWhite = false;
-  } else if (currentRoom.firstPlayer === 'random') {
-    // Use a consistent random seed based on room ID
-    const seed = currentRoom.id.split('_')[1];
-    isHostWhite = parseInt(seed) % 2 === 0;
-  }
-  
-  // Store player colors
-  currentRoom.hostColor = isHostWhite ? 'w' : 'b';
-  currentRoom.guestColor = isHostWhite ? 'b' : 'w';
-  
-  if (playerRole === 'host') {
-    document.getElementById('white-player-name').textContent = isHostWhite ? 'You' : 'Opponent';
-    document.getElementById('black-player-name').textContent = isHostWhite ? 'Opponent' : 'You';
-    document.getElementById('white-player-role').textContent = 'Host';
-    document.getElementById('black-player-role').textContent = 'Guest';
-  } else {
-    document.getElementById('white-player-name').textContent = isHostWhite ? 'Opponent' : 'You';
-    document.getElementById('black-player-name').textContent = isHostWhite ? 'You' : 'Opponent';
-    document.getElementById('white-player-role').textContent = 'Host';
-    document.getElementById('black-player-role').textContent = 'Guest';
-  }
-}
-
-// Initialize the game
-function initializeGame() {
-  console.log('🎮 Initializing game...');
-  console.log('📊 Current room:', currentRoom);
-  console.log('👤 Player role:', playerRole);
-  
-  // Create the chess board
-  createBoard();
-  
-  // Render the initial position
-  renderBoard();
-  
-  // Update game status
-  updateGameStatus();
-  
-  console.log('✅ Game initialized successfully!');
-}
-
-// Create the chess board
-function createBoard() {
-  console.log('🏗️ Creating chess board...');
-  console.log('📊 Board element:', board);
-  
-  board.innerHTML = '';
-  
-  for (let row = 0; row < 8; row++) {
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'row';
-    
-    for (let col = 0; col < 8; col++) {
-      const square = document.createElement('div');
-      square.className = 'square';
-      square.dataset.row = row;
-      square.dataset.col = col;
-      
-      // Add alternating colors
-      if ((row + col) % 2 === 0) {
-        square.classList.add('white');
-      } else {
-        square.classList.add('black');
-      }
-      
-      // Add click event
-      square.addEventListener('click', handleSquareClick);
-      
-      rowDiv.appendChild(square);
-    }
-    
-    board.appendChild(rowDiv);
-  }
-  
-  console.log('✅ Board created with', board.children.length, 'rows');
-  console.log('✅ Total squares:', board.querySelectorAll('.square').length);
-}
-
-// Render the board with pieces
-function renderBoard() {
-  const positions = chess.board();
-  
-  // Clear all highlights first
-  document.querySelectorAll('.square').forEach(square => {
-    square.classList.remove('selected', 'highlight', 'recent-move');
-    // Remove existing move dots
-    square.querySelectorAll('.move-dot').forEach(dot => dot.remove());
-  });
-  
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-      const piece = positions[row][col];
-      
-      // Clear existing piece
-      square.innerHTML = '';
-      
-      if (piece) {
-        const pieceImg = document.createElement('img');
-        pieceImg.src = pieceImages[piece.color + piece.type.toUpperCase()];
-        pieceImg.alt = `${piece.color} ${piece.type}`;
-        square.appendChild(pieceImg);
-      }
-    }
-  }
-  
-  // Add move dots for legal moves if a piece is selected
-  if (selectedSquare) {
-    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
-    legalMoves.forEach(move => {
-      const targetRow = 8 - parseInt(move.to[1]);
-      const targetCol = move.to.charCodeAt(0) - 97;
-      const targetSquare = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
-      
-      if (targetSquare) {
-        const dot = document.createElement('div');
-        dot.classList.add('move-dot');
-        targetSquare.appendChild(dot);
-      }
-    });
-    
-    // Highlight selected square
-    const selectedRow = 8 - parseInt(selectedSquare[1]);
-    const selectedCol = selectedSquare.charCodeAt(0) - 97;
-    const selectedSquareEl = document.querySelector(`[data-row="${selectedRow}"][data-col="${selectedCol}"]`);
-    if (selectedSquareEl) {
-      selectedSquareEl.classList.add('selected');
-    }
-  }
-}
-
-// Handle square clicks
-function handleSquareClick(event) {
-  console.log('🎯 Square clicked!', event.target);
-  
-  // Find the actual square element (in case we clicked on a piece image)
-  let squareElement = event.target;
-  while (squareElement && !squareElement.classList.contains('square')) {
-    squareElement = squareElement.parentElement;
-  }
-  
-  if (!squareElement) {
-    console.error('❌ Could not find square element');
-    return;
-  }
-  
-  const row = parseInt(squareElement.dataset.row);
-  const col = parseInt(squareElement.dataset.col);
-  const square = `${String.fromCharCode(97 + col)}${8 - row}`;
-  
-  console.log('📍 Clicked square:', square, 'row:', row, 'col:', col);
-  
-  // Check if it's the player's turn
-  const currentPlayer = chess.turn();
-  const myColor = playerRole === 'host' ? currentRoom.hostColor : currentRoom.guestColor;
-  const isMyTurn = currentPlayer === myColor;
-  
-  console.log('🎮 Turn check:', {
-    currentPlayer,
-    myColor,
-    isMyTurn,
-    playerRole,
-    hostColor: currentRoom.hostColor,
-    guestColor: currentRoom.guestColor
-  });
-  
-  if (!isMyTurn) {
-    console.log('❌ Not your turn!');
-    return;
-  }
-  
-  if (selectedSquare) {
-    // Try to make a move
-    const move = {
-      from: selectedSquare,
-      to: square,
-      promotion: 'q' // Auto-promote to queen
-    };
-    
-    const result = chess.move(move);
-    
-    if (result) {
-      // Move was successful
-      moveCount++;
-      updateMoveHistory(result);
-      renderBoard();
-      updateGameStatus();
-      
-      // Send move to Firebase
-      sendMoveToFirebase(result);
-      
-      // Check for game over
-      if (chess.isGameOver()) {
-        handleGameOver();
-      }
-      
-      // Clear selection
-      clearSelection();
-    } else {
-      // Invalid move, select new square
-      selectSquare(square);
-    }
-  } else {
-    // Select square
-    selectSquare(square);
-  }
-}
-
-// Select a square
-function selectSquare(square) {
-  clearSelection();
-  
-  const row = 8 - parseInt(square[1]);
-  const col = square.charCodeAt(0) - 97;
-  const squareElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-  
-  console.log('🎯 Selecting square:', square, 'row:', row, 'col:', col, 'element:', squareElement);
-  
-  if (squareElement) {
-    squareElement.classList.add('selected');
-    selectedSquare = square;
-    console.log('✅ Square selected:', square);
-  } else {
-    console.error('❌ Could not find square element for:', square);
-  }
-}
-
-// Clear selection
-function clearSelection() {
-  document.querySelectorAll('.square').forEach(square => {
-    square.classList.remove('selected');
-  });
-  selectedSquare = null;
-}
-
-// Update game status
-function updateGameStatus() {
-  const turnElement = document.getElementById('current-turn');
-  const currentPlayer = chess.turn();
-  
-  if (currentPlayer === 'w') {
-    turnElement.textContent = 'White to move';
-  } else {
-    turnElement.textContent = 'Black to move';
-  }
-  
-  // Update move count
-  document.getElementById('move-count').textContent = moveCount;
-}
-
-// Update move history
-function updateMoveHistory(move) {
-  const movesList = document.getElementById('moves-list');
-  const moveElement = document.createElement('div');
-  moveElement.className = 'move-item';
-  moveElement.textContent = `${moveCount}. ${move.san}`;
-  movesList.appendChild(moveElement);
-  
-  // Scroll to bottom
-  movesList.scrollTop = movesList.scrollHeight;
-}
-
-// Handle game over
-function handleGameOver() {
-  console.log('🏁 Game over detected!');
-  console.log('📊 Chess object methods:', Object.getOwnPropertyNames(chess));
-  
-  const modal = document.getElementById('game-over-modal');
-  const title = document.getElementById('game-over-title');
-  const message = document.getElementById('game-over-message');
-  const winner = document.getElementById('winner');
-  const endReason = document.getElementById('end-reason');
-  
-  let result = '';
-  let reason = '';
-  
-  // Check what type of game over it is
-  if (chess.isCheckmate && chess.isCheckmate()) {
-    result = chess.turn() === 'w' ? 'Black wins' : 'White wins';
-    reason = 'Checkmate';
-  } else if (chess.isDraw && chess.isDraw()) {
-    result = 'Draw';
-    reason = 'Draw';
-  } else if (chess.isStalemate && chess.isStalemate()) {
-    result = 'Draw';
-    reason = 'Stalemate';
-  } else if (chess.isGameOver && chess.isGameOver()) {
-    // Generic game over
-    result = 'Game Over';
-    reason = 'Game ended';
-  } else {
-    // Fallback
-    result = 'Game Over';
-    reason = 'Game ended';
-  }
-  
-  console.log('🏆 Game result:', result, 'Reason:', reason);
-  
-  title.textContent = 'Game Over';
-  message.textContent = result;
-  winner.textContent = result;
-  endReason.textContent = reason;
-  
-  modal.style.display = 'block';
-  
-  // Stop timer
-  if (gameTimer) {
-    clearInterval(gameTimer);
-  }
-}
-
-// Start game timer
-function startGameTimer() {
-  gameStartTime = Date.now();
-  
-  gameTimer = setInterval(() => {
-    const elapsed = Date.now() - gameStartTime;
-    const minutes = Math.floor(elapsed / 60000);
-    const seconds = Math.floor((elapsed % 60000) / 1000);
-    
-    document.getElementById('game-time').textContent = 
-      `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }, 1000);
-}
-
-// Set up event listeners
-function setupEventListeners() {
-  // Flip board
-  document.getElementById('flip-board-btn').addEventListener('click', flipBoard);
-  
-  // Resign
-  document.getElementById('resign-btn').addEventListener('click', resign);
-  
-  // Offer draw
-  document.getElementById('offer-draw-btn').addEventListener('click', offerDraw);
-  
-  // Undo move
-  document.getElementById('undo-move-btn').addEventListener('click', undoMove);
-  
-  // Game over modal buttons
-  document.getElementById('next-game-btn').addEventListener('click', nextGame);
-  document.getElementById('finish-match-btn').addEventListener('click', finishMatch);
-  document.getElementById('rematch-btn').addEventListener('click', rematch);
-}
-
-// Flip board
-function flipBoard() {
-  boardFlipped = !boardFlipped;
-  
-  // Rotate the board 180 degrees but keep pieces upright
-  if (boardFlipped) {
-    board.style.transform = 'rotate(180deg)';
-    // Rotate pieces back to keep them upright
-    board.querySelectorAll('img').forEach(img => {
-      img.style.transform = 'rotate(180deg)';
-    });
-  } else {
-    board.style.transform = 'rotate(0deg)';
-    // Reset piece rotation
-    board.querySelectorAll('img').forEach(img => {
-      img.style.transform = 'rotate(0deg)';
-    });
-  }
-}
-
-// Resign
-function resign() {
-  if (confirm('Are you sure you want to resign?')) {
-    // Determine who won by resignation
-    const currentPlayer = chess.turn();
-    const myColor = playerRole === 'host' ? currentRoom.hostColor : currentRoom.guestColor;
-    const winnerColor = currentPlayer === 'w' ? 'Black' : 'White';
-    const winner = `${winnerColor} wins`;
-    const reason = 'Resignation';
-    
-    // Show game over modal
-    const modal = document.getElementById('game-over-modal');
-    const title = document.getElementById('game-over-title');
-    const message = document.getElementById('game-over-message');
-    const winnerSpan = document.getElementById('winner');
-    const endReason = document.getElementById('end-reason');
-    
-    title.textContent = 'Game Over';
-    message.textContent = winner;
-    winnerSpan.textContent = winner;
-    endReason.textContent = reason;
-    
-    modal.style.display = 'block';
-    
-    // Stop timer
-    if (gameTimer) {
-      clearInterval(gameTimer);
-    }
-    
-    // Send resignation to Firebase
-    sendResignationToFirebase();
-  }
-}
-
-// Leave game
-function leaveGame() {
-  if (confirm('Are you sure you want to leave the game?')) {
-    // Clean up
-    if (gameTimer) {
-      clearInterval(gameTimer);
-    }
-    
-    // Remove room data
-    localStorage.removeItem('currentRoom');
-    localStorage.removeItem('playerRole');
-    
-    // Redirect
-    window.location.href = 'multiplayer.html';
-  }
-}
-
-// Offer draw
-function offerDraw() {
-  if (confirm('Offer a draw to your opponent?')) {
-    // Send draw offer to Firebase
-    sendDrawOfferToFirebase();
-  }
-}
-
-// Undo move
-function undoMove() {
-  // This would undo the last move (if allowed)
-  console.log('Undo move');
-}
-
-// Next game
-function nextGame() {
-  // This would start the next game in the match
-  console.log('Next game');
-}
-
-// Finish match
-function finishMatch() {
-  // This would end the match and show results
-  console.log('Finish match');
-}
-
-// Rematch
-function rematch() {
-  // This would start a new match with the same opponent
-  console.log('Rematch');
-}
-
-// Send move to Firebase
-function sendMoveToFirebase(move) {
-  if (!window.multiplayerServer || !currentRoom) {
-    console.error('Cannot send move: multiplayer server or room not available');
-    return;
-  }
-  
-  const moveData = {
-    from: move.from,
-    to: move.to,
-    piece: move.piece,
-    color: move.color,
-    san: move.san,
-    timestamp: Date.now(),
-    playerId: playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId
-  };
-  
-  console.log('📤 Sending move to Firebase:', moveData);
-  
-  const movesRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/moves`);
-  movesRef.push(moveData).then(() => {
-    console.log('✅ Move sent to Firebase successfully');
-  }).catch((error) => {
-    console.error('❌ Error sending move to Firebase:', error);
-  });
-}
-
-// Apply move from Firebase
-function applyMoveFromFirebase(move) {
-  // Don't apply moves that we sent ourselves
-  if (move.playerId === (playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId)) {
-    return;
-  }
-  
-  console.log('📥 Applying move from Firebase:', move);
-  
-  // Apply the move to the local chess instance
-  const result = chess.move({
-    from: move.from,
-    to: move.to,
-    promotion: move.promotion || 'q'
-  });
-  
-  if (result) {
-    moveCount++;
-    updateMoveHistory(result);
-    renderBoard();
-    updateGameStatus();
-    
-    // Check for game over
-    if (chess.isGameOver()) {
-      handleGameOver();
-    }
-  } else {
-    console.error('❌ Failed to apply move from Firebase:', move);
-  }
-}
-
-// Update game state from Firebase
-function updateGameFromFirebase(gameData) {
-  console.log('🔄 Updating game state from Firebase:', gameData);
-  
-  // Update game number if changed
-  if (gameData.gameNumber && gameData.gameNumber !== currentRoom.currentGame) {
-    currentRoom.currentGame = gameData.gameNumber;
-    document.getElementById('game-number').textContent = `Game ${gameData.gameNumber}`;
-  }
-  
-  // Update game status if provided
-  if (gameData.status) {
-    updateGameStatus();
-  }
-}
-
-// Send resignation to Firebase
-function sendResignationToFirebase() {
-  if (!window.multiplayerServer || !currentRoom) {
-    console.error('Cannot send resignation: multiplayer server or room not available');
-    return;
-  }
-  
-  const resignationData = {
-    type: 'resignation',
-    playerId: playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId,
-    timestamp: Date.now()
-  };
-  
-  console.log('📤 Sending resignation to Firebase:', resignationData);
-  
-  const gameRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/gameEvents`);
-  gameRef.push(resignationData).then(() => {
-    console.log('✅ Resignation sent to Firebase successfully');
-  }).catch((error) => {
-    console.error('❌ Error sending resignation to Firebase:', error);
-  });
-}
-
-// Send draw offer to Firebase
-function sendDrawOfferToFirebase() {
-  if (!window.multiplayerServer || !currentRoom) {
-    console.error('Cannot send draw offer: multiplayer server or room not available');
-    return;
-  }
-  
-  const drawOfferData = {
-    type: 'draw_offer',
-    playerId: playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId,
-    timestamp: Date.now()
-  };
-  
-  console.log('📤 Sending draw offer to Firebase:', drawOfferData);
-  
-  const gameRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/gameEvents`);
-  gameRef.push(drawOfferData).then(() => {
-    console.log('✅ Draw offer sent to Firebase successfully');
-    alert('Draw offer sent to your opponent!');
-  }).catch((error) => {
-    console.error('❌ Error sending draw offer to Firebase:', error);
-  });
-}
-
-// Clean up on page unload
-window.addEventListener('beforeunload', function() {
-  if (gameTimer) {
-    clearInterval(gameTimer);
-  }
-});
+}, 5 * 60 * 1000);
