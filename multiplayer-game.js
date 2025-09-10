@@ -293,7 +293,9 @@ function renderBoard() {
         const dot = document.createElement('div');
         dot.classList.add('move-dot');
         targetSquare.appendChild(dot);
-        console.log('✅ Move dot added to', move.to);
+        console.log('✅ Move dot added to', move.to, 'dot element:', dot);
+        console.log('✅ Target square after adding dot:', targetSquare);
+        console.log('✅ Dots in target square:', targetSquare.querySelectorAll('.move-dot').length);
       } else {
         console.error('❌ Could not find target square for', move.to);
       }
@@ -425,6 +427,9 @@ function selectSquare(square) {
     squareElement.classList.add('selected');
     selectedSquare = square;
     console.log('✅ Square selected:', square);
+    
+    // Re-render board to show move dots
+    renderBoard();
   } else {
     console.error('❌ Could not find square element for:', square);
   }
@@ -545,7 +550,6 @@ function setupEventListeners() {
   // Game over modal buttons
   document.getElementById('next-game-btn').addEventListener('click', nextGame);
   document.getElementById('finish-match-btn').addEventListener('click', finishMatch);
-  document.getElementById('rematch-btn').addEventListener('click', rematch);
 }
 
 // Flip board
@@ -571,10 +575,9 @@ function flipBoard() {
 // Resign
 function resign() {
   if (confirm('Are you sure you want to resign?')) {
-    // Determine who won by resignation
-    const currentPlayer = chess.turn();
+    // Determine who won by resignation (the player who didn't resign wins)
     const myColor = playerRole === 'host' ? currentRoom.hostColor : currentRoom.guestColor;
-    const winnerColor = currentPlayer === 'w' ? 'Black' : 'White';
+    const winnerColor = myColor === 'w' ? 'Black' : 'White';
     const winner = `${winnerColor} wins`;
     const reason = 'Resignation';
     
@@ -641,14 +644,8 @@ function nextGame() {
 
 // Finish match
 function finishMatch() {
-  // This would end the match and show results
-  console.log('Finish match');
-}
-
-// Rematch
-function rematch() {
-  // This would start a new match with the same opponent
-  console.log('Rematch');
+  // Go to home screen
+  window.location.href = 'index.html';
 }
 
 // Send move to Firebase
@@ -739,8 +736,8 @@ function handleGameEventFromFirebase(event) {
   if (event.type === 'resignation') {
     console.log('🏳️ Opponent resigned!');
     
-    // Determine who won by resignation
-    const winnerColor = event.playerId === currentRoom.hostId ? 'White' : 'Black';
+    // Determine who won by resignation (the NON-resigning player wins)
+    const winnerColor = event.playerId === currentRoom.hostId ? 'Black' : 'White';
     const winner = `${winnerColor} wins`;
     const reason = 'Resignation';
     
