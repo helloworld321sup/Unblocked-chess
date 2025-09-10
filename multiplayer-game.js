@@ -320,6 +320,14 @@ function renderBoard() {
         const pieceImg = document.createElement('img');
         pieceImg.src = pieceImages[piece.color + piece.type.toUpperCase()];
         pieceImg.alt = `${piece.color} ${piece.type}`;
+        
+        // Apply rotation to keep pieces upright when board is flipped
+        if (boardFlipped) {
+          pieceImg.style.transform = 'rotate(180deg)';
+        } else {
+          pieceImg.style.transform = 'rotate(0deg)';
+        }
+        
         square.appendChild(pieceImg);
       }
     }
