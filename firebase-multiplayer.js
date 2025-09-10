@@ -1,6 +1,8 @@
 // Firebase-based multiplayer server
 // This provides real cross-computer multiplayer functionality
 
+console.log('🔧 firebase-multiplayer.js loaded successfully');
+
 class FirebaseMultiplayer {
   constructor() {
     console.log('FirebaseMultiplayer constructor called');
@@ -149,14 +151,19 @@ class FirebaseMultiplayer {
     return roomRef.once('value').then((snapshot) => {
       const room = snapshot.val();
       if (room && !room.guestId) {
-        room.guestId = playerId;
-        room.status = 'ready';
+        // Update the room object with new data
+        const updatedRoom = {
+          ...room,
+          guestId: playerId,
+          status: 'ready'
+        };
+        
         return roomRef.update({
           guestId: playerId,
           status: 'ready'
         }).then(() => {
           console.log('Player joined room:', roomId);
-          return room;
+          return updatedRoom; // Return the updated room object
         });
       }
       return null;
@@ -321,3 +328,4 @@ setInterval(() => {
     window.multiplayerServer.cleanupOldRooms();
   }
 }, 5 * 60 * 1000);
+
