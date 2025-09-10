@@ -161,6 +161,11 @@ function loadRoomData() {
 
   currentRoom = JSON.parse(roomData);
   playerRole = role;
+  
+  console.log('🏠 Room data loaded:', currentRoom);
+  console.log('👤 Player role:', playerRole);
+  console.log('🎮 Games count:', currentRoom.gamesCount);
+  console.log('🎮 Current game:', currentRoom.currentGame);
 
   // Check if room has both players
   if (!currentRoom.guestId) {
@@ -760,11 +765,19 @@ function nextGame() {
 
 // Finish match
 function finishMatch() {
+  console.log('🏁 Finish match called');
+  console.log('🏁 currentRoom:', currentRoom);
+  console.log('🏁 gamesCount:', currentRoom?.gamesCount);
+  console.log('🏁 currentGame:', currentRoom?.currentGame);
+  console.log('🏁 playerRole:', playerRole);
+  
   // Check if there are more games to play
   if (currentRoom && currentRoom.gamesCount > currentRoom.currentGame) {
+    console.log('🎮 Starting next game...');
     // Start next game
     nextGame();
   } else {
+    console.log('🏠 All games completed, going to home screen');
     // All games completed, go to home screen
     window.location.href = 'index.html';
   }
