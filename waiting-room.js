@@ -161,28 +161,43 @@ document.addEventListener('DOMContentLoaded', function() {
   function startGame() {
     if (playerRole !== 'host') return;
 
-    // Check if there's a guest in the room
-    if (!currentRoom.guestId) {
-      alert('Please wait for an opponent to join before starting the game.');
-      return;
-    }
-
-    // Update room status to playing
-    window.multiplayerServer.updateRoomStatus(currentRoom.id, 'playing').then((updatedRoom) => {
-      if (updatedRoom) {
-        updatedRoom.currentGame = 1;
-        updatedRoom.gameHistory = [];
-        
-        // Update current room
-        currentRoom = updatedRoom;
-        localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
-      
-        // Redirect to game
-        window.location.href = 'multiplayer-game.html';
+    // Get the latest room data from Firebase before checking
+    window.multiplayerServer.getRoom(currentRoom.id).then((latestRoom) => {
+      if (!latestRoom) {
+        alert('Room not found. Please try again.');
+        return;
       }
+
+      // Check if there's a guest in the room
+      if (!latestRoom.guestId) {
+        alert('Please wait for an opponent to join before starting the game.');
+        return;
+      }
+
+      // Update current room with latest data
+      currentRoom = latestRoom;
+      localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
+
+      // Update room status to playing
+      window.multiplayerServer.updateRoomStatus(currentRoom.id, 'playing').then((updatedRoom) => {
+        if (updatedRoom) {
+          updatedRoom.currentGame = 1;
+          updatedRoom.gameHistory = [];
+          
+          // Update current room
+          currentRoom = updatedRoom;
+          localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
+        
+          // Redirect to game
+          window.location.href = 'multiplayer-game.html';
+        }
+      }).catch((error) => {
+        console.error('Error starting game:', error);
+        alert('Failed to start game. Please try again.');
+      });
     }).catch((error) => {
-      console.error('Error starting game:', error);
-      alert('Failed to start game. Please try again.');
+      console.error('Error getting room data:', error);
+      alert('Failed to get room data. Please try again.');
     });
   }
 
