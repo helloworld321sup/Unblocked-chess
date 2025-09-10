@@ -146,6 +146,28 @@ function setupFirebaseListeners() {
     console.log('🔄 New game event received:', event);
     handleGameEventFromFirebase(event);
   });
+  
+  // Listen for room updates (color changes, etc.)
+  const roomRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}`);
+  roomRef.on('value', (snapshot) => {
+    const roomData = snapshot.val();
+    if (roomData) {
+      console.log('🔄 Room data updated:', roomData);
+      
+      // Check if colors have changed
+      if (roomData.hostColor !== currentRoom.hostColor || roomData.guestColor !== currentRoom.guestColor) {
+        console.log('🎨 Colors have changed, updating...');
+        currentRoom.hostColor = roomData.hostColor;
+        currentRoom.guestColor = roomData.guestColor;
+        
+        // Update localStorage
+        localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
+        
+        // Update player info display
+        setupPlayerInfo();
+      }
+    }
+  });
 }
 
 // Load room data from localStorage
@@ -161,11 +183,6 @@ function loadRoomData() {
 
   currentRoom = JSON.parse(roomData);
   playerRole = role;
-  
-  console.log('🏠 Room data loaded:', currentRoom);
-  console.log('👤 Player role:', playerRole);
-  console.log('🎮 Games count:', currentRoom.gamesCount);
-  console.log('🎮 Current game:', currentRoom.currentGame);
 
   // Check if room has both players
   if (!currentRoom.guestId) {
@@ -735,6 +752,27 @@ function nextGame() {
   // Increment game number
   currentRoom.currentGame++;
   
+  // Handle side rotation if set to alternate
+  if (currentRoom.sideRotation === 'alternate') {
+    console.log('🔄 Alternating colors for game', currentRoom.currentGame);
+    // Swap host and guest colors
+    const tempColor = currentRoom.hostColor;
+    currentRoom.hostColor = currentRoom.guestColor;
+    currentRoom.guestColor = tempColor;
+    
+    // Update Firebase with new colors
+    if (window.multiplayerServer) {
+      const roomRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}`);
+      roomRef.update({
+        hostColor: currentRoom.hostColor,
+        guestColor: currentRoom.guestColor
+      });
+    }
+    
+    // Update localStorage
+    localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
+  }
+  
   // Reset the chess game
   chess.reset();
   moveCount = 0;
@@ -765,19 +803,11 @@ function nextGame() {
 
 // Finish match
 function finishMatch() {
-  console.log('🏁 Finish match called');
-  console.log('🏁 currentRoom:', currentRoom);
-  console.log('🏁 gamesCount:', currentRoom?.gamesCount);
-  console.log('🏁 currentGame:', currentRoom?.currentGame);
-  console.log('🏁 playerRole:', playerRole);
-  
   // Check if there are more games to play
   if (currentRoom && currentRoom.gamesCount > currentRoom.currentGame) {
-    console.log('🎮 Starting next game...');
     // Start next game
     nextGame();
   } else {
-    console.log('🏠 All games completed, going to home screen');
     // All games completed, go to home screen
     window.location.href = 'index.html';
   }
