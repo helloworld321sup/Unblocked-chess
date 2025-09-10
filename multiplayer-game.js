@@ -428,7 +428,7 @@ function handleSquareClick(event) {
       sendMoveToFirebase(result);
       
       // Check for game over
-      if (chess.isCheckmate() || chess.isDraw() || chess.isStalemate()) {
+      if (chess.in_checkmate() || chess.in_draw() || chess.in_stalemate()) {
         handleGameOver();
       }
       
@@ -516,19 +516,15 @@ function handleGameOver() {
   let reason = '';
   
   // Check what type of game over it is
-  if (chess.isCheckmate && chess.isCheckmate()) {
+  if (chess.in_checkmate()) {
     result = chess.turn() === 'w' ? 'Black wins' : 'White wins';
     reason = 'Checkmate';
-  } else if (chess.isDraw && chess.isDraw()) {
+  } else if (chess.in_draw()) {
     result = 'Draw';
     reason = 'Draw';
-  } else if (chess.isStalemate && chess.isStalemate()) {
+  } else if (chess.in_stalemate()) {
     result = 'Draw';
     reason = 'Stalemate';
-  } else if (chess.isCheckmate() || chess.isDraw() || chess.isStalemate()) {
-    // Generic game over
-    result = 'Game Over';
-    reason = 'Game ended';
   } else {
     // Fallback
     result = 'Game Over';
@@ -781,7 +777,7 @@ function applyMoveFromFirebase(move) {
     updateGameStatus();
     
     // Check for game over
-    if (chess.isCheckmate() || chess.isDraw() || chess.isStalemate()) {
+    if (chess.in_checkmate() || chess.in_draw() || chess.in_stalemate()) {
       handleGameOver();
     }
   } else {
