@@ -8,6 +8,7 @@ let gameStartTime = null;
 let gameTimer = null;
 let moveCount = 0;
 let boardFlipped = false;
+let lastMove = null;
 
 // Apply board color from settings
 function applyBoardColor() {
@@ -109,6 +110,14 @@ function setupFirebaseListeners() {
     const move = snapshot.val();
     console.log('🔄 New move received:', move);
     applyMoveFromFirebase(move);
+  });
+  
+  // Listen for game events (resignation, draw offers, etc.)
+  const gameEventsRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/gameEvents`);
+  gameEventsRef.on('child_added', (snapshot) => {
+    const event = snapshot.val();
+    console.log('🔄 New game event received:', event);
+    handleGameEventFromFirebase(event);
   });
 }
 
@@ -269,16 +278,24 @@ function renderBoard() {
   
   // Add move dots for legal moves if a piece is selected
   if (selectedSquare) {
+    console.log('🎯 Adding move dots for selected square:', selectedSquare);
     const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
+    console.log('📋 Legal moves:', legalMoves);
+    
     legalMoves.forEach(move => {
       const targetRow = 8 - parseInt(move.to[1]);
       const targetCol = move.to.charCodeAt(0) - 97;
       const targetSquare = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
       
+      console.log('🎯 Adding dot to:', move.to, 'row:', targetRow, 'col:', targetCol, 'element:', targetSquare);
+      
       if (targetSquare) {
         const dot = document.createElement('div');
         dot.classList.add('move-dot');
         targetSquare.appendChild(dot);
+        console.log('✅ Move dot added to', move.to);
+      } else {
+        console.error('❌ Could not find target square for', move.to);
       }
     });
     
@@ -288,6 +305,30 @@ function renderBoard() {
     const selectedSquareEl = document.querySelector(`[data-row="${selectedRow}"][data-col="${selectedCol}"]`);
     if (selectedSquareEl) {
       selectedSquareEl.classList.add('selected');
+      console.log('✅ Selected square highlighted:', selectedSquare);
+    } else {
+      console.error('❌ Could not find selected square element for:', selectedSquare);
+    }
+  }
+  
+  // Highlight last move
+  if (lastMove) {
+    console.log('🔄 Highlighting last move:', lastMove);
+    const fromRow = 8 - parseInt(lastMove.from[1]);
+    const fromCol = lastMove.from.charCodeAt(0) - 97;
+    const toRow = 8 - parseInt(lastMove.to[1]);
+    const toCol = lastMove.to.charCodeAt(0) - 97;
+    
+    const fromSquare = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
+    const toSquare = document.querySelector(`[data-row="${toRow}"][data-col="${toCol}"]`);
+    
+    if (fromSquare) {
+      fromSquare.classList.add('recent-move');
+      console.log('✅ Last move from square highlighted:', lastMove.from);
+    }
+    if (toSquare) {
+      toSquare.classList.add('recent-move');
+      console.log('✅ Last move to square highlighted:', lastMove.to);
     }
   }
 }
@@ -345,6 +386,7 @@ function handleSquareClick(event) {
     if (result) {
       // Move was successful
       moveCount++;
+      lastMove = result; // Store the last move
       updateMoveHistory(result);
       renderBoard();
       updateGameStatus();
@@ -654,6 +696,7 @@ function applyMoveFromFirebase(move) {
   
   if (result) {
     moveCount++;
+    lastMove = result; // Store the last move
     updateMoveHistory(result);
     renderBoard();
     updateGameStatus();
@@ -680,6 +723,49 @@ function updateGameFromFirebase(gameData) {
   // Update game status if provided
   if (gameData.status) {
     updateGameStatus();
+  }
+}
+
+// Handle game events from Firebase (resignation, draw offers, etc.)
+function handleGameEventFromFirebase(event) {
+  console.log('🎮 Handling game event from Firebase:', event);
+  
+  // Don't handle events that we sent ourselves
+  if (event.playerId === (playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId)) {
+    console.log('⏭️ Ignoring our own event');
+    return;
+  }
+  
+  if (event.type === 'resignation') {
+    console.log('🏳️ Opponent resigned!');
+    
+    // Determine who won by resignation
+    const winnerColor = event.playerId === currentRoom.hostId ? 'White' : 'Black';
+    const winner = `${winnerColor} wins`;
+    const reason = 'Resignation';
+    
+    // Show game over modal
+    const modal = document.getElementById('game-over-modal');
+    const title = document.getElementById('game-over-title');
+    const message = document.getElementById('game-over-message');
+    const winnerSpan = document.getElementById('winner');
+    const endReason = document.getElementById('end-reason');
+    
+    title.textContent = 'Game Over';
+    message.textContent = winner;
+    winnerSpan.textContent = winner;
+    endReason.textContent = reason;
+    
+    modal.style.display = 'block';
+    
+    // Stop timer
+    if (gameTimer) {
+      clearInterval(gameTimer);
+    }
+  } else if (event.type === 'draw_offer') {
+    console.log('🤝 Draw offer received!');
+    // Handle draw offer (you can implement this later)
+    alert('Your opponent has offered a draw!');
   }
 }
 
