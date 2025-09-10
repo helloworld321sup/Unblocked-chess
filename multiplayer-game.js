@@ -10,10 +10,37 @@ let moveCount = 0;
 let boardFlipped = false;
 let lastMove = null;
 
+// Sound effects
+const sounds = {
+  move: new Audio("http://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3"),
+  capture: new Audio("http://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3"),
+  castle: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/castle.mp3"),
+  check: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3"),
+  promotion: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/promote.mp3"),
+  checkmate: new Audio("https://images.chesscomfiles.com/chess-themes/sounds/_WEBM_/default/game-end.webm")
+};
+
 // Apply board color from settings
 function applyBoardColor() {
   const boardColor = localStorage.getItem('boardColor') || '#d67959';
   document.documentElement.style.setProperty('--black-square-color', boardColor);
+}
+
+// Play move sound effects
+function playMoveSound(move) {
+  console.log('🔊 Playing move sound for:', move);
+  
+  // Check if sound is enabled
+  const soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+  if (!soundEnabled) return;
+  
+  if (move.flags.includes("c")) sounds.capture.play();
+  else if (move.flags.includes("k") || move.flags.includes("q")) sounds.castle.play();
+  else if (move.flags.includes("p")) sounds.promotion.play();
+  else sounds.move.play();
+  
+  if (chess.in_checkmate()) sounds.checkmate.play();
+  else if (chess.in_check()) sounds.check.play();
 }
 
 // Apply board color on page load
@@ -389,6 +416,10 @@ function handleSquareClick(event) {
       // Move was successful
       moveCount++;
       lastMove = result; // Store the last move
+      
+      // Play move sound
+      playMoveSound(result);
+      
       updateMoveHistory(result);
       renderBoard();
       updateGameStatus();
@@ -741,6 +772,10 @@ function applyMoveFromFirebase(move) {
   if (result) {
     moveCount++;
     lastMove = result; // Store the last move
+    
+    // Play move sound
+    playMoveSound(result);
+    
     updateMoveHistory(result);
     renderBoard();
     updateGameStatus();
