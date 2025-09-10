@@ -428,7 +428,7 @@ function handleSquareClick(event) {
       sendMoveToFirebase(result);
       
       // Check for game over
-      if (chess.isGameOver()) {
+      if (chess.isCheckmate() || chess.isDraw() || chess.isStalemate()) {
         handleGameOver();
       }
       
@@ -525,7 +525,7 @@ function handleGameOver() {
   } else if (chess.isStalemate && chess.isStalemate()) {
     result = 'Draw';
     reason = 'Stalemate';
-  } else if (chess.isGameOver && chess.isGameOver()) {
+  } else if (chess.isCheckmate() || chess.isDraw() || chess.isStalemate()) {
     // Generic game over
     result = 'Game Over';
     reason = 'Game ended';
@@ -781,7 +781,7 @@ function applyMoveFromFirebase(move) {
     updateGameStatus();
     
     // Check for game over
-    if (chess.isGameOver()) {
+    if (chess.isCheckmate() || chess.isDraw() || chess.isStalemate()) {
       handleGameOver();
     }
   } else {
