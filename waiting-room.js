@@ -167,26 +167,22 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-      // Update room status to playing
-      window.multiplayerServer.updateRoomStatus(currentRoom.id, 'playing').then((updatedRoom) => {
-        if (updatedRoom) {
-          updatedRoom.currentGame = 1;
-          updatedRoom.gameHistory = [];
-          
-          // Update current room
-          currentRoom = updatedRoom;
-          localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
+    // Update room status to playing
+    window.multiplayerServer.updateRoomStatus(currentRoom.id, 'playing').then((updatedRoom) => {
+      if (updatedRoom) {
+        updatedRoom.currentGame = 1;
+        updatedRoom.gameHistory = [];
         
-          // Redirect to game
-          window.location.href = 'multiplayer-game.html';
-        }
-      }).catch((error) => {
-        console.error('Error starting game:', error);
-        alert('Failed to start game. Please try again.');
-      });
+        // Update current room
+        currentRoom = updatedRoom;
+        localStorage.setItem('currentRoom', JSON.stringify(currentRoom));
+      
+        // Redirect to game
+        window.location.href = 'multiplayer-game.html';
+      }
     }).catch((error) => {
-      console.error('Error getting room data:', error);
-      alert('Failed to get room data. Please try again.');
+      console.error('Error starting game:', error);
+      alert('Failed to start game. Please try again.');
     });
   }
 
