@@ -243,6 +243,13 @@ function createBoard() {
 function renderBoard() {
   const positions = chess.board();
   
+  // Clear all highlights first
+  document.querySelectorAll('.square').forEach(square => {
+    square.classList.remove('selected', 'highlight', 'recent-move');
+    // Remove existing move dots
+    square.querySelectorAll('.move-dot').forEach(dot => dot.remove());
+  });
+  
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
@@ -257,6 +264,30 @@ function renderBoard() {
         pieceImg.alt = `${piece.color} ${piece.type}`;
         square.appendChild(pieceImg);
       }
+    }
+  }
+  
+  // Add move dots for legal moves if a piece is selected
+  if (selectedSquare) {
+    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
+    legalMoves.forEach(move => {
+      const targetRow = 8 - parseInt(move.to[1]);
+      const targetCol = move.to.charCodeAt(0) - 97;
+      const targetSquare = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
+      
+      if (targetSquare) {
+        const dot = document.createElement('div');
+        dot.classList.add('move-dot');
+        targetSquare.appendChild(dot);
+      }
+    });
+    
+    // Highlight selected square
+    const selectedRow = 8 - parseInt(selectedSquare[1]);
+    const selectedCol = selectedSquare.charCodeAt(0) - 97;
+    const selectedSquareEl = document.querySelector(`[data-row="${selectedRow}"][data-col="${selectedCol}"]`);
+    if (selectedSquareEl) {
+      selectedSquareEl.classList.add('selected');
     }
   }
 }
@@ -394,6 +425,9 @@ function updateMoveHistory(move) {
 
 // Handle game over
 function handleGameOver() {
+  console.log('🏁 Game over detected!');
+  console.log('📊 Chess object methods:', Object.getOwnPropertyNames(chess));
+  
   const modal = document.getElementById('game-over-modal');
   const title = document.getElementById('game-over-title');
   const message = document.getElementById('game-over-message');
@@ -403,16 +437,27 @@ function handleGameOver() {
   let result = '';
   let reason = '';
   
-  if (chess.isCheckmate()) {
+  // Check what type of game over it is
+  if (chess.isCheckmate && chess.isCheckmate()) {
     result = chess.turn() === 'w' ? 'Black wins' : 'White wins';
     reason = 'Checkmate';
-  } else if (chess.isDraw()) {
+  } else if (chess.isDraw && chess.isDraw()) {
     result = 'Draw';
     reason = 'Draw';
-  } else if (chess.isStalemate()) {
+  } else if (chess.isStalemate && chess.isStalemate()) {
     result = 'Draw';
     reason = 'Stalemate';
+  } else if (chess.isGameOver && chess.isGameOver()) {
+    // Generic game over
+    result = 'Game Over';
+    reason = 'Game ended';
+  } else {
+    // Fallback
+    result = 'Game Over';
+    reason = 'Game ended';
   }
+  
+  console.log('🏆 Game result:', result, 'Reason:', reason);
   
   title.textContent = 'Game Over';
   message.textContent = result;
@@ -449,9 +494,6 @@ function setupEventListeners() {
   // Resign
   document.getElementById('resign-btn').addEventListener('click', resign);
   
-  // Leave game
-  document.getElementById('leave-game-btn').addEventListener('click', leaveGame);
-  
   // Offer draw
   document.getElementById('offer-draw-btn').addEventListener('click', offerDraw);
   
@@ -468,19 +510,30 @@ function setupEventListeners() {
 function flipBoard() {
   boardFlipped = !boardFlipped;
   
-  // Rotate the board 180 degrees
+  // Rotate the board 180 degrees but keep pieces upright
   if (boardFlipped) {
     board.style.transform = 'rotate(180deg)';
+    // Rotate pieces back to keep them upright
+    board.querySelectorAll('img').forEach(img => {
+      img.style.transform = 'rotate(180deg)';
+    });
   } else {
     board.style.transform = 'rotate(0deg)';
+    // Reset piece rotation
+    board.querySelectorAll('img').forEach(img => {
+      img.style.transform = 'rotate(0deg)';
+    });
   }
 }
 
 // Resign
 function resign() {
   if (confirm('Are you sure you want to resign?')) {
-    // Set the game as resigned
-    const winner = chess.turn() === 'w' ? 'Black wins' : 'White wins';
+    // Determine who won by resignation
+    const currentPlayer = chess.turn();
+    const myColor = playerRole === 'host' ? currentRoom.hostColor : currentRoom.guestColor;
+    const winnerColor = currentPlayer === 'w' ? 'Black' : 'White';
+    const winner = `${winnerColor} wins`;
     const reason = 'Resignation';
     
     // Show game over modal
@@ -501,6 +554,9 @@ function resign() {
     if (gameTimer) {
       clearInterval(gameTimer);
     }
+    
+    // Send resignation to Firebase
+    sendResignationToFirebase();
   }
 }
 
@@ -523,8 +579,10 @@ function leaveGame() {
 
 // Offer draw
 function offerDraw() {
-  // This would send a draw offer to the opponent
-  console.log('Offer draw');
+  if (confirm('Offer a draw to your opponent?')) {
+    // Send draw offer to Firebase
+    sendDrawOfferToFirebase();
+  }
 }
 
 // Undo move
@@ -623,6 +681,53 @@ function updateGameFromFirebase(gameData) {
   if (gameData.status) {
     updateGameStatus();
   }
+}
+
+// Send resignation to Firebase
+function sendResignationToFirebase() {
+  if (!window.multiplayerServer || !currentRoom) {
+    console.error('Cannot send resignation: multiplayer server or room not available');
+    return;
+  }
+  
+  const resignationData = {
+    type: 'resignation',
+    playerId: playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId,
+    timestamp: Date.now()
+  };
+  
+  console.log('📤 Sending resignation to Firebase:', resignationData);
+  
+  const gameRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/gameEvents`);
+  gameRef.push(resignationData).then(() => {
+    console.log('✅ Resignation sent to Firebase successfully');
+  }).catch((error) => {
+    console.error('❌ Error sending resignation to Firebase:', error);
+  });
+}
+
+// Send draw offer to Firebase
+function sendDrawOfferToFirebase() {
+  if (!window.multiplayerServer || !currentRoom) {
+    console.error('Cannot send draw offer: multiplayer server or room not available');
+    return;
+  }
+  
+  const drawOfferData = {
+    type: 'draw_offer',
+    playerId: playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId,
+    timestamp: Date.now()
+  };
+  
+  console.log('📤 Sending draw offer to Firebase:', drawOfferData);
+  
+  const gameRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/gameEvents`);
+  gameRef.push(drawOfferData).then(() => {
+    console.log('✅ Draw offer sent to Firebase successfully');
+    alert('Draw offer sent to your opponent!');
+  }).catch((error) => {
+    console.error('❌ Error sending draw offer to Firebase:', error);
+  });
 }
 
 // Clean up on page unload
