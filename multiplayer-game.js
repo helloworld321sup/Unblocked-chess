@@ -550,6 +550,10 @@ function setupEventListeners() {
   // Game over modal buttons
   document.getElementById('next-game-btn').addEventListener('click', nextGame);
   document.getElementById('finish-match-btn').addEventListener('click', finishMatch);
+  
+  // Draw offer modal buttons
+  document.getElementById('accept-draw-btn').addEventListener('click', acceptDraw);
+  document.getElementById('decline-draw-btn').addEventListener('click', declineDraw);
 }
 
 // Flip board
@@ -628,6 +632,49 @@ function offerDraw() {
     // Send draw offer to Firebase
     sendDrawOfferToFirebase();
   }
+}
+
+// Accept draw
+function acceptDraw() {
+  console.log('🤝 Draw accepted!');
+  
+  // Close the draw offer modal
+  const modal = document.getElementById('draw-offer-modal');
+  modal.style.display = 'none';
+  
+  // Show game over modal with draw result
+  const gameOverModal = document.getElementById('game-over-modal');
+  const title = document.getElementById('game-over-title');
+  const message = document.getElementById('game-over-message');
+  const winnerSpan = document.getElementById('winner');
+  const endReason = document.getElementById('end-reason');
+  
+  title.textContent = 'Game Over';
+  message.textContent = 'Draw';
+  winnerSpan.textContent = 'Draw';
+  endReason.textContent = 'Draw by agreement';
+  
+  gameOverModal.style.display = 'block';
+  
+  // Stop timer
+  if (gameTimer) {
+    clearInterval(gameTimer);
+  }
+  
+  // Send draw acceptance to Firebase
+  sendDrawResponseToFirebase('accepted');
+}
+
+// Decline draw
+function declineDraw() {
+  console.log('🤝 Draw declined!');
+  
+  // Close the draw offer modal
+  const modal = document.getElementById('draw-offer-modal');
+  modal.style.display = 'none';
+  
+  // Send draw decline to Firebase
+  sendDrawResponseToFirebase('declined');
 }
 
 // Undo move
@@ -761,8 +808,43 @@ function handleGameEventFromFirebase(event) {
     }
   } else if (event.type === 'draw_offer') {
     console.log('🤝 Draw offer received!');
-    // Handle draw offer (you can implement this later)
-    alert('Your opponent has offered a draw!');
+    // Show draw offer modal
+    const modal = document.getElementById('draw-offer-modal');
+    modal.style.display = 'block';
+  } else if (event.type === 'draw_response') {
+    console.log('🤝 Draw response received:', event.response);
+    
+    if (event.response === 'accepted') {
+      // Draw was accepted by opponent
+      console.log('🤝 Draw accepted by opponent!');
+      
+      // Close any open draw offer modal
+      const drawModal = document.getElementById('draw-offer-modal');
+      drawModal.style.display = 'none';
+      
+      // Show game over modal with draw result
+      const gameOverModal = document.getElementById('game-over-modal');
+      const title = document.getElementById('game-over-title');
+      const message = document.getElementById('game-over-message');
+      const winnerSpan = document.getElementById('winner');
+      const endReason = document.getElementById('end-reason');
+      
+      title.textContent = 'Game Over';
+      message.textContent = 'Draw';
+      winnerSpan.textContent = 'Draw';
+      endReason.textContent = 'Draw by agreement';
+      
+      gameOverModal.style.display = 'block';
+      
+      // Stop timer
+      if (gameTimer) {
+        clearInterval(gameTimer);
+      }
+    } else if (event.response === 'declined') {
+      // Draw was declined by opponent
+      console.log('🤝 Draw declined by opponent!');
+      alert('Your opponent declined the draw offer.');
+    }
   }
 }
 
@@ -810,6 +892,30 @@ function sendDrawOfferToFirebase() {
     alert('Draw offer sent to your opponent!');
   }).catch((error) => {
     console.error('❌ Error sending draw offer to Firebase:', error);
+  });
+}
+
+// Send draw response to Firebase
+function sendDrawResponseToFirebase(response) {
+  if (!window.multiplayerServer || !currentRoom) {
+    console.error('Cannot send draw response: multiplayer server or room not available');
+    return;
+  }
+  
+  const drawResponseData = {
+    type: 'draw_response',
+    response: response, // 'accepted' or 'declined'
+    playerId: playerRole === 'host' ? currentRoom.hostId : currentRoom.guestId,
+    timestamp: Date.now()
+  };
+  
+  console.log('📤 Sending draw response to Firebase:', drawResponseData);
+  
+  const gameRef = window.multiplayerServer.database.ref(`rooms/${currentRoom.id}/gameEvents`);
+  gameRef.push(drawResponseData).then(() => {
+    console.log('✅ Draw response sent to Firebase successfully');
+  }).catch((error) => {
+    console.error('❌ Error sending draw response to Firebase:', error);
   });
 }
 
