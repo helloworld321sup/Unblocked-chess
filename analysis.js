@@ -44,8 +44,8 @@ function getPieceImages() {
       bR: "https://static.stands4.com/images/symbol/3400_black-rook.png",
       bN: "https://static.stands4.com/images/symbol/3402_black-knight.png",
       bB: "https://static.stands4.com/images/symbol/3401_black-bishop.png",
-      bQ: "https://static.stands4.com/images/symbol/3405_white-queen.png",
-      bK: "https://static.stands4.com/images/symbol/3404_white-king.png",
+      bQ: "https://static.stands4.com/images/symbol/3399_black-queen.png",
+      bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
     };
   }
 }
