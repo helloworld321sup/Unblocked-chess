@@ -2250,11 +2250,11 @@ body {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
-    width: 480px;
-    height: 480px;
-    border: 3px solid #333;
-    border-radius: 8px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    width: 640px;
+    height: 640px;
+    border: 4px solid #333;
+    border-radius: 10px;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.4);
     overflow: hidden;
   }
   
@@ -2269,8 +2269,8 @@ body {
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
   }
   
   .square.white {
@@ -2299,11 +2299,11 @@ body {
   }
   
   .move-dot {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background-color: rgba(0, 0, 0, 0.3);
-    border: 2px solid #333;
+    border: 3px solid #333;
     position: absolute;
     z-index: 10;
   }
@@ -2314,8 +2314,8 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 10px;
-    height: 10px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background-color: #333;
   }
