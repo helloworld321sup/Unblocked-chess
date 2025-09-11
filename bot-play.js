@@ -838,6 +838,15 @@ copyPgnGameoverBtn?.addEventListener("click", () => {
   showScorebook();
 });
 
+// --- Game Over Popup Analyze Game button ---
+const analyzeGameBtn = document.getElementById("analyze-game-btn");
+analyzeGameBtn?.addEventListener("click", () => {
+  // Store the current game PGN in localStorage and go to analysis
+  const pgn = chess.pgn();
+  localStorage.setItem('analysisPGN', pgn);
+  window.location.href = 'analysis.html';
+});
+
 // --- Scorebook buttons ---
 scorebookButton?.addEventListener("click", () => {
   showScorebook();
