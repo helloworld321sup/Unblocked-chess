@@ -110,21 +110,11 @@ function updateEngineStatus(message, type = 'ready') {
 
 // Create the chess board
 function createBoard() {
-  board.innerHTML = '';
-  
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const square = document.createElement('div');
-      square.className = 'square';
-      square.dataset.row = row;
-      square.dataset.col = col;
-      
-      // Add click event
-      square.addEventListener('click', () => handleSquareClick(square));
-      
-      board.appendChild(square);
-    }
-  }
+  // Board is already created in HTML, just add event listeners
+  const squares = board.querySelectorAll('.square');
+  squares.forEach(square => {
+    square.addEventListener('click', () => handleSquareClick(square));
+  });
   
   renderBoard();
 }
@@ -133,7 +123,7 @@ function createBoard() {
 function renderBoard() {
   const positions = chess.board();
   
-  // Clear all highlights
+  // Clear all highlights and pieces
   document.querySelectorAll('.square').forEach(square => {
     square.classList.remove('selected', 'highlight', 'recent-move');
     square.innerHTML = '';
@@ -143,9 +133,10 @@ function renderBoard() {
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const piece = positions[row][col];
-      const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+      const squareNotation = String.fromCharCode(97 + col) + (8 - row);
+      const square = document.querySelector(`[data-square="${squareNotation}"]`);
       
-      if (piece) {
+      if (piece && square) {
         const pieceImg = document.createElement('img');
         pieceImg.src = pieceImages[piece.color + piece.type.toUpperCase()];
         pieceImg.alt = `${piece.color} ${piece.type}`;
@@ -165,13 +156,12 @@ function renderBoard() {
 
 // Handle square clicks
 function handleSquareClick(square) {
-  const row = parseInt(square.dataset.row);
-  const col = parseInt(square.dataset.col);
+  const squareNotation = square.dataset.square;
   
   if (selectedSquare) {
     // Try to make a move
-    const fromSquare = getSquareNotation(selectedSquare);
-    const toSquare = getSquareNotation({row, col});
+    const fromSquare = selectedSquare.dataset.square;
+    const toSquare = squareNotation;
     
     const move = {
       from: fromSquare,
@@ -190,11 +180,11 @@ function handleSquareClick(square) {
       clearSelection();
     } else {
       // Invalid move, select new square
-      selectSquare({row, col});
+      selectSquare(square);
     }
   } else {
     // Select square
-    selectSquare({row, col});
+    selectSquare(square);
   }
 }
 
@@ -203,17 +193,14 @@ function selectSquare(square) {
   clearSelection();
   selectedSquare = square;
   
-  const squareEl = document.querySelector(`[data-row="${square.row}"][data-col="${square.col}"]`);
-  squareEl.classList.add('selected');
+  square.classList.add('selected');
   
   // Show legal moves
-  const fromSquare = getSquareNotation(square);
+  const fromSquare = square.dataset.square;
   const legalMoves = chess.moves({ square: fromSquare, verbose: true });
   
   legalMoves.forEach(move => {
-    const targetRow = 8 - parseInt(move.to[1]);
-    const targetCol = move.to.charCodeAt(0) - 97;
-    const targetSquare = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
+    const targetSquare = document.querySelector(`[data-square="${move.to}"]`);
     
     if (targetSquare) {
       const dot = document.createElement('div');
@@ -232,12 +219,6 @@ function clearSelection() {
   selectedSquare = null;
 }
 
-// Get square notation (e.g., "e4")
-function getSquareNotation(square) {
-  const col = String.fromCharCode(97 + square.col);
-  const row = 8 - square.row;
-  return col + row;
-}
 
 // Analyze current position
 function analyzeCurrentPosition() {
@@ -407,6 +388,9 @@ function flipBoard() {
       img.style.transform = 'rotate(0deg)';
     });
   }
+   
+  // Re-render to update piece positions
+  renderBoard();
 }
 
 // Setup event listeners
