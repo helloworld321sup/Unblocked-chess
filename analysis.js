@@ -44,8 +44,8 @@ function getPieceImages() {
       bR: "https://static.stands4.com/images/symbol/3400_black-rook.png",
       bN: "https://static.stands4.com/images/symbol/3402_black-knight.png",
       bB: "https://static.stands4.com/images/symbol/3401_black-bishop.png",
-      bQ: "https://static.stands4.com/images/symbol/3399_black-queen.png",
-      bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
+      bQ: "https://static.stands4.com/images/symbol/3405_white-queen.png",
+      bK: "https://static.stands4.com/images/symbol/3404_white-king.png",
     };
   }
 }
@@ -73,32 +73,62 @@ function initializeStockfish() {
   console.log('🤖 Initializing Stockfish engine...');
   updateEngineStatus('Loading Stockfish...', 'loading');
   
-  if (typeof Stockfish === 'undefined') {
-    updateEngineStatus('Stockfish not loaded!', 'error');
-    return;
+  // Try multiple Stockfish sources
+  const stockfishSources = [
+    'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.js',
+    'https://unpkg.com/stockfish@16.0.0/stockfish.js',
+    'https://cdn.skypack.dev/stockfish@16.0.0'
+  ];
+  
+  let currentSourceIndex = 0;
+  
+  function tryNextSource() {
+    if (currentSourceIndex >= stockfishSources.length) {
+      updateEngineStatus('Stockfish not available!', 'error');
+      return;
+    }
+    
+    const source = stockfishSources[currentSourceIndex];
+    console.log(`🤖 Trying Stockfish source: ${source}`);
+    
+    try {
+      stockfish = new Worker(source);
+      
+      stockfish.onmessage = function(event) {
+        const message = event.data;
+        console.log('🤖 Stockfish:', message);
+        
+        if (message.includes('uciok')) {
+          updateEngineStatus('Engine ready!', 'ready');
+          stockfish.postMessage('isready');
+        } else if (message.includes('readyok')) {
+          updateEngineStatus('Engine ready!', 'ready');
+          analyzeCurrentPosition();
+        } else if (message.includes('bestmove')) {
+          handleBestMove(message);
+        } else if (message.includes('info depth')) {
+          handleAnalysisInfo(message);
+        }
+      };
+      
+      stockfish.onerror = function(error) {
+        console.error(`❌ Stockfish worker error with ${source}:`, error);
+        stockfish.terminate();
+        currentSourceIndex++;
+        setTimeout(tryNextSource, 1000);
+      };
+      
+      stockfish.postMessage('uci');
+      stockfish.postMessage('isready');
+      
+    } catch (error) {
+      console.error(`❌ Error creating Stockfish worker with ${source}:`, error);
+      currentSourceIndex++;
+      setTimeout(tryNextSource, 1000);
+    }
   }
   
-  stockfish = new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js');
-  
-  stockfish.onmessage = function(event) {
-    const message = event.data;
-    console.log('🤖 Stockfish:', message);
-    
-    if (message.includes('uciok')) {
-      updateEngineStatus('Engine ready!', 'ready');
-      stockfish.postMessage('isready');
-    } else if (message.includes('readyok')) {
-      updateEngineStatus('Engine ready!', 'ready');
-      analyzeCurrentPosition();
-    } else if (message.includes('bestmove')) {
-      handleBestMove(message);
-    } else if (message.includes('info depth')) {
-      handleAnalysisInfo(message);
-    }
-  };
-  
-  stockfish.postMessage('uci');
-  stockfish.postMessage('isready');
+  tryNextSource();
 }
 
 // Update engine status display
