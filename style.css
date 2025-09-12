@@ -2537,3 +2537,175 @@ body.settings-page {
     min-width: auto;
   }
 }
+
+/* Chess.com-style Analysis Features */
+.evaluation-bar-container {
+  width: 100%;
+  margin: 10px 0;
+}
+
+.evaluation-bar {
+  position: relative;
+  width: 100%;
+  height: 30px;
+  background: #2c2c2c;
+  border-radius: 15px;
+  overflow: hidden;
+  border: 2px solid #444;
+}
+
+.evaluation-fill {
+  height: 100%;
+  width: 50%;
+  background: #4a90e2;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 13px;
+}
+
+.evaluation-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  z-index: 1;
+}
+
+.analysis-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.analysis-line {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: #2c2c2c;
+  border-radius: 8px;
+  border-left: 4px solid #4a90e2;
+  transition: background-color 0.2s ease;
+}
+
+.analysis-line:hover {
+  background: #3c3c3c;
+}
+
+.analysis-line.line-1 {
+  border-left-color: #4a90e2;
+}
+
+.analysis-line.line-2 {
+  border-left-color: #f39c12;
+}
+
+.analysis-line.line-3 {
+  border-left-color: #e74c3c;
+}
+
+.analysis-line.line-4 {
+  border-left-color: #9b59b6;
+}
+
+.analysis-line.line-5 {
+  border-left-color: #1abc9c;
+}
+
+.line-number {
+  width: 20px;
+  height: 20px;
+  background: #4a90e2;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.line-evaluation {
+  min-width: 60px;
+  font-weight: bold;
+  color: #4a90e2;
+  margin-right: 10px;
+}
+
+.line-depth {
+  min-width: 30px;
+  color: #888;
+  font-size: 12px;
+  margin-right: 10px;
+}
+
+.line-moves {
+  flex: 1;
+  color: #ccc;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+/* Enhanced engine status */
+.engine-status {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+.engine-status.loading {
+  background: #f39c12;
+  color: white;
+}
+
+.engine-status.ready {
+  background: #27ae60;
+  color: white;
+}
+
+.engine-status.error {
+  background: #e74c3c;
+  color: white;
+}
+
+/* Analysis controls improvements */
+.analysis-controls {
+  background: #2c2c2c;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #444;
+}
+
+.control-group {
+  margin-bottom: 15px;
+}
+
+.control-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #ccc;
+  font-weight: 500;
+}
+
+.setting-select {
+  width: 100%;
+  padding: 8px 12px;
+  background: #3c3c3c;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.setting-select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
