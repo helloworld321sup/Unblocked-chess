@@ -176,23 +176,32 @@ function analyzePositionMock() {
   const scoredMoves = moves.map(move => ({
     move,
     score: evaluateMove(board, move, evaluation)
-  })).sort((a, b) => b.score - a.score);
+  })).filter(item => item.move && item.move.from && item.move.to)
+    .sort((a, b) => b.score - a.score);
   
   // Send analysis info
-  for (let i = 0; i < Math.min(multiPV, scoredMoves.length); i++) {
-    const move = scoredMoves[i];
-    const depth = Math.min(analysisDepth, 20);
-    const nodes = Math.floor(Math.random() * 10000) + 1000;
-    const time = Math.floor(Math.random() * 1000) + 100;
+  if (scoredMoves.length > 0) {
+    for (let i = 0; i < Math.min(multiPV, scoredMoves.length); i++) {
+      const move = scoredMoves[i];
+      const depth = Math.min(analysisDepth, 20);
+      const nodes = Math.floor(Math.random() * 10000) + 1000;
+      const time = Math.floor(Math.random() * 1000) + 100;
+      
+      postMessage(`info depth ${depth} seldepth ${depth} multipv ${i + 1} score cp ${Math.round(move.score * 100)} nodes ${nodes} nps ${Math.floor(nodes / (time / 1000))} time ${time} pv ${move.move.from}${move.move.to}${move.move.promotion || ''}`);
+    }
     
-    postMessage(`info depth ${depth} seldepth ${depth} multipv ${i + 1} score cp ${Math.round(move.score * 100)} nodes ${nodes} nps ${Math.floor(nodes / (time / 1000))} time ${time} pv ${move.move.from}${move.move.to}${move.move.promotion || ''}`);
+    // Send best move
+    setTimeout(() => {
+      const bestMove = scoredMoves[0];
+      postMessage(`bestmove ${bestMove.move.from}${bestMove.move.to}${bestMove.move.promotion || ''}`);
+    }, Math.random() * 200 + 100);
+  } else {
+    // No valid moves found
+    postMessage(`info depth 1 score cp ${Math.round(evaluation * 100)} nodes 0 time 100`);
+    setTimeout(() => {
+      postMessage('bestmove (none)');
+    }, 100);
   }
-  
-  // Send best move
-  setTimeout(() => {
-    const bestMove = scoredMoves[0];
-    postMessage(`bestmove ${bestMove.move.from}${bestMove.move.to}${bestMove.move.promotion || ''}`);
-  }, Math.random() * 200 + 100);
 }
 
 // Parse FEN string to board representation
@@ -239,7 +248,12 @@ function generateLegalMoves(position) {
       if (piece && piece.color === turn) {
         const from = String.fromCharCode(97 + file) + (8 - rank);
         const pieceMoves = generatePieceMoves(board, rank, file, piece);
-        moves.push(...pieceMoves.map(to => ({ from, to })));
+        moves.push(...pieceMoves.map(to => ({ 
+          from: from, 
+          to: to,
+          piece: piece.type,
+          color: piece.color
+        })));
       }
     }
   }
@@ -492,9 +506,24 @@ function isPathClear(board, fromRank, fromFile, toRank, toFile) {
 function evaluateMove(board, move, currentEval) {
   let score = 0;
   
+  // Check if move has required properties
+  if (!move || !move.from || !move.to) {
+    return 0;
+  }
+  
   // Basic move evaluation
-  const fromSquare = board[7 - parseInt(move.to[1])][move.to.charCodeAt(0) - 97];
-  const toSquare = board[7 - parseInt(move.to[1])][move.to.charCodeAt(0) - 97];
+  const toRank = 7 - parseInt(move.to[1]);
+  const toFile = move.to.charCodeAt(0) - 97;
+  const fromRank = 7 - parseInt(move.from[1]);
+  const fromFile = move.from.charCodeAt(0) - 97;
+  
+  // Check bounds
+  if (toRank < 0 || toRank >= 8 || toFile < 0 || toFile >= 8) {
+    return 0;
+  }
+  
+  const fromSquare = board[fromRank] && board[fromRank][fromFile];
+  const toSquare = board[toRank] && board[toRank][toFile];
   
   // Capture bonus
   if (toSquare) {
