@@ -64,9 +64,52 @@ function initializeStockfish() {
   console.log('🤖 Initializing Stockfish engine...');
   updateEngineStatus('Loading Stockfish...', 'loading');
   
-  try {
-    // Use local Stockfish worker
-    stockfish = new Worker('stockfish-worker.js');
+  // Try multiple Stockfish implementations
+  const stockfishSources = [
+    () => {
+      if (typeof Stockfish !== 'undefined') {
+        console.log('🎯 Using Stockfish from CDN');
+        return new Stockfish();
+      }
+      return null;
+    },
+    () => {
+      try {
+        console.log('🎯 Trying Stockfish Web Worker from CDN');
+        return new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js');
+      } catch (e) {
+        console.log('❌ CDN Worker failed:', e);
+        return null;
+      }
+    },
+    () => {
+      try {
+        console.log('🎯 Trying local Stockfish worker');
+        return new Worker('stockfish-worker.js');
+      } catch (e) {
+        console.log('❌ Local Worker failed:', e);
+        return null;
+      }
+    }
+  ];
+  
+  let stockfishInstance = null;
+  
+  // Try each source until one works
+  for (let i = 0; i < stockfishSources.length; i++) {
+    try {
+      stockfishInstance = stockfishSources[i]();
+      if (stockfishInstance) {
+        console.log(`✅ Stockfish source ${i + 1} loaded successfully`);
+        break;
+      }
+    } catch (error) {
+      console.log(`❌ Stockfish source ${i + 1} failed:`, error);
+    }
+  }
+  
+  if (stockfishInstance) {
+    stockfish = stockfishInstance;
     
     stockfish.onmessage = function(event) {
       const message = event.data;
@@ -94,8 +137,8 @@ function initializeStockfish() {
     stockfish.postMessage('uci');
     stockfish.postMessage('isready');
     
-  } catch (error) {
-    console.error('❌ Failed to initialize Stockfish:', error);
+  } else {
+    console.error('❌ All Stockfish sources failed');
     updateEngineStatus('Failed to load Stockfish', 'error');
   }
 }
