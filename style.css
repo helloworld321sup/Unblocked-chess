@@ -82,27 +82,37 @@ body {
 }
 
 .home-actions {
-  margin-top: 2rem;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
 }
 
 .settings-btn {
   background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
   color: white;
   border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 1.1rem;
+  padding: 12px 20px;
+  border-radius: 50px;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  display: block;
-  margin-bottom: 10px; /* Add some space between buttons */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
 .settings-btn:hover {
   background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+.settings-btn:active {
+  transform: translateY(0) scale(0.98);
 }
 
 /* Chess Board Styles */
