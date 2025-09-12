@@ -65,88 +65,18 @@ function initializeStockfish() {
   updateEngineStatus('Loading Stockfish...', 'loading');
   
   try {
-    // Use a different approach - create a simple chess engine simulation
-    // This avoids CORS issues with external workers
-    stockfish = {
-      postMessage: function(message) {
-        console.log('🤖 Simulated Stockfish:', message);
-        // Simulate engine responses
-        setTimeout(() => {
-          if (message.includes('uci')) {
-            this.onmessage({ data: 'uciok' });
-          } else if (message.includes('isready')) {
-            this.onmessage({ data: 'readyok' });
-          } else if (message.includes('go depth')) {
-            this.simulateAnalysis();
-          }
-        }, 100);
-      },
-      simulateAnalysis: function() {
-        // Basic chess analysis simulation
-        const moves = chess.moves({ verbose: true });
-        if (moves.length > 0) {
-          // Simple evaluation based on material and position
-          let evaluation = 0;
-          
-          // Basic material count
-          const board = chess.board();
-          for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
-              const piece = board[row][col];
-              if (piece) {
-                const value = getPieceValue(piece);
-                evaluation += piece.color === 'w' ? value : -value;
-              }
-            }
-          }
-          
-          // Add some randomness for variety
-          evaluation += (Math.random() - 0.5) * 0.5;
-          
-          // Find a reasonable move (prefer captures and center moves)
-          let bestMove = moves[0];
-          let bestScore = -1000;
-          
-          moves.forEach(move => {
-            let score = 0;
-            if (move.captured) score += 1; // Prefer captures
-            if (move.promotion) score += 2; // Prefer promotions
-            if (move.flags.includes('k')) score += 0.5; // Prefer castling
-            if (move.flags.includes('b')) score += 0.3; // Prefer pawn pushes
-            
-            // Center control bonus
-            const centerSquares = ['d4', 'd5', 'e4', 'e5'];
-            if (centerSquares.includes(move.to)) score += 0.2;
-            
-            if (score > bestScore) {
-              bestScore = score;
-              bestMove = move;
-            }
-          });
-          
-          setTimeout(() => {
-            this.onmessage({ data: `info depth 10 score cp ${Math.round(evaluation * 100)}` });
-            this.onmessage({ data: `bestmove ${bestMove.from}${bestMove.to}` });
-          }, 300);
-        } else {
-          this.onmessage({ data: 'bestmove (none)' });
-        }
-      },
-      onmessage: null,
-      terminate: function() {
-        console.log('🤖 Simulated Stockfish terminated');
-      }
-    };
+    // Use local Stockfish worker
+    stockfish = new Worker('stockfish-worker.js');
     
     stockfish.onmessage = function(event) {
       const message = event.data;
-      console.log('🤖 Simulated Stockfish:', message);
+      console.log('🤖 Stockfish:', message);
       
       if (message.includes('uciok')) {
-        updateEngineStatus('Basic engine ready!', 'ready');
+        updateEngineStatus('Stockfish ready!', 'ready');
         stockfish.postMessage('isready');
       } else if (message.includes('readyok')) {
-        updateEngineStatus('Basic engine ready!', 'ready');
+        updateEngineStatus('Stockfish ready!', 'ready');
         analyzeCurrentPosition();
       } else if (message.includes('bestmove')) {
         handleBestMove(message);
@@ -155,6 +85,12 @@ function initializeStockfish() {
       }
     };
     
+    stockfish.onerror = function(error) {
+      console.error('❌ Stockfish error:', error);
+      updateEngineStatus('Stockfish error', 'error');
+    };
+    
+    // Initialize UCI
     stockfish.postMessage('uci');
     stockfish.postMessage('isready');
     
@@ -250,6 +186,26 @@ function renderBoard() {
       }
     }
   }
+  
+  // Add move dots for legal moves if a piece is selected
+  if (selectedSquare) {
+    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
+    
+    legalMoves.forEach(move => {
+      const targetSquare = document.querySelector(`[data-square="${move.to}"]`);
+      if (targetSquare && !targetSquare.querySelector('.move-dot')) {
+        const dot = document.createElement('div');
+        dot.classList.add('move-dot');
+        targetSquare.appendChild(dot);
+      }
+    });
+  }
+  
+  // Add selection highlight
+  if (selectedSquare) {
+    const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
+    if (selectedEl) selectedEl.classList.add('selected');
+  }
 }
 
 // Handle square clicks
@@ -258,64 +214,36 @@ function handleSquareClick(square) {
   
   if (selectedSquare) {
     // Try to make a move
-    const fromSquare = selectedSquare.dataset.square;
-    const toSquare = squareNotation;
+    const move = chess.move({ from: selectedSquare, to: squareNotation, promotion: 'q' });
     
-    const move = {
-      from: fromSquare,
-      to: toSquare,
-      promotion: 'q' // Auto-promote to queen
-    };
-    
-    const result = chess.move(move);
-    
-    if (result) {
+    if (move) {
       // Move was successful
-      moveHistory.push(result);
+      moveHistory.push(move);
       currentMoveIndex = moveHistory.length - 1;
       updateMoveHistory();
       renderBoard();
       analyzeCurrentPosition();
-      clearSelection();
+      selectedSquare = null;
     } else {
       // Invalid move, select new square
-      selectSquare(square);
+      const piece = chess.get(squareNotation);
+      if (piece && piece.color === chess.turn()) {
+        selectedSquare = squareNotation;
+      } else {
+        selectedSquare = squareNotation;
+      }
+      renderBoard();
     }
   } else {
     // Select square
-    selectSquare(square);
-  }
-}
-
-// Select a square
-function selectSquare(square) {
-  clearSelection();
-  selectedSquare = square;
-  
-  square.classList.add('selected');
-  
-  // Show legal moves
-  const fromSquare = square.dataset.square;
-  const legalMoves = chess.moves({ square: fromSquare, verbose: true });
-  
-  legalMoves.forEach(move => {
-    const targetSquare = document.querySelector(`[data-square="${move.to}"]`);
-    
-    if (targetSquare) {
-      const dot = document.createElement('div');
-      dot.classList.add('move-dot');
-      targetSquare.appendChild(dot);
+    const piece = chess.get(squareNotation);
+    if (piece && piece.color === chess.turn()) {
+      selectedSquare = squareNotation;
+    } else {
+      selectedSquare = squareNotation;
     }
-  });
-}
-
-// Clear selection
-function clearSelection() {
-  document.querySelectorAll('.square').forEach(square => {
-    square.classList.remove('selected');
-    square.querySelectorAll('.move-dot').forEach(dot => dot.remove());
-  });
-  selectedSquare = null;
+    renderBoard();
+  }
 }
 
 // Analyze current position
