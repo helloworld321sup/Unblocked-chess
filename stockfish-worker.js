@@ -144,29 +144,46 @@ function handleSetOption(parts) {
 
 // Enhanced mock position analysis
 function analyzePositionMock() {
+  console.log('🔍 Starting analysis...');
+  
   if (!currentPosition) {
     currentPosition = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   }
   
+  console.log('📋 Current position:', currentPosition);
+  
   const fen = currentPosition;
   const board = parseFEN(fen);
+  console.log('🏁 Parsed board:', board);
+  
   const moves = generateLegalMoves(board);
+  console.log('🎯 Generated moves count:', moves.length);
+  console.log('🎯 First 5 moves:', moves.slice(0, 5));
   
   if (moves.length === 0) {
+    console.log('❌ No moves found');
     postMessage('bestmove (none)');
     return;
   }
   
   // Enhanced evaluation
   const evaluation = evaluatePosition(board);
+  console.log('📊 Position evaluation:', evaluation);
   
   // Find best moves with more sophisticated analysis
-  const scoredMoves = moves.map(move => {
+  console.log('🔄 Evaluating moves...');
+  const scoredMoves = moves.map((move, index) => {
+    console.log(`Evaluating move ${index + 1}/${moves.length}:`, move);
     const score = evaluateMove(board, move, evaluation);
+    console.log(`Move ${index + 1} score:`, score);
     return { move, score };
   }).filter(item => {
-    return item.move && item.move.from && item.move.to;
+    const isValid = item.move && item.move.from && item.move.to;
+    console.log('Move validation:', item.move, 'isValid:', isValid);
+    return isValid;
   }).sort((a, b) => b.score - a.score);
+  
+  console.log('✅ Scored moves:', scoredMoves.length);
   
   // Send analysis info
   if (scoredMoves.length > 0) {
@@ -227,6 +244,7 @@ function parseFEN(fen) {
 
 // Generate legal moves (simplified)
 function generateLegalMoves(position) {
+  console.log('🎲 Generating legal moves for turn:', position.turn);
   const moves = [];
   const board = position.board;
   const turn = position.turn;
@@ -236,7 +254,9 @@ function generateLegalMoves(position) {
       const piece = board[rank][file];
       if (piece && piece.color === turn) {
         const from = String.fromCharCode(97 + file) + (8 - rank);
+        console.log(`Found ${piece.color} ${piece.type} at ${from}`);
         const pieceMoves = generatePieceMoves(board, rank, file, piece);
+        console.log(`Generated ${pieceMoves.length} moves for ${piece.type}:`, pieceMoves);
         moves.push(...pieceMoves.map(to => ({ 
           from: from, 
           to: to,
@@ -247,6 +267,7 @@ function generateLegalMoves(position) {
     }
   }
   
+  console.log('🎯 Total moves generated:', moves.length);
   return moves;
 }
 
@@ -436,12 +457,16 @@ function getPositionBonus(piece, rank, file) {
 
 // Evaluate a specific move
 function evaluateMove(board, move, currentEval) {
+  console.log('🔍 Evaluating move:', move);
   let score = 0;
   
   // Check if move has required properties
   if (!move || !move.from || !move.to) {
+    console.log('❌ Invalid move structure:', move);
     return 0;
   }
+  
+  console.log('✅ Move has valid structure');
   
   // Basic move evaluation
   const toRank = 7 - parseInt(move.to[1]);
@@ -449,33 +474,45 @@ function evaluateMove(board, move, currentEval) {
   const fromRank = 7 - parseInt(move.from[1]);
   const fromFile = move.from.charCodeAt(0) - 97;
   
+  console.log(`📍 From: ${move.from} (rank: ${fromRank}, file: ${fromFile})`);
+  console.log(`📍 To: ${move.to} (rank: ${toRank}, file: ${toFile})`);
+  
   // Check bounds
   if (toRank < 0 || toRank >= 8 || toFile < 0 || toFile >= 8) {
+    console.log('❌ Move out of bounds');
     return 0;
   }
   
   const toSquare = board[toRank] && board[toRank][toFile];
+  console.log('🎯 Target square:', toSquare);
   
   // Capture bonus
   if (toSquare) {
     const pieceValues = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0 };
-    score += (pieceValues[toSquare.type] || 0) * 10;
+    const captureValue = (pieceValues[toSquare.type] || 0) * 10;
+    score += captureValue;
+    console.log('💥 Capture bonus:', captureValue);
   }
   
   // Center control bonus
   const centerSquares = ['d4', 'd5', 'e4', 'e5'];
   if (centerSquares.includes(move.to)) {
     score += 2;
+    console.log('🎯 Center control bonus: +2');
   }
   
   // Development bonus
   if (move.from[1] === '1' || move.from[1] === '8') {
     score += 1;
+    console.log('🚀 Development bonus: +1');
   }
   
   // Random factor for variety
-  score += (Math.random() - 0.5) * 0.5;
+  const randomFactor = (Math.random() - 0.5) * 0.5;
+  score += randomFactor;
+  console.log('🎲 Random factor:', randomFactor);
   
+  console.log('📊 Final score:', score);
   return score;
 }
 
