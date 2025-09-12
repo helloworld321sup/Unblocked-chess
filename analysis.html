@@ -24,9 +24,19 @@
       <div class="control-group">
         <label for="engine-depth">Analysis Depth:</label>
         <select id="engine-depth" class="setting-select">
-          <option value="10">Fast (Depth 10)</option>
+          <option value="8">Very Fast (Depth 8)</option>
+          <option value="12">Fast (Depth 12)</option>
           <option value="15" selected>Standard (Depth 15)</option>
-          <option value="20">Deep (Depth 20)</option>
+          <option value="18">Deep (Depth 18)</option>
+          <option value="20">Very Deep (Depth 20)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="engine-lines">Analysis Lines:</label>
+        <select id="engine-lines" class="setting-select">
+          <option value="1">1 Line</option>
+          <option value="3" selected>3 Lines</option>
+          <option value="5">5 Lines</option>
         </select>
       </div>
       <div class="control-group">
@@ -61,10 +71,10 @@
           <div id="engine-status" class="engine-status">Engine: Ready</div>
         </div>
 
-        <!-- Best Moves -->
+        <!-- Analysis Lines -->
         <div class="best-moves">
-          <h3>Best Moves</h3>
-          <div id="move-arrows"></div>
+          <h3>Analysis Lines</h3>
+          <div id="move-arrows" class="analysis-lines"></div>
         </div>
 
         <!-- Move History -->
@@ -78,7 +88,6 @@
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js"></script>
   <script src="analysis.js"></script>
 </body>
 </html>
