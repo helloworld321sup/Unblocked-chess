@@ -1,10 +1,14 @@
-// Chess Analysis with Stockfish Engine
+// Chess Analysis with Stockfish Engine - Chess.com Style
 const chess = new Chess();
 let selectedSquare = null;
 let boardFlipped = false;
 let stockfish = null;
 let moveHistory = [];
 let currentMoveIndex = -1;
+let analysisLines = [];
+let currentAnalysis = null;
+let isAnalyzing = false;
+let evaluationBar = null;
 
 // Apply board color from settings
 function applyBoardColor() {
@@ -59,57 +63,14 @@ document.addEventListener('DOMContentLoaded', function() {
   updateMoveHistory();
 });
 
-// Initialize Stockfish engine
+// Initialize Stockfish engine with Chess.com-style features
 function initializeStockfish() {
   console.log('🤖 Initializing Stockfish engine...');
   updateEngineStatus('Loading Stockfish...', 'loading');
   
-  // Try multiple Stockfish implementations
-  const stockfishSources = [
-    () => {
-      if (typeof Stockfish !== 'undefined') {
-        console.log('🎯 Using Stockfish from CDN');
-        return new Stockfish();
-      }
-      return null;
-    },
-    () => {
-      try {
-        console.log('🎯 Trying Stockfish Web Worker from CDN');
-        return new Worker('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js');
-      } catch (e) {
-        console.log('❌ CDN Worker failed:', e);
-        return null;
-      }
-    },
-    () => {
-      try {
-        console.log('🎯 Trying local Stockfish worker');
-        return new Worker('stockfish-worker.js');
-      } catch (e) {
-        console.log('❌ Local Worker failed:', e);
-        return null;
-      }
-    }
-  ];
-  
-  let stockfishInstance = null;
-  
-  // Try each source until one works
-  for (let i = 0; i < stockfishSources.length; i++) {
-    try {
-      stockfishInstance = stockfishSources[i]();
-      if (stockfishInstance) {
-        console.log(`✅ Stockfish source ${i + 1} loaded successfully`);
-        break;
-      }
-    } catch (error) {
-      console.log(`❌ Stockfish source ${i + 1} failed:`, error);
-    }
-  }
-  
-  if (stockfishInstance) {
-    stockfish = stockfishInstance;
+  try {
+    // Use local worker with enhanced implementation
+    stockfish = new Worker('stockfish-worker.js');
     
     stockfish.onmessage = function(event) {
       const message = event.data;
@@ -120,11 +81,14 @@ function initializeStockfish() {
         stockfish.postMessage('isready');
       } else if (message.includes('readyok')) {
         updateEngineStatus('Stockfish ready!', 'ready');
+        initializeEvaluationBar();
         analyzeCurrentPosition();
       } else if (message.includes('bestmove')) {
         handleBestMove(message);
       } else if (message.includes('info depth')) {
         handleAnalysisInfo(message);
+      } else if (message.includes('error')) {
+        updateEngineStatus('Engine error', 'error');
       }
     };
     
@@ -137,8 +101,8 @@ function initializeStockfish() {
     stockfish.postMessage('uci');
     stockfish.postMessage('isready');
     
-  } else {
-    console.error('❌ All Stockfish sources failed');
+  } catch (error) {
+    console.error('❌ Failed to initialize Stockfish:', error);
     updateEngineStatus('Failed to load Stockfish', 'error');
   }
 }
@@ -289,18 +253,27 @@ function handleSquareClick(square) {
   }
 }
 
-// Analyze current position
+// Analyze current position with Chess.com-style features
 function analyzeCurrentPosition() {
   if (!stockfish) return;
   
   const fen = chess.fen();
   const depth = document.getElementById('engine-depth').value;
+  const multiPV = document.getElementById('engine-lines').value;
   
   console.log('🔍 Analyzing position:', fen);
   updateEngineStatus('Analyzing...', 'loading');
   
+  // Clear previous analysis
+  analysisLines = [];
+  updateAnalysisLines();
+  
+  // Set position and start analysis
   stockfish.postMessage(`position fen ${fen}`);
+  stockfish.postMessage(`setoption name MultiPV value ${multiPV}`);
   stockfish.postMessage(`go depth ${depth}`);
+  
+  isAnalyzing = true;
 }
 
 // Handle best move from Stockfish
@@ -316,33 +289,154 @@ function handleBestMove(message) {
   updateEngineStatus('Analysis complete!', 'ready');
 }
 
-// Handle analysis info from Stockfish
+// Handle analysis info from Stockfish with Chess.com-style features
 function handleAnalysisInfo(message) {
   // Parse evaluation from info string
   const evalMatch = message.match(/score (cp|mate) (-?\d+)/);
+  const multipvMatch = message.match(/multipv (\d+)/);
+  const depthMatch = message.match(/depth (\d+)/);
+  const pvMatch = message.match(/pv ([a-h1-8]+)/);
+  
   if (evalMatch) {
     let evaluation = 0;
+    let isMate = false;
+    
     if (evalMatch[1] === 'mate') {
-      evaluation = evalMatch[2] > 0 ? `M${evalMatch[2]}` : `M${evalMatch[2]}`;
+      evaluation = parseInt(evalMatch[2]);
+      isMate = true;
     } else {
-      evaluation = (parseInt(evalMatch[2]) / 100).toFixed(1);
-      if (evaluation > 0) evaluation = '+' + evaluation;
+      evaluation = parseInt(evalMatch[2]) / 100;
     }
     
-    document.getElementById('evaluation').textContent = `Evaluation: ${evaluation}`;
+    const multipv = multipvMatch ? parseInt(multipvMatch[1]) : 1;
+    const depth = depthMatch ? parseInt(depthMatch[1]) : 0;
+    const pv = pvMatch ? pvMatch[1] : '';
+    
+    // Update evaluation display
+    updateEvaluationDisplay(evaluation, isMate);
+    
+    // Update evaluation bar
+    updateEvaluationBar(evaluation, isMate);
+    
+    // Store analysis line
+    if (multipv <= 5) { // Show up to 5 lines
+      analysisLines[multipv - 1] = {
+        evaluation,
+        isMate,
+        depth,
+        pv: pv,
+        multipv
+      };
+      updateAnalysisLines();
+    }
   }
+}
+
+// Initialize evaluation bar
+function initializeEvaluationBar() {
+  const evaluationEl = document.getElementById('evaluation');
+  evaluationEl.innerHTML = `
+    <div class="evaluation-bar-container">
+      <div class="evaluation-bar">
+        <div class="evaluation-fill" id="evaluation-fill"></div>
+        <div class="evaluation-text" id="evaluation-text">+0.0</div>
+      </div>
+    </div>
+  `;
+  evaluationBar = document.getElementById('evaluation-fill');
+}
+
+// Update evaluation display
+function updateEvaluationDisplay(evaluation, isMate) {
+  const evaluationText = document.getElementById('evaluation-text');
+  if (!evaluationText) return;
+  
+  let displayText = '';
+  if (isMate) {
+    displayText = evaluation > 0 ? `+M${Math.abs(evaluation)}` : `-M${Math.abs(evaluation)}`;
+  } else {
+    displayText = evaluation > 0 ? `+${evaluation.toFixed(1)}` : evaluation.toFixed(1);
+  }
+  
+  evaluationText.textContent = displayText;
+}
+
+// Update evaluation bar (Chess.com style)
+function updateEvaluationBar(evaluation, isMate) {
+  if (!evaluationBar) return;
+  
+  let percentage = 50; // Neutral position
+  
+  if (isMate) {
+    // Mate positions
+    if (evaluation > 0) {
+      percentage = 100; // White winning
+    } else {
+      percentage = 0; // Black winning
+    }
+  } else {
+    // Convert centipawns to percentage
+    const maxEval = 5.0; // Maximum evaluation to show
+    const clampedEval = Math.max(-maxEval, Math.min(maxEval, evaluation));
+    percentage = 50 + (clampedEval / maxEval) * 50;
+  }
+  
+  evaluationBar.style.width = `${percentage}%`;
+  evaluationBar.style.backgroundColor = percentage > 50 ? '#4a90e2' : '#e74c3c';
+}
+
+// Update analysis lines display
+function updateAnalysisLines() {
+  const analysisContainer = document.getElementById('move-arrows');
+  if (!analysisContainer) return;
+  
+  analysisContainer.innerHTML = '';
+  
+  analysisLines.forEach((line, index) => {
+    if (!line) return;
+    
+    const lineEl = document.createElement('div');
+    lineEl.className = `analysis-line line-${index + 1}`;
+    
+    const evaluationText = line.isMate 
+      ? (line.evaluation > 0 ? `+M${Math.abs(line.evaluation)}` : `-M${Math.abs(line.evaluation)}`)
+      : (line.evaluation > 0 ? `+${line.evaluation.toFixed(1)}` : line.evaluation.toFixed(1));
+    
+    const lineColors = ['#4a90e2', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c'];
+    const lineColor = lineColors[index] || '#4a90e2';
+    
+    lineEl.innerHTML = `
+      <div class="line-number" style="background-color: ${lineColor}">${index + 1}</div>
+      <div class="line-evaluation">${evaluationText}</div>
+      <div class="line-depth">d${line.depth}</div>
+      <div class="line-moves">${formatPV(line.pv)}</div>
+    `;
+    
+    analysisContainer.appendChild(lineEl);
+  });
+}
+
+// Format principal variation moves
+function formatPV(pv) {
+  if (!pv) return '';
+  
+  const moves = [];
+  for (let i = 0; i < pv.length; i += 4) {
+    if (i + 4 <= pv.length) {
+      const move = pv.substring(i, i + 4);
+      moves.push(move);
+    }
+  }
+  
+  return moves.slice(0, 3).join(' '); // Show first 3 moves
 }
 
 // Display best move as an arrow
 function displayBestMove(bestMove) {
-  const moveArrowsEl = document.getElementById('move-arrows');
-  moveArrowsEl.innerHTML = '';
-  
-  const arrow = document.createElement('div');
-  arrow.className = 'move-arrow best';
-  arrow.textContent = bestMove;
-  arrow.title = 'Best move';
-  moveArrowsEl.appendChild(arrow);
+  // This is now handled by updateAnalysisLines
+  if (analysisLines.length > 0) {
+    updateAnalysisLines();
+  }
 }
 
 // Load PGN
