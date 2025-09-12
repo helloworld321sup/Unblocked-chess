@@ -107,18 +107,6 @@ function handlePosition(parts) {
     currentPosition = parts.slice(2, 8).join(' ');
   }
   
-  // Apply moves if any
-  if (parts.includes('moves')) {
-    const movesIndex = parts.indexOf('moves');
-    for (let i = movesIndex + 1; i < parts.length; i++) {
-      const move = parts[i];
-      if (move.length >= 4) {
-        // Apply move to position (simplified)
-        currentPosition = applyMoveToFEN(currentPosition, move);
-      }
-    }
-  }
-  
   if (stockfish) {
     stockfish.postMessage(parts.join(' '));
   }
@@ -173,11 +161,12 @@ function analyzePositionMock() {
   const evaluation = evaluatePosition(board);
   
   // Find best moves with more sophisticated analysis
-  const scoredMoves = moves.map(move => ({
-    move,
-    score: evaluateMove(board, move, evaluation)
-  })).filter(item => item.move && item.move.from && item.move.to)
-    .sort((a, b) => b.score - a.score);
+  const scoredMoves = moves.map(move => {
+    const score = evaluateMove(board, move, evaluation);
+    return { move, score };
+  }).filter(item => {
+    return item.move && item.move.from && item.move.to;
+  }).sort((a, b) => b.score - a.score);
   
   // Send analysis info
   if (scoredMoves.length > 0) {
@@ -264,93 +253,126 @@ function generateLegalMoves(position) {
 // Generate moves for a specific piece
 function generatePieceMoves(board, rank, file, piece) {
   const moves = [];
-  const directions = getPieceDirections(piece.type);
   
-  for (const [dr, df] of directions) {
-    let newRank = rank + dr;
-    let newFile = file + df;
+  if (piece.type === 'p') {
+    // Pawn moves
+    const direction = piece.color === 'w' ? -1 : 1;
+    const startRank = piece.color === 'w' ? 6 : 1;
     
-    if (piece.type === 'p') {
-      // Pawn moves
-      const startRank = piece.color === 'w' ? 6 : 1;
-      const direction = piece.color === 'w' ? -1 : 1;
+    // Forward moves
+    const forwardRank = rank + direction;
+    if (forwardRank >= 0 && forwardRank < 8 && !board[forwardRank][file]) {
+      moves.push(String.fromCharCode(97 + file) + (8 - forwardRank));
       
-      // Forward moves
-      if (newRank >= 0 && newRank < 8 && !board[newRank][file]) {
-        moves.push(String.fromCharCode(97 + file) + (8 - newRank));
+      // Double move from starting position
+      if (rank === startRank) {
+        const doubleRank = rank + 2 * direction;
+        if (doubleRank >= 0 && doubleRank < 8 && !board[doubleRank][file]) {
+          moves.push(String.fromCharCode(97 + file) + (8 - doubleRank));
+        }
+      }
+    }
+    
+    // Captures
+    for (const df of [-1, 1]) {
+      const captureRank = rank + direction;
+      const captureFile = file + df;
+      if (captureRank >= 0 && captureRank < 8 && captureFile >= 0 && captureFile < 8) {
+        const target = board[captureRank][captureFile];
+        if (target && target.color !== piece.color) {
+          moves.push(String.fromCharCode(97 + captureFile) + (8 - captureRank));
+        }
+      }
+    }
+  } else if (piece.type === 'n') {
+    // Knight moves
+    const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+    for (const [dr, df] of knightMoves) {
+      const newRank = rank + dr;
+      const newFile = file + df;
+      if (newRank >= 0 && newRank < 8 && newFile >= 0 && newFile < 8) {
+        const target = board[newRank][newFile];
+        if (!target || target.color !== piece.color) {
+          moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
+        }
+      }
+    }
+  } else if (piece.type === 'r') {
+    // Rook moves
+    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    for (const [dr, df] of directions) {
+      for (let steps = 1; steps < 8; steps++) {
+        const newRank = rank + dr * steps;
+        const newFile = file + df * steps;
+        if (newRank < 0 || newRank >= 8 || newFile < 0 || newFile >= 8) break;
         
-        // Double move from starting position
-        if (rank === startRank && !board[newRank + direction][file]) {
-          moves.push(String.fromCharCode(97 + file) + (8 - (newRank + direction)));
-        }
-      }
-      
-      // Captures
-      for (const df of [-1, 1]) {
-        const captureRank = rank + direction;
-        const captureFile = file + df;
-        if (captureRank >= 0 && captureRank < 8 && captureFile >= 0 && captureFile < 8) {
-          const target = board[captureRank][captureFile];
-          if (target && target.color !== piece.color) {
-            moves.push(String.fromCharCode(97 + captureFile) + (8 - captureRank));
-          }
-        }
-      }
-    } else {
-      // Other pieces
-      if (piece.type === 'n') {
-        // Knight moves
-        const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
-        for (const [dr, df] of knightMoves) {
-          const newRank = rank + dr;
-          const newFile = file + df;
-          if (newRank >= 0 && newRank < 8 && newFile >= 0 && newFile < 8) {
-            const target = board[newRank][newFile];
-            if (!target || target.color !== piece.color) {
-              moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
-            }
-          }
-        }
-      } else {
-        // Sliding pieces
-        let steps = 1;
-        while (steps < 8) {
-          const newRank = rank + dr * steps;
-          const newFile = file + df * steps;
-          
-          if (newRank < 0 || newRank >= 8 || newFile < 0 || newFile >= 8) break;
-          
-          const target = board[newRank][newFile];
-          if (!target) {
+        const target = board[newRank][newFile];
+        if (!target) {
+          moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
+        } else {
+          if (target.color !== piece.color) {
             moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
-          } else {
-            if (target.color !== piece.color) {
-              moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
-            }
-            break;
           }
-          
-          if (piece.type === 'p' || piece.type === 'n') break;
-          steps++;
+          break;
+        }
+      }
+    }
+  } else if (piece.type === 'b') {
+    // Bishop moves
+    const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+    for (const [dr, df] of directions) {
+      for (let steps = 1; steps < 8; steps++) {
+        const newRank = rank + dr * steps;
+        const newFile = file + df * steps;
+        if (newRank < 0 || newRank >= 8 || newFile < 0 || newFile >= 8) break;
+        
+        const target = board[newRank][newFile];
+        if (!target) {
+          moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
+        } else {
+          if (target.color !== piece.color) {
+            moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
+          }
+          break;
+        }
+      }
+    }
+  } else if (piece.type === 'q') {
+    // Queen moves (combination of rook and bishop)
+    const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+    for (const [dr, df] of directions) {
+      for (let steps = 1; steps < 8; steps++) {
+        const newRank = rank + dr * steps;
+        const newFile = file + df * steps;
+        if (newRank < 0 || newRank >= 8 || newFile < 0 || newFile >= 8) break;
+        
+        const target = board[newRank][newFile];
+        if (!target) {
+          moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
+        } else {
+          if (target.color !== piece.color) {
+            moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
+          }
+          break;
+        }
+      }
+    }
+  } else if (piece.type === 'k') {
+    // King moves
+    const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+    for (const [dr, df] of directions) {
+      const newRank = rank + dr;
+      const newFile = file + df;
+      if (newRank >= 0 && newRank < 8 && newFile >= 0 && newFile < 8) {
+        const target = board[newRank][newFile];
+        if (!target || target.color !== piece.color) {
+          moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
         }
       }
     }
   }
   
   return moves;
-}
-
-// Get piece movement directions
-function getPieceDirections(pieceType) {
-  const directions = {
-    'p': [[-1, 0], [1, 0]],
-    'r': [[-1, 0], [1, 0], [0, -1], [0, 1]],
-    'n': [],
-    'b': [[-1, -1], [-1, 1], [1, -1], [1, 1]],
-    'q': [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]],
-    'k': [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
-  };
-  return directions[pieceType] || [];
 }
 
 // Enhanced position evaluation
@@ -374,12 +396,6 @@ function evaluatePosition(position) {
       }
     }
   }
-  
-  // Center control bonus
-  evaluation += evaluateCenterControl(board);
-  
-  // Development bonus
-  evaluation += evaluateDevelopment(board);
   
   return evaluation;
 }
@@ -418,90 +434,6 @@ function getPositionBonus(piece, rank, file) {
   return 0;
 }
 
-// Evaluate center control
-function evaluateCenterControl(board) {
-  let centerControl = 0;
-  const centerSquares = [[3, 3], [3, 4], [4, 3], [4, 4]];
-  
-  for (const [rank, file] of centerSquares) {
-    // Check for pieces attacking/defending center
-    for (let r = 0; r < 8; r++) {
-      for (let f = 0; f < 8; f++) {
-        const piece = board[r][f];
-        if (piece && canAttackSquare(board, r, f, rank, file)) {
-          centerControl += piece.color === 'w' ? 0.1 : -0.1;
-        }
-      }
-    }
-  }
-  
-  return centerControl;
-}
-
-// Evaluate piece development
-function evaluateDevelopment(board) {
-  let development = 0;
-  
-  // Bonus for developed pieces
-  for (let rank = 0; rank < 8; rank++) {
-    for (let file = 0; file < 8; file++) {
-      const piece = board[rank][file];
-      if (piece && piece.type !== 'p' && piece.type !== 'k') {
-        const homeRank = piece.color === 'w' ? 7 : 0;
-        if (rank !== homeRank) {
-          development += piece.color === 'w' ? 0.1 : -0.1;
-        }
-      }
-    }
-  }
-  
-  return development;
-}
-
-// Check if piece can attack square
-function canAttackSquare(board, fromRank, fromFile, toRank, toFile) {
-  const piece = board[fromRank][fromFile];
-  if (!piece) return false;
-  
-  const dr = Math.abs(toRank - fromRank);
-  const df = Math.abs(toFile - fromFile);
-  
-  switch (piece.type) {
-    case 'p':
-      const direction = piece.color === 'w' ? -1 : 1;
-      return (toRank === fromRank + direction) && (df === 1);
-    case 'r':
-      return (dr === 0 || df === 0) && isPathClear(board, fromRank, fromFile, toRank, toFile);
-    case 'b':
-      return (dr === df) && isPathClear(board, fromRank, fromFile, toRank, toFile);
-    case 'q':
-      return ((dr === 0 || df === 0 || dr === df) && isPathClear(board, fromRank, fromFile, toRank, toFile));
-    case 'k':
-      return (dr <= 1 && df <= 1);
-    case 'n':
-      return (dr === 2 && df === 1) || (dr === 1 && df === 2);
-  }
-  
-  return false;
-}
-
-// Check if path is clear
-function isPathClear(board, fromRank, fromFile, toRank, toFile) {
-  const dr = toRank > fromRank ? 1 : toRank < fromRank ? -1 : 0;
-  const df = toFile > fromFile ? 1 : toFile < fromFile ? -1 : 0;
-  
-  let rank = fromRank + dr;
-  let file = fromFile + df;
-  
-  while (rank !== toRank || file !== toFile) {
-    if (board[rank][file]) return false;
-    rank += dr;
-    file += df;
-  }
-  
-  return true;
-}
-
 // Evaluate a specific move
 function evaluateMove(board, move, currentEval) {
   let score = 0;
@@ -522,7 +454,6 @@ function evaluateMove(board, move, currentEval) {
     return 0;
   }
   
-  const fromSquare = board[fromRank] && board[fromRank][fromFile];
   const toSquare = board[toRank] && board[toRank][toFile];
   
   // Capture bonus
@@ -546,13 +477,6 @@ function evaluateMove(board, move, currentEval) {
   score += (Math.random() - 0.5) * 0.5;
   
   return score;
-}
-
-// Apply move to FEN (simplified)
-function applyMoveToFEN(fen, move) {
-  // This is a simplified implementation
-  // In a real implementation, you'd properly update the FEN
-  return fen;
 }
 
 // Handle messages from main thread
