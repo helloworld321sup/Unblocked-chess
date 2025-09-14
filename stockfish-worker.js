@@ -242,8 +242,20 @@ function handleGo(parts) {
 
 // Handle setoption command
 function handleSetOption(parts) {
-  const optionName = parts[2];
-  const optionValue = parts[4];
+  // Handle multi-word option names like "Skill Level"
+  let optionName = parts[2];
+  let optionValue = parts[4];
+  
+  // Check for multi-word option names
+  if (parts.length > 5) {
+    if (parts[2] === 'Skill' && parts[3] === 'Level') {
+      optionName = 'Skill Level';
+      optionValue = parts[5];
+    } else if (parts[2] === 'Hash' && parts[3] === 'Size') {
+      optionName = 'Hash Size';
+      optionValue = parts[5];
+    }
+  }
   
   console.log(`⚙️ Setting option: ${optionName} = ${optionValue}`);
   
@@ -254,6 +266,7 @@ function handleSetOption(parts) {
       engineOptions.multipv = multiPV;
       break;
     case 'Hash':
+    case 'Hash Size':
       engineOptions.hash = parseInt(optionValue);
       break;
     case 'Threads':
@@ -276,36 +289,25 @@ function handleSetOption(parts) {
 
 // Enhanced mock position analysis with iterative deepening
 function analyzePositionMock() {
-  console.log('🔍 Starting enhanced analysis...');
-  
   if (!currentPosition) {
     currentPosition = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   }
   
-  console.log('📋 Current position:', currentPosition);
-  
   const fen = currentPosition;
   const board = parseFEN(fen);
-  console.log('🏁 Parsed board:', board);
-  
   const moves = generateLegalMoves(board);
-  console.log('🎯 Generated moves count:', moves.length);
   
   if (moves.length === 0) {
-    console.log('❌ No moves found');
     postMessage('bestmove (none)');
     return;
   }
   
   // Enhanced evaluation with multiple factors
   const evaluation = evaluatePositionAdvanced(board);
-  console.log('📊 Advanced position evaluation:', evaluation);
   
   // Iterative deepening for better analysis
   const maxDepth = Math.min(analysisDepth, 20);
   const skillLevel = engineOptions.skill || 20;
-  
-  console.log(`🔄 Running iterative deepening to depth ${maxDepth} (skill: ${skillLevel})`);
   
   // Find best moves with enhanced analysis
   const scoredMoves = moves.map((move, index) => {
@@ -314,8 +316,6 @@ function analyzePositionMock() {
   }).filter(item => {
     return item.move && item.move.from && item.move.to;
   }).sort((a, b) => b.score - a.score);
-  
-  console.log('✅ Enhanced analysis complete, scored moves:', scoredMoves.length);
   
   // Send analysis info
   if (scoredMoves.length > 0) {
@@ -376,7 +376,6 @@ function parseFEN(fen) {
 
 // Generate legal moves (simplified)
 function generateLegalMoves(position) {
-  console.log('🎲 Generating legal moves for turn:', position.turn);
   const moves = [];
   const board = position.board;
   const turn = position.turn;
@@ -386,9 +385,7 @@ function generateLegalMoves(position) {
       const piece = board[rank][file];
       if (piece && piece.color === turn) {
         const from = String.fromCharCode(97 + file) + (8 - rank);
-        console.log(`Found ${piece.color} ${piece.type} at ${from}`);
         const pieceMoves = generatePieceMoves(board, rank, file, piece);
-        console.log(`Generated ${pieceMoves.length} moves for ${piece.type}:`, pieceMoves);
         moves.push(...pieceMoves.map(to => ({ 
           from: from, 
           to: to,
@@ -399,7 +396,6 @@ function generateLegalMoves(position) {
     }
   }
   
-  console.log('🎯 Total moves generated:', moves.length);
   return moves;
 }
 
@@ -778,6 +774,67 @@ function evaluatePawnStructure(board) {
   }
   
   return structure;
+}
+
+function evaluateCenterControl(board) {
+  let centerControl = 0;
+  const centerSquares = [[3, 3], [3, 4], [4, 3], [4, 4]];
+  
+  for (const [rank, file] of centerSquares) {
+    // Check for pieces attacking/defending center
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const piece = board[r][f];
+        if (piece && canAttackSquare(board, r, f, rank, file)) {
+          centerControl += piece.color === 'w' ? 0.1 : -0.1;
+        }
+      }
+    }
+  }
+  
+  return centerControl;
+}
+
+function canAttackSquare(board, fromRank, fromFile, toRank, toFile) {
+  const piece = board[fromRank][fromFile];
+  if (!piece) return false;
+  
+  const dr = Math.abs(toRank - fromRank);
+  const df = Math.abs(toFile - fromFile);
+  
+  switch (piece.type) {
+    case 'p':
+      const direction = piece.color === 'w' ? -1 : 1;
+      return (toRank === fromRank + direction) && (df === 1);
+    case 'r':
+      return (dr === 0 || df === 0) && isPathClear(board, fromRank, fromFile, toRank, toFile);
+    case 'b':
+      return (dr === df) && isPathClear(board, fromRank, fromFile, toRank, toFile);
+    case 'q':
+      return ((dr === 0 || df === 0 || dr === df) && isPathClear(board, fromRank, fromFile, toRank, toFile));
+    case 'k':
+      return (dr <= 1 && df <= 1);
+    case 'n':
+      return (dr === 2 && df === 1) || (dr === 1 && df === 2);
+  }
+  
+  return false;
+}
+
+function isPathClear(board, fromRank, fromFile, toRank, toFile) {
+  const dr = toRank > fromRank ? 1 : toRank < fromRank ? -1 : 0;
+  const df = toFile > fromFile ? 1 : toFile < fromFile ? -1 : 0;
+  
+  let rank = fromRank + dr;
+  let file = fromFile + df;
+  
+  while (rank !== toRank || file !== toFile) {
+    if (board[rank][file]) return false;
+    rank += dr;
+    file += df;
+  }
+  
+  return true;
 }
 
 function getMobilityImprovement(board, move) {
