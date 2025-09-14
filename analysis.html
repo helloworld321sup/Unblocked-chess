@@ -40,6 +40,26 @@
         </select>
       </div>
       <div class="control-group">
+        <label for="engine-skill">Engine Skill Level:</label>
+        <select id="engine-skill" class="setting-select">
+          <option value="0">Beginner (0)</option>
+          <option value="5">Novice (5)</option>
+          <option value="10">Intermediate (10)</option>
+          <option value="15">Advanced (15)</option>
+          <option value="20" selected>Expert (20)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="engine-hash">Hash Size (MB):</label>
+        <select id="engine-hash" class="setting-select">
+          <option value="1">1 MB</option>
+          <option value="4">4 MB</option>
+          <option value="16" selected>16 MB</option>
+          <option value="64">64 MB</option>
+          <option value="256">256 MB</option>
+        </select>
+      </div>
+      <div class="control-group">
         <button id="load-pgn-btn" class="control-btn">Load Game</button>
         <button id="analyze-position-btn" class="control-btn">Analyze Position</button>
         <button id="clear-board-btn" class="control-btn">Clear Board</button>
