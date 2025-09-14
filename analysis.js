@@ -260,17 +260,22 @@ function analyzeCurrentPosition() {
   const fen = chess.fen();
   const depth = document.getElementById('engine-depth').value;
   const multiPV = document.getElementById('engine-lines').value;
+  const skill = document.getElementById('engine-skill').value;
+  const hash = document.getElementById('engine-hash').value;
   
   console.log('🔍 Analyzing position:', fen);
+  console.log('⚙️ Engine settings:', { depth, multiPV, skill, hash });
   updateEngineStatus('Analyzing...', 'loading');
   
   // Clear previous analysis
   analysisLines = [];
   updateAnalysisLines();
   
-  // Set position and start analysis
+  // Set position and configure engine
   stockfish.postMessage(`position fen ${fen}`);
   stockfish.postMessage(`setoption name MultiPV value ${multiPV}`);
+  stockfish.postMessage(`setoption name Skill Level value ${skill}`);
+  stockfish.postMessage(`setoption name Hash value ${hash}`);
   stockfish.postMessage(`go depth ${depth}`);
   
   isAnalyzing = true;
