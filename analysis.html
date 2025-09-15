@@ -1,126 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chess Analysis - Game Review</title>
-  <link rel="icon" href="Unblocked-Chess Favicon.png" type="image/png">
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game Analysis</title>
+    <link rel="icon" href="Unblocked-Chess Favicon.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .analysis-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .analysis-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .analysis-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #4a90e2, #357abd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .analysis-header p {
+            font-size: 1.1rem;
+            color: #ccc;
+            margin: 0;
+        }
+
+        .input-section {
+            background: linear-gradient(145deg, #252525, #353535);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid #444;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .pgn-input {
+            width: 100%;
+            height: 120px;
+            padding: 15px;
+            background: #1a1a1a;
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            font-family: monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .pgn-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .depth-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .depth-slider {
+            width: 150px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: none;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(145deg, #4a90e2, #357abd);
+            color: white;
+            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(145deg, #5ba0f2, #4a8acd);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(74, 144, 226, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-section {
+            background: linear-gradient(145deg, #252525, #353535);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid #444;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2, #357abd);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status-message {
+            text-align: center;
+            color: #fff;
+            font-size: 1.1rem;
+        }
+
+        .results-section {
+            background: linear-gradient(145deg, #252525, #353535);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid #444;
+            display: none;
+        }
+
+        .accuracy-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .accuracy-card {
+            background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+
+        .accuracy-card h3 {
+            margin: 0 0 10px 0;
+            color: #4a90e2;
+        }
+
+        .accuracy-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .classification-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .classification-item {
+            background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+
+        .classification-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .classification-counts {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .count-white {
+            color: #fff;
+        }
+
+        .count-black {
+            color: #ccc;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-btn:hover {
+            background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+    </style>
 </head>
 <body>
-  <div class="analysis-container">
-    <!-- Header -->
-    <div class="analysis-header">
-      <h1>🔍 Chess Game Analysis</h1>
-      <p>Analyze your games with Stockfish engine and get detailed insights</p>
+    <div class="analysis-container">
+        <a href="index.html" class="back-btn">← Back to Home</a>
+        
+        <div class="analysis-header">
+            <h1>🔍 Chess Game Analysis</h1>
+            <p>Analyze your games with advanced move classification and evaluation</p>
+        </div>
+
+        <div class="input-section">
+            <div class="input-group">
+                <label for="pgn-input">Paste your game (PGN format):</label>
+                <textarea id="pgn-input" class="pgn-input" placeholder="1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 11. c4 c6 12. cxb5 axb5 13. Nc3 Bb7 14. Bg5 b4 15. Nb1 h6 16. Bh4 c5 17. dxc5 Nxc5 18. Bxf6 Qxf6 19. Nbd2 Nxd3 20. cxd3 Bc5 21. Nc4 Bb6 22. a3 bxa3 23. Rxa3 Rxa3 24. bxa3 Qe6 25. Qd2 Qxa2 26. Nxd6 Qa1+ 27. Kh2 Qxe1 28. Qxd8+ Rxd8 29. Nxd8 Qxe4 30. Nc6 Qxf3 31. Nxb8 Qxf2+ 32. Kh1 Qf1+ 33. Kh2 Qf2+ 34. Kh1 Qf1+ 35. Kh2 Qf2+ 36. Kh1 1/2-1/2"></textarea>
+            </div>
+            
+            <div class="controls">
+                <div class="depth-control">
+                    <label for="depth-slider">Analysis Depth:</label>
+                    <input type="range" id="depth-slider" class="depth-slider" min="8" max="20" value="15">
+                    <span id="depth-value">15</span>
+                </div>
+                
+                <button id="analyze-btn" class="btn btn-primary">Analyze Game</button>
+            </div>
+        </div>
+
+        <div class="progress-section" id="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="status-message" id="status-message">Preparing analysis...</div>
+        </div>
+
+        <div class="results-section" id="results-section">
+            <h2>Analysis Results</h2>
+            
+            <div class="accuracy-display">
+                <div class="accuracy-card">
+                    <h3>White Accuracy</h3>
+                    <div class="accuracy-value" id="white-accuracy">0%</div>
+                </div>
+                <div class="accuracy-card">
+                    <h3>Black Accuracy</h3>
+                    <div class="accuracy-value" id="black-accuracy">0%</div>
+                </div>
+            </div>
+
+            <div class="classification-stats" id="classification-stats">
+                <!-- Classification stats will be populated here -->
+            </div>
+        </div>
     </div>
 
-    <!-- Controls -->
-    <div class="analysis-controls">
-      <div class="pgn-section">
-        <div class="control-group">
-          <label for="pgn-input">Paste PGN for Analysis:</label>
-          <textarea id="pgn-input" class="pgn-input" placeholder="Paste your PGN here and click 'Analyze Game' for detailed breakdown..."></textarea>
-        </div>
-        <div class="button-group">
-          <button id="load-pgn-btn" class="btn btn-primary">Analyze Game</button>
-          <button id="analyze-position-btn" class="btn btn-secondary">Analyze Position</button>
-        </div>
-      </div>
-      
-      <div class="engine-settings">
-        <h3>Engine Settings</h3>
-        <div class="settings-grid">
-          <div class="control-group">
-            <label for="engine-depth">Analysis Depth:</label>
-            <select id="engine-depth" class="setting-select">
-              <option value="8">Very Fast (Depth 8)</option>
-              <option value="12">Fast (Depth 12)</option>
-              <option value="15" selected>Standard (Depth 15)</option>
-              <option value="18">Deep (Depth 18)</option>
-              <option value="20">Very Deep (Depth 20)</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <label for="engine-lines">Analysis Lines:</label>
-            <select id="engine-lines" class="setting-select">
-              <option value="1">1 Line</option>
-              <option value="3" selected>3 Lines</option>
-              <option value="5">5 Lines</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <label for="engine-skill">Engine Skill Level:</label>
-            <select id="engine-skill" class="setting-select">
-              <option value="0">Beginner (0)</option>
-              <option value="5">Novice (5)</option>
-              <option value="10">Intermediate (10)</option>
-              <option value="15">Advanced (15)</option>
-              <option value="20" selected>Expert (20)</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <label for="engine-hash">Hash Size (MB):</label>
-            <select id="engine-hash" class="setting-select">
-              <option value="1">1 MB</option>
-              <option value="4">4 MB</option>
-              <option value="16" selected>16 MB</option>
-              <option value="64">64 MB</option>
-              <option value="256">256 MB</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      <div class="board-controls">
-        <div class="button-group">
-          <button id="clear-board-btn" class="control-btn">Clear Board</button>
-          <button id="reset-position-btn" class="control-btn">Reset</button>
-          <button id="flip-board-btn" class="control-btn">Flip Board</button>
-          <button id="back-btn" class="control-btn">← Back to Home</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Analysis Area -->
-    <div class="analysis-board-container">
-      <!-- Chess Board Section -->
-      <div class="board-section">
-        <div class="chess-container">
-          <div class="chess-board" id="chess-board">
-            <!-- Board will be generated by JavaScript -->
-          </div>
-          <div class="board-controls">
-            <div id="game-message">Ready to analyze</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Analysis Panel -->
-      <div class="analysis-section">
-        <!-- Engine Status & Evaluation -->
-        <div class="analysis-info">
-          <div id="evaluation" class="evaluation">Evaluation: +0.0</div>
-          <div id="engine-status" class="engine-status">Engine: Ready</div>
-        </div>
-
-        <!-- Analysis Lines -->
-        <div class="best-moves">
-          <h3>Analysis Lines</h3>
-          <div id="move-arrows" class="analysis-lines"></div>
-        </div>
-
-        <!-- Move History -->
-        <div class="move-history">
-          <h3>Move History</h3>
-          <div id="moves-list"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.js"></script>
-  <script src="analysis.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.js"></script>
+    <script src="stockfish-engine.js"></script>
+    <script src="chess-analysis.js"></script>
+    <script src="analysis-new.js"></script>
 </body>
 </html>
