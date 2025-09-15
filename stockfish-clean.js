@@ -29,27 +29,22 @@ class StockfishEngine {
     }
 
     async loadStockfishWithRetry() {
-        // Try a more reliable approach with different Stockfish versions and sources
+        // Use older Stockfish versions that don't require SharedArrayBuffer
         const approaches = [
-            // Approach 1: Try the working WASM version
+            // Approach 1: Try Stockfish.js (older, compatible version)
             {
-                name: 'Stockfish WASM from unpkg',
-                load: () => this.loadStockfishWASM('https://unpkg.com/stockfish.wasm@0.11.0/stockfish.js')
+                name: 'Stockfish.js (compatible version)',
+                load: () => this.loadCompatibleStockfish('https://unpkg.com/stockfish.js@10.0.2/stockfish.js')
             },
-            // Approach 2: Try the npm version
+            // Approach 2: Try another compatible version
             {
-                name: 'Stockfish NPM version',
-                load: () => this.loadSingleStockfish('https://unpkg.com/stockfish@16.0.0/src/stockfish.js')
+                name: 'Stockfish v10 from CDN',
+                load: () => this.loadCompatibleStockfish('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js')
             },
-            // Approach 3: Try jsdelivr
+            // Approach 3: Try even older version
             {
-                name: 'Stockfish from JSDelivr',
-                load: () => this.loadSingleStockfish('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js')
-            },
-            // Approach 4: Try older version
-            {
-                name: 'Stockfish v15',
-                load: () => this.loadSingleStockfish('https://unpkg.com/stockfish@15.0.0/src/stockfish.js')
+                name: 'Stockfish v9 (very compatible)',
+                load: () => this.loadCompatibleStockfish('https://unpkg.com/stockfish.js@9.0.0/stockfish.js')
             }
         ];
         
@@ -65,7 +60,61 @@ class StockfishEngine {
             }
         }
         
-        throw new Error('All Stockfish loading approaches failed');
+        throw new Error('All compatible Stockfish versions failed');
+    }
+
+    async loadCompatibleStockfish(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            
+            const timeout = setTimeout(() => {
+                reject(new Error('Compatible Stockfish loading timeout'));
+            }, 15000);
+            
+            script.onload = () => {
+                clearTimeout(timeout);
+                console.log('📦 Compatible Stockfish script loaded, initializing...');
+                
+                // Give it time to initialize
+                setTimeout(() => {
+                    // Try different ways the engine might be exposed
+                    let stockfishConstructor = null;
+                    
+                    if (typeof Stockfish !== 'undefined') {
+                        stockfishConstructor = Stockfish;
+                    } else if (typeof window.Stockfish !== 'undefined') {
+                        stockfishConstructor = window.Stockfish;
+                    } else if (typeof STOCKFISH !== 'undefined') {
+                        stockfishConstructor = STOCKFISH;
+                    }
+                    
+                    if (stockfishConstructor) {
+                        try {
+                            // Try different initialization methods
+                            if (typeof stockfishConstructor === 'function') {
+                                this.stockfish = new stockfishConstructor();
+                            } else {
+                                this.stockfish = stockfishConstructor();
+                            }
+                            console.log('✅ Compatible Stockfish instance created');
+                            resolve();
+                        } catch (e) {
+                            reject(new Error('Failed to create compatible Stockfish: ' + e.message));
+                        }
+                    } else {
+                        reject(new Error('Compatible Stockfish constructor not found'));
+                    }
+                }, 1000);
+            };
+            
+            script.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error('Compatible Stockfish script loading failed'));
+            };
+            
+            document.head.appendChild(script);
+        });
     }
 
     async loadStockfishWASM(src) {
@@ -207,29 +256,43 @@ class StockfishEngine {
     async loadStockfishWorker() {
         return new Promise((resolve, reject) => {
             try {
-                // Try to create a Web Worker with inline Stockfish loading
+                // Try to create a Web Worker with compatible Stockfish versions
                 const workerScript = `
                     try {
-                        importScripts('https://unpkg.com/stockfish.wasm@0.11.0/stockfish.js');
+                        importScripts('https://unpkg.com/stockfish.js@10.0.2/stockfish.js');
                     } catch (e1) {
                         try {
-                            importScripts('https://unpkg.com/stockfish@16.0.0/src/stockfish.js');
+                            importScripts('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js');
                         } catch (e2) {
-                            importScripts('https://cdn.jsdelivr.net/npm/stockfish@15.0.0/src/stockfish.js');
+                            importScripts('https://unpkg.com/stockfish.js@9.0.0/stockfish.js');
                         }
                     }
                     let stockfish = null;
                     try {
-                        stockfish = new Stockfish();
-                        stockfish.onmessage = function(event) {
-                            self.postMessage(event.data);
-                        };
-                        self.onmessage = function(event) {
-                            if (stockfish) {
-                                stockfish.postMessage(event.data);
+                        // Try different ways to initialize Stockfish
+                        if (typeof Stockfish !== 'undefined') {
+                            if (typeof Stockfish === 'function') {
+                                stockfish = new Stockfish();
+                            } else {
+                                stockfish = Stockfish();
                             }
-                        };
-                        self.postMessage('worker-ready');
+                        } else if (typeof STOCKFISH !== 'undefined') {
+                            stockfish = STOCKFISH();
+                        }
+                        
+                        if (stockfish) {
+                            stockfish.onmessage = function(event) {
+                                self.postMessage(event.data);
+                            };
+                            self.onmessage = function(event) {
+                                if (stockfish) {
+                                    stockfish.postMessage(event.data);
+                                }
+                            };
+                            self.postMessage('worker-ready');
+                        } else {
+                            self.postMessage('worker-error: Stockfish constructor not found');
+                        }
                     } catch (e) {
                         self.postMessage('worker-error: ' + e.message);
                     }
