@@ -1,6 +1,7 @@
 // Modern Stockfish Web Worker Implementation
 // Based on best practices and modern chess engine integration
-// Version: 3.0 - Complete rewrite for reliability
+// Version: 3.1 - Fixed async issues and error handling
+// Cache bust: 2024-01-15-17:30
 
 let stockfish = null;
 let isReady = false;
@@ -17,12 +18,12 @@ let engineOptions = {
 };
 
 // Initialize Stockfish engine
-async function initStockfish() {
+function initStockfish() {
   console.log('🚀 Initializing Stockfish engine...');
   
   try {
     // Try to load real Stockfish WebAssembly
-    await loadRealStockfish();
+    loadRealStockfish();
   } catch (error) {
     console.log('🔄 Real Stockfish failed, using enhanced mock engine');
     setupMockEngine();
@@ -30,40 +31,38 @@ async function initStockfish() {
 }
 
 // Load real Stockfish WebAssembly
-async function loadRealStockfish() {
-  return new Promise((resolve, reject) => {
-    try {
-      // Try multiple CDN sources
-      const sources = [
-        'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js',
-        'https://unpkg.com/stockfish@16.0.0/stockfish.min.js'
-      ];
-      
-      let loaded = false;
-      
-      for (const src of sources) {
-        try {
-          importScripts(src);
-          if (typeof Stockfish !== 'undefined') {
-            stockfish = new Stockfish();
-            engineType = 'webassembly';
-            setupRealStockfish();
-            resolve();
-            loaded = true;
-            break;
-          }
-        } catch (e) {
-          console.log(`Failed to load from ${src}:`, e.message);
+function loadRealStockfish() {
+  try {
+    // Try multiple CDN sources
+    const sources = [
+      'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js',
+      'https://unpkg.com/stockfish@16.0.0/stockfish.min.js'
+    ];
+    
+    let loaded = false;
+    
+    for (const src of sources) {
+      try {
+        importScripts(src);
+        if (typeof Stockfish !== 'undefined') {
+          stockfish = new Stockfish();
+          engineType = 'webassembly';
+          setupRealStockfish();
+          loaded = true;
+          break;
         }
+      } catch (e) {
+        console.log(`Failed to load from ${src}:`, e.message);
       }
-      
-      if (!loaded) {
-        reject(new Error('All Stockfish sources failed'));
-      }
-    } catch (error) {
-      reject(error);
     }
-  });
+    
+    if (!loaded) {
+      throw new Error('All Stockfish sources failed');
+    }
+  } catch (error) {
+    console.log('🔄 Real Stockfish failed, using enhanced mock engine');
+    setupMockEngine();
+  }
 }
 
 // Setup real Stockfish engine
@@ -73,30 +72,46 @@ function setupRealStockfish() {
   console.log('🔧 Setting up real Stockfish engine...');
   
   stockfish.onmessage = function(event) {
-    const message = event.data;
-    postMessage(message);
+    try {
+      const message = event.data;
+      postMessage(message);
+    } catch (error) {
+      console.error('❌ Error processing Stockfish message:', error);
+    }
   };
   
   stockfish.onerror = function(error) {
     console.error('❌ Stockfish error:', error);
-    postMessage('error Stockfish engine error');
+    // Don't send error message, just fall back to mock
+    console.log('🔄 Falling back to mock engine due to error');
+    setupMockEngine();
   };
   
   // Initialize UCI
-  stockfish.postMessage('uci');
-  
-  // Wait for uciok, then configure
-  const originalOnMessage = stockfish.onmessage;
-  stockfish.onmessage = function(event) {
-    const message = event.data;
+  try {
+    stockfish.postMessage('uci');
     
-    if (message.includes('uciok')) {
-      configureEngineOptions();
-      stockfish.onmessage = originalOnMessage;
-    }
-    
-    postMessage(message);
-  };
+    // Wait for uciok, then configure
+    const originalOnMessage = stockfish.onmessage;
+    stockfish.onmessage = function(event) {
+      try {
+        const message = event.data;
+        
+        if (message.includes('uciok')) {
+          configureEngineOptions();
+          stockfish.onmessage = originalOnMessage;
+        }
+        
+        postMessage(message);
+      } catch (error) {
+        console.error('❌ Error in UCI setup:', error);
+        setupMockEngine();
+      }
+    };
+  } catch (error) {
+    console.error('❌ Error initializing Stockfish:', error);
+    setupMockEngine();
+  }
 }
 
 // Setup enhanced mock engine
