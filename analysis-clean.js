@@ -2,7 +2,10 @@
 class ChessAnalysis {
     constructor() {
         this.chess = new Chess();
-        this.stockfish = new StockfishEngine();
+        // Use WintrCat's working Stockfish
+        this.stockfish = new Worker('stockfish.js');
+        this.stockfish.postMessage("uci");
+        this.stockfish.postMessage("setoption name MultiPV value 2");
         this.moveHistory = [];
         this.evaluations = [];
         this.currentMove = 0;
@@ -144,18 +147,38 @@ class ChessAnalysis {
         if (this.isAnalyzing) return;
         
         this.isAnalyzing = true;
-        this.updateStatus('Analyzing position...', 'analyzing');
+        this.updateStatus('Analyzing with Stockfish...', 'analyzing');
         
         try {
-            // Wait for Stockfish to be ready
-            await this.stockfish.waitForReady();
-            
-            // Get current position FEN
             const fen = this.chess.fen();
             
-            // Evaluate with Stockfish
-            const result = await this.stockfish.evaluate(fen, 15);
-            const evaluation = result.evaluation;
+            // Use WintrCat's Stockfish approach
+            this.stockfish.postMessage("position fen " + fen);
+            this.stockfish.postMessage("go depth 15");
+
+            const evaluation = await new Promise(resolve => {
+                const messageHandler = (event) => {
+                    const message = event.data;
+                    
+                    if (message.startsWith("bestmove")) {
+                        this.stockfish.removeEventListener("message", messageHandler);
+                        
+                        // Extract evaluation from previous messages
+                        let eval = 0;
+                        if (this.lastInfoMessage && this.lastInfoMessage.includes(" cp ")) {
+                            let value = parseInt(this.lastInfoMessage.match(/cp ([\d-]+)/)?.[1] || "0");
+                            if (fen.includes(" b ")) value *= -1;
+                            eval = value / 100;
+                        }
+                        
+                        resolve(eval);
+                    } else if (message.startsWith("info") && message.includes(" cp ")) {
+                        this.lastInfoMessage = message;
+                    }
+                };
+
+                this.stockfish.addEventListener("message", messageHandler);
+            });
             
             this.evaluations[this.currentMove] = evaluation;
             this.updateEvaluationBar(evaluation);
@@ -167,15 +190,10 @@ class ChessAnalysis {
                 this.addMoveIcon(this.currentMove - 1, classification);
             }
             
-            this.updateStatus('Analysis complete', 'ready');
+            this.updateStatus('Stockfish analysis complete!', 'ready');
         } catch (error) {
-            console.error('Analysis error:', error);
-            this.updateStatus('Analysis failed - using fallback', 'error');
-            
-            // Fallback to mock evaluation
-            const evaluation = this.mockEvaluate();
-            this.evaluations[this.currentMove] = evaluation;
-            this.updateEvaluationBar(evaluation);
+            console.error('Stockfish analysis error:', error);
+            this.updateStatus('Analysis failed', 'error');
         } finally {
             this.isAnalyzing = false;
         }
