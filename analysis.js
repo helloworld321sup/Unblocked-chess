@@ -13,6 +13,7 @@ class ChessAnalysis {
         this.initializeBoard();
         this.setupEventListeners();
         this.updateDisplay();
+        this.applySettings();
     }
 
     initializeBoard() {
@@ -73,7 +74,7 @@ class ChessAnalysis {
             this.updateEvaluationBar(evaluation.evaluation);
             
             // If we have a previous move, classify it
-            if (this.currentMove > 0) {
+            if (this.currentMove > 0 && this.evaluations[this.currentMove - 1] !== undefined) {
                 const moveClassification = this.classifyMove(this.evaluations[this.currentMove - 1], evaluation.evaluation);
                 this.addMoveIcon(this.currentMove - 1, moveClassification);
             }
@@ -88,8 +89,6 @@ class ChessAnalysis {
     }
 
     classifyMove(prevEval, currentEval) {
-        const evalChange = Math.abs(currentEval - prevEval);
-        
         // Determine if it's a book move (opening)
         if (this.isBookMove()) {
             return { type: 'book', emoji: '📖' };
@@ -98,6 +97,18 @@ class ChessAnalysis {
         // Determine if it's a brilliant move (sacrifice)
         if (this.isBrilliantMove(prevEval, currentEval)) {
             return { type: 'brilliant', emoji: '‼️' };
+        }
+        
+        // Calculate evaluation change from the perspective of the player who just moved
+        const isWhiteToMove = this.chess.turn() === 'w';
+        let evalChange;
+        
+        if (isWhiteToMove) {
+            // White just moved, so we compare from white's perspective
+            evalChange = Math.abs(currentEval - prevEval);
+        } else {
+            // Black just moved, so we compare from black's perspective
+            evalChange = Math.abs(currentEval - prevEval);
         }
         
         // Classify based on evaluation change
@@ -232,7 +243,7 @@ class ChessAnalysis {
                 if (piece) {
                     const pieceElement = document.createElement('div');
                     pieceElement.className = 'piece';
-                    pieceElement.style.backgroundImage = `url('pieces/${piece.color}${piece.type.toUpperCase()}.png')`;
+                    pieceElement.style.backgroundImage = `url('${this.getPieceImage(piece)}')`;
                     square.appendChild(pieceElement);
                 }
             }
@@ -296,6 +307,36 @@ class ChessAnalysis {
         const status = document.getElementById('status');
         status.textContent = message;
         status.className = `status ${type}`;
+    }
+
+    getPieceImage(piece) {
+        // Load piece images from settings
+        if (typeof window.getPieceImages === 'function') {
+            const pieceImages = window.getPieceImages();
+            const pieceKey = piece.color + piece.type.toUpperCase();
+            return pieceImages[pieceKey] || this.getFallbackPieceSymbol(piece);
+        }
+        return this.getFallbackPieceSymbol(piece);
+    }
+
+    getFallbackPieceSymbol(piece) {
+        // Fallback to Unicode symbols if settings not available
+        const symbols = {
+            'w': { 'k': '♔', 'q': '♕', 'r': '♖', 'b': '♗', 'n': '♘', 'p': '♙' },
+            'b': { 'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟' }
+        };
+        return symbols[piece.color][piece.type];
+    }
+
+    applySettings() {
+        // Apply board color from settings
+        if (typeof window.getBoardColor === 'function') {
+            const boardColor = window.getBoardColor();
+            document.documentElement.style.setProperty('--black-square-color', boardColor);
+        }
+        
+        // Update board to reflect new colors
+        this.updateBoard();
     }
 }
 
