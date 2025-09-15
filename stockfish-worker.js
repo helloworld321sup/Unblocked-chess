@@ -1,5 +1,6 @@
 // Real Stockfish Web Worker Implementation
 // This uses the actual Stockfish engine compiled to WebAssembly
+// Cache bust: 2024-01-15-15:30
 
 let stockfish = null;
 let isReady = false;
