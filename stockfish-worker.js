@@ -1,14 +1,13 @@
-// Real Stockfish Web Worker Implementation - UPDATED
-// This uses the actual Stockfish engine compiled to WebAssembly
-// Version: 2.3 - WintrChess-inspired optimizations, ultra-fast responses
-// Cache bust: 2024-01-15-17:00
+// Modern Stockfish Web Worker Implementation
+// Based on best practices and modern chess engine integration
+// Version: 3.0 - Complete rewrite for reliability
 
 let stockfish = null;
 let isReady = false;
 let currentPosition = null;
 let analysisDepth = 15;
 let multiPV = 1;
-let engineType = 'none';
+let engineType = 'mock';
 let engineOptions = {
   hash: 16,
   threads: 1,
@@ -17,92 +16,64 @@ let engineOptions = {
   depth: 15
 };
 
-// Initialize Stockfish engine with multiple fallback options
+// Initialize Stockfish engine
 async function initStockfish() {
   console.log('🚀 Initializing Stockfish engine...');
   
-  const stockfishSources = [
-    // Try WebAssembly Stockfish from official CDN
-    {
-      name: 'WebAssembly Stockfish 16',
-      loader: async () => {
-        try {
-          // Use importScripts for Web Workers (no document access)
-          importScripts('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js');
-          if (typeof Stockfish !== 'undefined') {
-            const engine = new Stockfish();
-            engineType = 'webassembly';
-            return engine;
-          }
-          throw new Error('Stockfish not available after importScripts');
-        } catch (e) {
-          throw new Error('Failed to load WebAssembly Stockfish: ' + e.message);
-        }
-      }
-    },
-    // Try alternative CDN
-    {
-      name: 'Alternative CDN Stockfish',
-      loader: async () => {
-        try {
-          importScripts('https://unpkg.com/stockfish@16.0.0/stockfish.min.js');
-          if (typeof Stockfish !== 'undefined') {
-            const engine = new Stockfish();
-            engineType = 'webassembly';
-            return engine;
-          }
-          throw new Error('Stockfish not available');
-        } catch (e) {
-          throw new Error('Alternative CDN failed: ' + e.message);
-        }
-      }
-    },
-    // Try local Stockfish file
-    {
-      name: 'Local Stockfish',
-      loader: async () => {
-        try {
-          importScripts('./stockfish-wasm.js');
-          if (typeof Stockfish !== 'undefined') {
-            const engine = new Stockfish();
-            engineType = 'webassembly';
-            return engine;
-          }
-          throw new Error('Local Stockfish not available');
-        } catch (e) {
-          throw new Error('Local Stockfish failed: ' + e.message);
-        }
-      }
-    }
-  ];
-  
-  // Try each source until one works
-  for (const source of stockfishSources) {
-    try {
-      console.log(`🎯 Trying ${source.name}...`);
-      stockfish = await source.loader();
-      console.log(`✅ ${source.name} loaded successfully!`);
-      setupStockfish();
-      return;
-    } catch (error) {
-      console.log(`❌ ${source.name} failed:`, error.message);
-    }
+  try {
+    // Try to load real Stockfish WebAssembly
+    await loadRealStockfish();
+  } catch (error) {
+    console.log('🔄 Real Stockfish failed, using enhanced mock engine');
+    setupMockEngine();
   }
-  
-  // If all real engines fail, use enhanced mock
-  console.log('🔄 All real engines failed, using enhanced mock engine');
-  setupMockEngine();
+}
+
+// Load real Stockfish WebAssembly
+async function loadRealStockfish() {
+  return new Promise((resolve, reject) => {
+    try {
+      // Try multiple CDN sources
+      const sources = [
+        'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js',
+        'https://unpkg.com/stockfish@16.0.0/stockfish.min.js'
+      ];
+      
+      let loaded = false;
+      
+      for (const src of sources) {
+        try {
+          importScripts(src);
+          if (typeof Stockfish !== 'undefined') {
+            stockfish = new Stockfish();
+            engineType = 'webassembly';
+            setupRealStockfish();
+            resolve();
+            loaded = true;
+            break;
+          }
+        } catch (e) {
+          console.log(`Failed to load from ${src}:`, e.message);
+        }
+      }
+      
+      if (!loaded) {
+        reject(new Error('All Stockfish sources failed'));
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 // Setup real Stockfish engine
-function setupStockfish() {
+function setupRealStockfish() {
   if (!stockfish) return;
   
-  console.log('🔧 Setting up Stockfish engine...');
+  console.log('🔧 Setting up real Stockfish engine...');
   
   stockfish.onmessage = function(event) {
     const message = event.data;
-    console.log('🤖 Stockfish:', message);
     postMessage(message);
   };
   
@@ -111,19 +82,16 @@ function setupStockfish() {
     postMessage('error Stockfish engine error');
   };
   
-  // Initialize UCI and configure engine
+  // Initialize UCI
   stockfish.postMessage('uci');
   
-  // Wait for uciok, then configure options
+  // Wait for uciok, then configure
   const originalOnMessage = stockfish.onmessage;
   stockfish.onmessage = function(event) {
     const message = event.data;
-    console.log('🤖 Stockfish:', message);
     
     if (message.includes('uciok')) {
-      // Configure engine options
       configureEngineOptions();
-      // Restore original message handler
       stockfish.onmessage = originalOnMessage;
     }
     
@@ -131,30 +99,14 @@ function setupStockfish() {
   };
 }
 
-// Configure engine options
-function configureEngineOptions() {
-  if (!stockfish || engineType !== 'webassembly') return;
-  
-  console.log('⚙️ Configuring engine options...');
-  
-  // Set engine options
-  stockfish.postMessage(`setoption name Hash value ${engineOptions.hash}`);
-  stockfish.postMessage(`setoption name Threads value ${engineOptions.threads}`);
-  stockfish.postMessage(`setoption name MultiPV value ${engineOptions.multipv}`);
-  stockfish.postMessage(`setoption name Skill Level value ${engineOptions.skill}`);
-  
-  // Send ready command
-  stockfish.postMessage('isready');
-}
-
-// Setup enhanced mock engine as fallback
+// Setup enhanced mock engine
 function setupMockEngine() {
   console.log('🔄 Setting up enhanced mock engine...');
   engineType = 'mock';
   isReady = true;
   
   postMessage('id name Mockfish 16 Enhanced');
-  postMessage('id author Enhanced Mock Engine v2.1');
+  postMessage('id author Enhanced Mock Engine v3.0');
   postMessage('option name Hash type spin default 16 min 1 max 33554432');
   postMessage('option name Threads type spin default 1 min 1 max 512');
   postMessage('option name MultiPV type spin default 1 min 1 max 500');
@@ -163,31 +115,44 @@ function setupMockEngine() {
   postMessage('uciok');
 }
 
+// Configure engine options
+function configureEngineOptions() {
+  if (!stockfish || engineType !== 'webassembly') return;
+  
+  console.log('⚙️ Configuring engine options...');
+  
+  stockfish.postMessage(`setoption name Hash value ${engineOptions.hash}`);
+  stockfish.postMessage(`setoption name Threads value ${engineOptions.threads}`);
+  stockfish.postMessage(`setoption name MultiPV value ${engineOptions.multipv}`);
+  stockfish.postMessage(`setoption name Skill Level value ${engineOptions.skill}`);
+  stockfish.postMessage('isready');
+}
+
 // Process UCI commands
 function processCommand(command) {
   const parts = command.split(' ');
   
   if (command === 'uci') {
-    if (stockfish) {
+    if (stockfish && engineType === 'webassembly') {
       stockfish.postMessage('uci');
     } else {
       postMessage('id name Mockfish 16 Enhanced');
-      postMessage('id author Enhanced Mock Engine v2.1');
-    postMessage('option name Hash type spin default 16 min 1 max 33554432');
-    postMessage('option name Threads type spin default 1 min 1 max 512');
-    postMessage('option name MultiPV type spin default 1 min 1 max 500');
+      postMessage('id author Enhanced Mock Engine v3.0');
+      postMessage('option name Hash type spin default 16 min 1 max 33554432');
+      postMessage('option name Threads type spin default 1 min 1 max 512');
+      postMessage('option name MultiPV type spin default 1 min 1 max 500');
       postMessage('option name Skill Level type spin default 20 min 0 max 20');
       postMessage('option name Depth type spin default 15 min 1 max 50');
-    postMessage('uciok');
+      postMessage('uciok');
     }
   } else if (command === 'isready') {
-    if (stockfish) {
+    if (stockfish && engineType === 'webassembly') {
       stockfish.postMessage('isready');
     } else {
-    postMessage('readyok');
+      postMessage('readyok');
     }
   } else if (command === 'quit') {
-    if (stockfish) {
+    if (stockfish && engineType === 'webassembly') {
       stockfish.postMessage('quit');
     }
     close();
@@ -197,28 +162,27 @@ function processCommand(command) {
     handleGo(parts);
   } else if (parts[0] === 'setoption') {
     handleSetOption(parts);
-  } else if (stockfish) {
-    // Forward other commands to real Stockfish
+  } else if (stockfish && engineType === 'webassembly') {
     stockfish.postMessage(command);
   }
 }
 
 // Handle position command
 function handlePosition(parts) {
-    if (parts[1] === 'startpos') {
+  if (parts[1] === 'startpos') {
     currentPosition = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-    } else if (parts[1] === 'fen') {
+  } else if (parts[1] === 'fen') {
     currentPosition = parts.slice(2, 8).join(' ');
   }
   
-  if (stockfish) {
+  if (stockfish && engineType === 'webassembly') {
     stockfish.postMessage(parts.join(' '));
   }
 }
 
 // Handle go command
 function handleGo(parts) {
-  // Extract depth and other parameters
+  // Extract parameters
   for (let i = 1; i < parts.length; i++) {
     if (parts[i] === 'depth' && i + 1 < parts.length) {
       analysisDepth = parseInt(parts[i + 1]);
@@ -227,21 +191,20 @@ function handleGo(parts) {
     }
   }
   
-  if (stockfish) {
+  if (stockfish && engineType === 'webassembly') {
     stockfish.postMessage(parts.join(' '));
   } else {
-  // Use enhanced mock analysis with much faster response
-  setTimeout(() => analyzePositionMock(), 5);
+    // Use mock analysis
+    setTimeout(() => analyzePositionMock(), 1);
   }
 }
 
 // Handle setoption command
 function handleSetOption(parts) {
-  // Handle multi-word option names like "Skill Level"
   let optionName = parts[2];
   let optionValue = parts[4];
   
-  // Check for multi-word option names
+  // Handle multi-word options
   if (parts.length > 5) {
     if (parts[2] === 'Skill' && parts[3] === 'Level') {
       optionName = 'Skill Level';
@@ -254,7 +217,7 @@ function handleSetOption(parts) {
   
   console.log(`⚙️ Setting option: ${optionName} = ${optionValue}`);
   
-  // Update engine options
+  // Update options
   switch (optionName) {
     case 'MultiPV':
       multiPV = parseInt(optionValue);
@@ -282,7 +245,7 @@ function handleSetOption(parts) {
   }
 }
 
-// Enhanced mock position analysis with iterative deepening
+// Enhanced mock analysis
 function analyzePositionMock() {
   if (!currentPosition) {
     currentPosition = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -297,47 +260,40 @@ function analyzePositionMock() {
     return;
   }
   
-  // Enhanced evaluation with multiple factors
-  const evaluation = evaluatePositionAdvanced(board);
+  // Quick evaluation
+  const evaluation = evaluatePosition(board);
   
-  // Optimized depth for faster responses
-  const maxDepth = Math.min(analysisDepth, 12); // Reduced from 20 to 12
-  const skillLevel = engineOptions.skill || 20;
+  // Score moves
+  const scoredMoves = moves.map(move => ({
+    move,
+    score: evaluateMove(board, move, evaluation)
+  })).sort((a, b) => b.score - a.score);
   
-  // Find best moves with enhanced analysis
-  const scoredMoves = moves.map((move, index) => {
-    const score = evaluateMoveAdvanced(board, move, evaluation, maxDepth);
-    return { move, score };
-  }).filter(item => {
-    return item.move && item.move.from && item.move.to;
-  }).sort((a, b) => b.score - a.score);
-  
-  // Send analysis info with faster response
+  // Send analysis
   if (scoredMoves.length > 0) {
     for (let i = 0; i < Math.min(multiPV, scoredMoves.length); i++) {
       const move = scoredMoves[i];
-      const depth = Math.min(analysisDepth, 12); // Reduced max depth
-      const nodes = Math.floor(Math.random() * 5000) + 500; // Reduced nodes
-      const time = Math.floor(Math.random() * 200) + 50; // Much faster time
+      const depth = Math.min(analysisDepth, 10);
+      const nodes = Math.floor(Math.random() * 2000) + 100;
+      const time = Math.floor(Math.random() * 50) + 10;
       
       postMessage(`info depth ${depth} seldepth ${depth} multipv ${i + 1} score cp ${Math.round(move.score * 100)} nodes ${nodes} nps ${Math.floor(nodes / (time / 1000))} time ${time} pv ${move.move.from}${move.move.to}${move.move.promotion || ''}`);
     }
     
-    // Send best move with much faster response
+    // Send best move
     setTimeout(() => {
       const bestMove = scoredMoves[0];
       postMessage(`bestmove ${bestMove.move.from}${bestMove.move.to}${bestMove.move.promotion || ''}`);
-    }, Math.random() * 20 + 10); // Much faster: 10-30ms instead of 25-75ms
+    }, Math.random() * 10 + 5);
   } else {
-    // No valid moves found
-    postMessage(`info depth 1 score cp ${Math.round(evaluation * 100)} nodes 0 time 50`);
+    postMessage(`info depth 1 score cp ${Math.round(evaluation * 100)} nodes 0 time 10`);
     setTimeout(() => {
       postMessage('bestmove (none)');
-    }, 10); // Faster response
+    }, 5);
   }
 }
 
-// Parse FEN string to board representation
+// Parse FEN string
 function parseFEN(fen) {
   const parts = fen.split(' ');
   const board = Array(8).fill().map(() => Array(8).fill(null));
@@ -369,7 +325,7 @@ function parseFEN(fen) {
   };
 }
 
-// Generate legal moves (simplified)
+// Generate legal moves
 function generateLegalMoves(position) {
   const moves = [];
   const board = position.board;
@@ -381,8 +337,8 @@ function generateLegalMoves(position) {
       if (piece && piece.color === turn) {
         const from = String.fromCharCode(97 + file) + (8 - rank);
         const pieceMoves = generatePieceMoves(board, rank, file, piece);
-        moves.push(...pieceMoves.map(to => ({ 
-          from: from, 
+        moves.push(...pieceMoves.map(to => ({
+          from: from,
           to: to,
           piece: piece.type,
           color: piece.color
@@ -394,7 +350,7 @@ function generateLegalMoves(position) {
   return moves;
 }
 
-// Generate moves for a specific piece
+// Generate moves for a piece
 function generatePieceMoves(board, rank, file, piece) {
   const moves = [];
   
@@ -408,7 +364,7 @@ function generatePieceMoves(board, rank, file, piece) {
     if (forwardRank >= 0 && forwardRank < 8 && !board[forwardRank][file]) {
       moves.push(String.fromCharCode(97 + file) + (8 - forwardRank));
       
-      // Double move from starting position
+      // Double move
       if (rank === startRank) {
         const doubleRank = rank + 2 * direction;
         if (doubleRank >= 0 && doubleRank < 8 && !board[doubleRank][file]) {
@@ -441,9 +397,9 @@ function generatePieceMoves(board, rank, file, piece) {
         }
       }
     }
-  } else if (piece.type === 'r') {
-    // Rook moves
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  } else {
+    // Sliding pieces
+    const directions = getPieceDirections(piece.type);
     for (const [dr, df] of directions) {
       for (let steps = 1; steps < 8; steps++) {
         const newRank = rank + dr * steps;
@@ -459,59 +415,8 @@ function generatePieceMoves(board, rank, file, piece) {
           }
           break;
         }
-      }
-    }
-  } else if (piece.type === 'b') {
-    // Bishop moves
-    const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
-    for (const [dr, df] of directions) {
-      for (let steps = 1; steps < 8; steps++) {
-        const newRank = rank + dr * steps;
-        const newFile = file + df * steps;
-        if (newRank < 0 || newRank >= 8 || newFile < 0 || newFile >= 8) break;
         
-        const target = board[newRank][newFile];
-        if (!target) {
-          moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
-        } else {
-          if (target.color !== piece.color) {
-            moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
-          }
-          break;
-        }
-      }
-    }
-  } else if (piece.type === 'q') {
-    // Queen moves (combination of rook and bishop)
-    const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
-    for (const [dr, df] of directions) {
-      for (let steps = 1; steps < 8; steps++) {
-        const newRank = rank + dr * steps;
-        const newFile = file + df * steps;
-        if (newRank < 0 || newRank >= 8 || newFile < 0 || newFile >= 8) break;
-        
-        const target = board[newRank][newFile];
-        if (!target) {
-          moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
-        } else {
-          if (target.color !== piece.color) {
-            moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
-          }
-          break;
-        }
-      }
-    }
-  } else if (piece.type === 'k') {
-    // King moves
-    const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
-    for (const [dr, df] of directions) {
-      const newRank = rank + dr;
-      const newFile = file + df;
-      if (newRank >= 0 && newRank < 8 && newFile >= 0 && newFile < 8) {
-        const target = board[newRank][newFile];
-        if (!target || target.color !== piece.color) {
-          moves.push(String.fromCharCode(97 + newFile) + (8 - newRank));
-        }
+        if (piece.type === 'k') break;
       }
     }
   }
@@ -519,12 +424,23 @@ function generatePieceMoves(board, rank, file, piece) {
   return moves;
 }
 
-// Advanced position evaluation with multiple factors
-function evaluatePositionAdvanced(position) {
+// Get piece directions
+function getPieceDirections(pieceType) {
+  const directions = {
+    'p': [],
+    'r': [[-1, 0], [1, 0], [0, -1], [0, 1]],
+    'n': [],
+    'b': [[-1, -1], [-1, 1], [1, -1], [1, 1]],
+    'q': [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]],
+    'k': [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
+  };
+  return directions[pieceType] || [];
+}
+
+// Evaluate position
+function evaluatePosition(position) {
   let evaluation = 0;
   const board = position.board;
-  
-  // Material evaluation
   const pieceValues = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0 };
   
   for (let rank = 0; rank < 8; rank++) {
@@ -532,39 +448,16 @@ function evaluatePositionAdvanced(position) {
       const piece = board[rank][file];
       if (piece) {
         let value = pieceValues[piece.type] || 0;
-        
-        // Position bonuses
         value += getPositionBonus(piece, rank, file);
-        
-        // Mobility bonus
-        value += getMobilityBonus(board, rank, file, piece);
-        
-        // King safety
-        value += getKingSafetyBonus(board, rank, file, piece);
-        
-        // Pawn structure
-        value += getPawnStructureBonus(board, rank, file, piece);
-        
         evaluation += piece.color === 'w' ? value : -value;
       }
     }
   }
   
-  // Additional positional factors
-  evaluation += evaluateCenterControl(board);
-  evaluation += evaluateDevelopment(board);
-  evaluation += evaluateKingSafety(board);
-  evaluation += evaluatePawnStructure(board);
-  
   return evaluation;
 }
 
-// Legacy function for compatibility
-function evaluatePosition(position) {
-  return evaluatePositionAdvanced(position);
-}
-
-// Get position bonus for a piece
+// Get position bonus
 function getPositionBonus(piece, rank, file) {
   const bonuses = {
     'p': [
@@ -598,67 +491,48 @@ function getPositionBonus(piece, rank, file) {
   return 0;
 }
 
-// Advanced move evaluation with multiple factors
-function evaluateMoveAdvanced(board, move, currentEval, depth) {
-  if (!move || !move.from || !move.to) {
-    return 0;
-  }
+// Evaluate move
+function evaluateMove(board, move, currentEval) {
+  if (!move || !move.from || !move.to) return 0;
   
-    let score = 0;
-    
-  // Basic move evaluation
+  let score = 0;
+  
   const toRank = 7 - parseInt(move.to[1]);
   const toFile = move.to.charCodeAt(0) - 97;
   const fromRank = 7 - parseInt(move.from[1]);
   const fromFile = move.from.charCodeAt(0) - 97;
   
-  // Check bounds
-  if (toRank < 0 || toRank >= 8 || toFile < 0 || toFile >= 8) {
-    return 0;
-  }
+  if (toRank < 0 || toRank >= 8 || toFile < 0 || toFile >= 8) return 0;
   
   const toSquare = board[toRank] && board[toRank][toFile];
   const fromSquare = board[fromRank] && board[fromRank][fromFile];
   
-  // Capture bonus (SEE - Static Exchange Evaluation)
+  // Capture bonus
   if (toSquare) {
     const pieceValues = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0 };
     const captureValue = (pieceValues[toSquare.type] || 0) * 10;
     const attackerValue = (pieceValues[fromSquare?.type] || 0) * 10;
     
-    // Only capture if it's profitable
     if (captureValue >= attackerValue) {
       score += captureValue - attackerValue;
     }
   }
   
-  // Position bonuses
+  // Position bonus
   score += getPositionBonus(fromSquare, toRank, toFile);
   
   // Center control
-    const centerSquares = ['d4', 'd5', 'e4', 'e5'];
-    if (centerSquares.includes(move.to)) {
-      score += 2;
-    }
-    
+  const centerSquares = ['d4', 'd5', 'e4', 'e5'];
+  if (centerSquares.includes(move.to)) {
+    score += 2;
+  }
+  
   // Development
   if (move.from[1] === '1' || move.from[1] === '8') {
     score += 1;
   }
   
-  // Mobility improvement
-  score += getMobilityImprovement(board, move);
-  
-  // King safety
-  score += getKingSafetyImprovement(board, move);
-  
-  // Pawn structure
-  score += getPawnStructureImprovement(board, move);
-  
-  // Tactical patterns
-  score += getTacticalPatterns(board, move);
-  
-  // Skill level adjustment (add some randomness for lower skill)
+  // Skill level adjustment
   const skillLevel = engineOptions.skill || 20;
   const skillFactor = skillLevel / 20;
   const randomFactor = (Math.random() - 0.5) * (1 - skillFactor) * 2;
@@ -667,222 +541,10 @@ function evaluateMoveAdvanced(board, move, currentEval, depth) {
   return score;
 }
 
-// Legacy function for compatibility
-function evaluateMove(board, move, currentEval) {
-  return evaluateMoveAdvanced(board, move, currentEval, 1);
-}
-
-// Advanced evaluation helper functions
-function getMobilityBonus(board, rank, file, piece) {
-  // Count how many squares this piece can move to
-  const moves = generatePieceMoves(board, rank, file, piece);
-  return moves.length * 0.1;
-}
-
-function getKingSafetyBonus(board, rank, file, piece) {
-  if (piece.type !== 'k') return 0;
-  
-  // King safety based on position
-  const centerDistance = Math.abs(rank - 3.5) + Math.abs(file - 3.5);
-  return centerDistance * -0.2; // Closer to center is better
-}
-
-function getPawnStructureBonus(board, rank, file, piece) {
-  if (piece.type !== 'p') return 0;
-  
-  // Pawn structure bonuses
-  let bonus = 0;
-  
-  // Doubled pawns penalty
-  for (let r = 0; r < 8; r++) {
-    if (r !== rank && board[r][file] && board[r][file].type === 'p' && board[r][file].color === piece.color) {
-      bonus -= 0.5; // Doubled pawn penalty
-    }
-  }
-  
-  // Isolated pawns penalty
-  let hasSupport = false;
-  for (let f = Math.max(0, file - 1); f <= Math.min(7, file + 1); f++) {
-    if (f !== file) {
-      for (let r = 0; r < 8; r++) {
-        if (board[r][f] && board[r][f].type === 'p' && board[r][f].color === piece.color) {
-          hasSupport = true;
-          break;
-        }
-      }
-    }
-  }
-  if (!hasSupport) bonus -= 0.3; // Isolated pawn penalty
-  
-  return bonus;
-}
-
-function evaluateKingSafety(board) {
-  let safety = 0;
-  
-  // Find kings and evaluate their safety
-  for (let rank = 0; rank < 8; rank++) {
-    for (let file = 0; file < 8; file++) {
-      const piece = board[rank][file];
-      if (piece && piece.type === 'k') {
-        // Count pieces around the king
-        let defenders = 0;
-        for (let dr = -1; dr <= 1; dr++) {
-          for (let df = -1; df <= 1; df++) {
-            const r = rank + dr;
-            const f = file + df;
-            if (r >= 0 && r < 8 && f >= 0 && f < 8) {
-              const nearbyPiece = board[r][f];
-              if (nearbyPiece && nearbyPiece.color === piece.color) {
-                defenders++;
-              }
-            }
-          }
-        }
-        safety += defenders * (piece.color === 'w' ? 0.1 : -0.1);
-      }
-    }
-  }
-  
-  return safety;
-}
-
-function evaluatePawnStructure(board) {
-  let structure = 0;
-  
-  // Evaluate pawn chains, doubled pawns, etc.
-  for (let file = 0; file < 8; file++) {
-    let whitePawns = 0;
-    let blackPawns = 0;
-    
-    for (let rank = 0; rank < 8; rank++) {
-      const piece = board[rank][file];
-      if (piece && piece.type === 'p') {
-        if (piece.color === 'w') whitePawns++;
-        else blackPawns++;
-      }
-    }
-    
-    // Doubled pawns penalty
-    if (whitePawns > 1) structure -= whitePawns - 1;
-    if (blackPawns > 1) structure += blackPawns - 1;
-  }
-  
-  return structure;
-}
-
-function evaluateCenterControl(board) {
-  let centerControl = 0;
-  const centerSquares = [[3, 3], [3, 4], [4, 3], [4, 4]];
-  
-  for (const [rank, file] of centerSquares) {
-    // Check for pieces attacking/defending center
-    for (let r = 0; r < 8; r++) {
-      for (let f = 0; f < 8; f++) {
-        const piece = board[r][f];
-        if (piece && canAttackSquare(board, r, f, rank, file)) {
-          centerControl += piece.color === 'w' ? 0.1 : -0.1;
-        }
-      }
-    }
-  }
-  
-  return centerControl;
-}
-
-function evaluateDevelopment(board) {
-  let development = 0;
-  
-  // Bonus for developed pieces (not on starting ranks)
-  for (let rank = 0; rank < 8; rank++) {
-    for (let file = 0; file < 8; file++) {
-      const piece = board[rank][file];
-      if (piece && piece.type !== 'p' && piece.type !== 'k') {
-        const homeRank = piece.color === 'w' ? 7 : 0;
-        if (rank !== homeRank) {
-          development += piece.color === 'w' ? 0.1 : -0.1;
-        }
-      }
-    }
-  }
-  
-  return development;
-}
-
-function canAttackSquare(board, fromRank, fromFile, toRank, toFile) {
-  const piece = board[fromRank][fromFile];
-  if (!piece) return false;
-  
-  const dr = Math.abs(toRank - fromRank);
-  const df = Math.abs(toFile - fromFile);
-  
-  switch (piece.type) {
-    case 'p':
-      const direction = piece.color === 'w' ? -1 : 1;
-      return (toRank === fromRank + direction) && (df === 1);
-    case 'r':
-      return (dr === 0 || df === 0) && isPathClear(board, fromRank, fromFile, toRank, toFile);
-    case 'b':
-      return (dr === df) && isPathClear(board, fromRank, fromFile, toRank, toFile);
-    case 'q':
-      return ((dr === 0 || df === 0 || dr === df) && isPathClear(board, fromRank, fromFile, toRank, toFile));
-    case 'k':
-      return (dr <= 1 && df <= 1);
-    case 'n':
-      return (dr === 2 && df === 1) || (dr === 1 && df === 2);
-  }
-  
-  return false;
-}
-
-function isPathClear(board, fromRank, fromFile, toRank, toFile) {
-  const dr = toRank > fromRank ? 1 : toRank < fromRank ? -1 : 0;
-  const df = toFile > fromFile ? 1 : toFile < fromFile ? -1 : 0;
-  
-  let rank = fromRank + dr;
-  let file = fromFile + df;
-  
-  while (rank !== toRank || file !== toFile) {
-    if (board[rank][file]) return false;
-    rank += dr;
-    file += df;
-  }
-  
-  return true;
-}
-
-function getMobilityImprovement(board, move) {
-  // Calculate mobility improvement from this move
-  return 0.1; // Simplified for now
-}
-
-function getKingSafetyImprovement(board, move) {
-  // Calculate king safety improvement from this move
-  return 0.1; // Simplified for now
-}
-
-function getPawnStructureImprovement(board, move) {
-  // Calculate pawn structure improvement from this move
-  return 0.1; // Simplified for now
-}
-
-function getTacticalPatterns(board, move) {
-  // Look for tactical patterns like forks, pins, skewers
-  let bonus = 0;
-  
-  // Fork detection (simplified)
-  if (move.piece === 'n') {
-    // Knights are good for forks
-    bonus += 0.2;
-  }
-  
-  return bonus;
-}
-
-// Handle messages from main thread
+// Handle messages
 self.onmessage = function(event) {
   processCommand(event.data);
 };
 
-// Initialize when worker starts
+// Initialize
 initStockfish();
