@@ -24,9 +24,9 @@ class StockfishEngine {
 
     async loadOriginalStockfish() {
         return new Promise((resolve, reject) => {
-            // Load the original Stockfish.js from the official GitHub repository
+            // Load Stockfish from a working CDN
             const script = document.createElement('script');
-            script.src = 'https://raw.githubusercontent.com/nmrugg/stockfish.js/master/stockfish.js';
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js';
             
             const timeout = setTimeout(() => {
                 reject(new Error('Stockfish loading timeout'));
@@ -34,7 +34,7 @@ class StockfishEngine {
             
             script.onload = () => {
                 clearTimeout(timeout);
-                console.log('📦 Original Stockfish.js loaded from GitHub');
+                console.log('📦 Stockfish.js loaded from CDNJS');
                 
                 // Give it time to initialize
                 setTimeout(() => {
@@ -42,7 +42,7 @@ class StockfishEngine {
                         try {
                             // Create Stockfish instance
                             this.stockfish = new Stockfish();
-                            console.log('✅ Stockfish instance created from GitHub source');
+                            console.log('✅ REAL Stockfish instance created!');
                             resolve();
                         } catch (e) {
                             reject(new Error('Failed to create Stockfish instance: ' + e.message));
