@@ -9,12 +9,139 @@ class StockfishEngine {
     }
 
     async init() {
-        console.log('🚀 Initializing chess engine...');
+        console.log('🚀 Initializing Stockfish engine...');
         
-        // Skip external CDN loading due to network issues
-        // Go straight to reliable fallback engine
-        console.log('🔄 Using enhanced fallback engine for reliable analysis');
-        this.setupFallback();
+        try {
+            // Try different Stockfish loading approaches
+            await this.loadStockfishWithRetry();
+            this.setupEngine();
+            console.log('✅ Real Stockfish initialized successfully!');
+        } catch (error) {
+            console.warn('⚠️ Stockfish loading failed, trying Web Worker approach:', error.message);
+            try {
+                await this.loadStockfishWorker();
+                console.log('✅ Stockfish Web Worker initialized successfully!');
+            } catch (workerError) {
+                console.warn('⚠️ All Stockfish methods failed, using enhanced fallback:', workerError.message);
+                this.setupFallback();
+            }
+        }
+    }
+
+    async loadStockfishWithRetry() {
+        // Try a more reliable approach with different Stockfish versions and sources
+        const approaches = [
+            // Approach 1: Try the working WASM version
+            {
+                name: 'Stockfish WASM from unpkg',
+                load: () => this.loadStockfishWASM('https://unpkg.com/stockfish.wasm@0.11.0/stockfish.js')
+            },
+            // Approach 2: Try the npm version
+            {
+                name: 'Stockfish NPM version',
+                load: () => this.loadSingleStockfish('https://unpkg.com/stockfish@16.0.0/src/stockfish.js')
+            },
+            // Approach 3: Try jsdelivr
+            {
+                name: 'Stockfish from JSDelivr',
+                load: () => this.loadSingleStockfish('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/src/stockfish.js')
+            },
+            // Approach 4: Try older version
+            {
+                name: 'Stockfish v15',
+                load: () => this.loadSingleStockfish('https://unpkg.com/stockfish@15.0.0/src/stockfish.js')
+            }
+        ];
+        
+        for (const approach of approaches) {
+            try {
+                console.log(`📥 Trying: ${approach.name}`);
+                await approach.load();
+                console.log(`✅ Success with: ${approach.name}`);
+                return;
+            } catch (error) {
+                console.warn(`❌ ${approach.name} failed: ${error.message}`);
+                continue;
+            }
+        }
+        
+        throw new Error('All Stockfish loading approaches failed');
+    }
+
+    async loadStockfishWASM(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            
+            const timeout = setTimeout(() => {
+                reject(new Error('WASM loading timeout'));
+            }, 15000);
+            
+            script.onload = () => {
+                clearTimeout(timeout);
+                console.log('📦 WASM script loaded, initializing...');
+                
+                // WASM version might need different initialization
+                setTimeout(() => {
+                    if (typeof Stockfish !== 'undefined') {
+                        try {
+                            this.stockfish = Stockfish();
+                            console.log('✅ Stockfish WASM instance created');
+                            resolve();
+                        } catch (e) {
+                            reject(new Error('Failed to create WASM instance: ' + e.message));
+                        }
+                    } else {
+                        reject(new Error('Stockfish WASM not available'));
+                    }
+                }, 1000);
+            };
+            
+            script.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error('WASM script loading failed'));
+            };
+            
+            document.head.appendChild(script);
+        });
+    }
+
+    async loadSingleStockfish(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            
+            const timeout = setTimeout(() => {
+                reject(new Error('Loading timeout'));
+            }, 10000);
+            
+            script.onload = () => {
+                clearTimeout(timeout);
+                console.log('📦 Script loaded, checking for Stockfish...');
+                
+                // Give it a moment to initialize
+                setTimeout(() => {
+                    if (typeof Stockfish !== 'undefined') {
+                        try {
+                            this.stockfish = new Stockfish();
+                            console.log('✅ Stockfish instance created');
+                            resolve();
+                        } catch (e) {
+                            reject(new Error('Failed to create Stockfish instance: ' + e.message));
+                        }
+                    } else {
+                        reject(new Error('Stockfish not available after loading'));
+                    }
+                }, 500);
+            };
+            
+            script.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error('Script loading failed'));
+            };
+            
+            document.head.appendChild(script);
+        });
     }
 
     async loadStockfish() {
@@ -82,7 +209,15 @@ class StockfishEngine {
             try {
                 // Try to create a Web Worker with inline Stockfish loading
                 const workerScript = `
-                    importScripts('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js');
+                    try {
+                        importScripts('https://unpkg.com/stockfish.wasm@0.11.0/stockfish.js');
+                    } catch (e1) {
+                        try {
+                            importScripts('https://unpkg.com/stockfish@16.0.0/src/stockfish.js');
+                        } catch (e2) {
+                            importScripts('https://cdn.jsdelivr.net/npm/stockfish@15.0.0/src/stockfish.js');
+                        }
+                    }
                     let stockfish = null;
                     try {
                         stockfish = new Stockfish();
