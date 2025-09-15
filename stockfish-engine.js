@@ -11,25 +11,48 @@ class StockfishEngine {
 
     async init() {
         try {
-            // Try to create Web Worker with Stockfish
-            this.worker = new Worker('stockfish-worker.js');
-            
-            this.worker.onmessage = (event) => {
-                this.handleMessage(event.data);
-            };
-            
-            this.worker.onerror = (error) => {
-                console.error('Stockfish worker error:', error);
-                this.setupMockEngine();
-            };
-            
-            // Wait for worker to be ready
-            await this.waitForReady();
+            // Try to load Stockfish from CDN
+            await this.loadStockfishFromCDN();
             
         } catch (error) {
             console.error('Failed to initialize Stockfish:', error);
             this.setupMockEngine();
         }
+    }
+
+    async loadStockfishFromCDN() {
+        return new Promise((resolve, reject) => {
+            // Try to load Stockfish from CDN
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js';
+            script.onload = () => {
+                if (typeof Stockfish !== 'undefined') {
+                    this.stockfish = new Stockfish();
+                    this.setupRealStockfish();
+                    resolve();
+                } else {
+                    reject(new Error('Stockfish not available'));
+                }
+            };
+            script.onerror = () => {
+                reject(new Error('Failed to load Stockfish from CDN'));
+            };
+            document.head.appendChild(script);
+        });
+    }
+
+    setupRealStockfish() {
+        this.stockfish.onmessage = (event) => {
+            this.handleMessage(event.data);
+        };
+        
+        this.stockfish.onerror = (error) => {
+            console.error('Stockfish error:', error);
+            this.setupMockEngine();
+        };
+        
+        // Initialize UCI
+        this.stockfish.postMessage('uci');
     }
 
     setupMockEngine() {
@@ -41,7 +64,9 @@ class StockfishEngine {
         if (message.includes('uciok')) {
             this.isReady = true;
             // Initialize MultiPV after UCI is ready
-            this.worker.postMessage('setoption name MultiPV value 2');
+            if (this.stockfish) {
+                this.stockfish.postMessage('setoption name MultiPV value 2');
+            }
         }
     }
 
@@ -50,18 +75,20 @@ class StockfishEngine {
             await this.waitForReady();
         }
 
-        if (!this.worker) {
+        if (!this.stockfish) {
             return this.mockEvaluation(fen, targetDepth);
         }
 
         return new Promise((resolve) => {
-            this.worker.postMessage(`position fen ${fen}`);
-            this.worker.postMessage(`go depth ${targetDepth}`);
+            this.stockfish.postMessage(`position fen ${fen}`);
+            this.stockfish.postMessage(`go depth ${targetDepth}`);
 
             const messages = [];
             const lines = [];
 
-            const messageHandler = (event) => {
+            // Temporarily override message handler
+            const originalHandler = this.stockfish.onmessage;
+            this.stockfish.onmessage = (event) => {
                 const message = event.data;
                 messages.unshift(message);
 
@@ -73,7 +100,7 @@ class StockfishEngine {
 
                 // Best move or checkmate log indicates end of search
                 if (message.startsWith("bestmove") || message.includes("depth 0")) {
-                    this.worker.removeEventListener('message', messageHandler);
+                    this.stockfish.onmessage = originalHandler;
                     
                     const searchMessages = messages.filter(msg => msg.startsWith("info depth"));
 
