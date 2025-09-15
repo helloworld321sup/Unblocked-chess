@@ -29,22 +29,27 @@ class StockfishEngine {
     }
 
     async loadStockfishWithRetry() {
-        // Use older Stockfish versions that don't require SharedArrayBuffer
+        // Use known working Stockfish versions
         const approaches = [
-            // Approach 1: Try Stockfish.js (older, compatible version)
+            // Approach 1: Try the most reliable version
             {
-                name: 'Stockfish.js (compatible version)',
+                name: 'Stockfish.js v10 (reliable)',
+                load: () => this.loadCompatibleStockfish('https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@10.0.2/stockfish.js')
+            },
+            // Approach 2: Try from unpkg
+            {
+                name: 'Stockfish.js from unpkg',
                 load: () => this.loadCompatibleStockfish('https://unpkg.com/stockfish.js@10.0.2/stockfish.js')
             },
-            // Approach 2: Try another compatible version
+            // Approach 3: Try direct from GitHub
             {
-                name: 'Stockfish v10 from CDN',
-                load: () => this.loadCompatibleStockfish('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js')
+                name: 'Stockfish.js from GitHub',
+                load: () => this.loadCompatibleStockfish('https://raw.githubusercontent.com/nmrugg/stockfish.js/master/stockfish.js')
             },
-            // Approach 3: Try even older version
+            // Approach 4: Try a different working version
             {
-                name: 'Stockfish v9 (very compatible)',
-                load: () => this.loadCompatibleStockfish('https://unpkg.com/stockfish.js@9.0.0/stockfish.js')
+                name: 'Alternative Stockfish build',
+                load: () => this.loadCompatibleStockfish('https://cdn.jsdelivr.net/npm/stockfish@10.0.2/stockfish.js')
             }
         ];
         
@@ -78,31 +83,72 @@ class StockfishEngine {
                 
                 // Give it time to initialize
                 setTimeout(() => {
+                    // Debug: Log what's available in the global scope
+                    console.log('🔍 Debugging available globals:', {
+                        Stockfish: typeof Stockfish !== 'undefined' ? typeof Stockfish : 'undefined',
+                        windowStockfish: typeof window.Stockfish !== 'undefined' ? typeof window.Stockfish : 'undefined',
+                        STOCKFISH: typeof STOCKFISH !== 'undefined' ? typeof STOCKFISH : 'undefined',
+                        stockfish: typeof stockfish !== 'undefined' ? typeof stockfish : 'undefined',
+                        StockfishModule: typeof StockfishModule !== 'undefined' ? typeof StockfishModule : 'undefined'
+                    });
+                    
                     // Try different ways the engine might be exposed
                     let stockfishConstructor = null;
+                    let constructorName = '';
                     
                     if (typeof Stockfish !== 'undefined') {
                         stockfishConstructor = Stockfish;
+                        constructorName = 'Stockfish';
                     } else if (typeof window.Stockfish !== 'undefined') {
                         stockfishConstructor = window.Stockfish;
+                        constructorName = 'window.Stockfish';
                     } else if (typeof STOCKFISH !== 'undefined') {
                         stockfishConstructor = STOCKFISH;
+                        constructorName = 'STOCKFISH';
+                    } else if (typeof stockfish !== 'undefined') {
+                        stockfishConstructor = stockfish;
+                        constructorName = 'stockfish';
+                    } else if (typeof StockfishModule !== 'undefined') {
+                        stockfishConstructor = StockfishModule;
+                        constructorName = 'StockfishModule';
                     }
+                    
+                    console.log(`🔍 Found constructor: ${constructorName} (type: ${typeof stockfishConstructor})`);
                     
                     if (stockfishConstructor) {
                         try {
                             // Try different initialization methods
                             if (typeof stockfishConstructor === 'function') {
+                                console.log('🔧 Trying new constructor...');
                                 this.stockfish = new stockfishConstructor();
+                            } else if (typeof stockfishConstructor.then === 'function') {
+                                console.log('🔧 Trying promise-based constructor...');
+                                stockfishConstructor.then(sf => {
+                                    this.stockfish = sf;
+                                    console.log('✅ Promise-based Stockfish instance created');
+                                    resolve();
+                                }).catch(e => {
+                                    reject(new Error('Promise-based init failed: ' + e.message));
+                                });
+                                return;
                             } else {
+                                console.log('🔧 Trying direct call...');
                                 this.stockfish = stockfishConstructor();
                             }
                             console.log('✅ Compatible Stockfish instance created');
                             resolve();
                         } catch (e) {
+                            console.error('❌ Constructor error:', e);
                             reject(new Error('Failed to create compatible Stockfish: ' + e.message));
                         }
                     } else {
+                        // List all available globals for debugging
+                        const availableGlobals = Object.keys(window).filter(key => 
+                            key.toLowerCase().includes('stock') || 
+                            key.toLowerCase().includes('chess') ||
+                            key.toLowerCase().includes('engine')
+                        );
+                        console.log('🔍 Available chess-related globals:', availableGlobals);
                         reject(new Error('Compatible Stockfish constructor not found'));
                     }
                 }, 1000);
