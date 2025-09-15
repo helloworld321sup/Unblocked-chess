@@ -12,46 +12,136 @@ class StockfishEngine {
         console.log('🚀 Initializing Stockfish...');
         
         try {
+            // First try direct CDN loading
             await this.loadStockfish();
             this.setupEngine();
             console.log('✅ Stockfish initialized successfully');
         } catch (error) {
-            console.warn('⚠️ Stockfish failed to load, using fallback:', error.message);
-            this.setupFallback();
+            console.warn('⚠️ CDN loading failed, trying Web Worker approach:', error.message);
+            try {
+                await this.loadStockfishWorker();
+                console.log('✅ Stockfish Web Worker initialized successfully');
+            } catch (workerError) {
+                console.warn('⚠️ Web Worker also failed, using fallback:', workerError.message);
+                this.setupFallback();
+            }
         }
     }
 
     async loadStockfish() {
         return new Promise((resolve, reject) => {
-            // Try to load Stockfish from a reliable CDN
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/stockfish@16.0.0/stockfish.min.js';
+            const sources = [
+                'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js',
+                'https://unpkg.com/stockfish@16.0.0/stockfish.min.js',
+                'https://cdn.skypack.dev/stockfish@16.0.0',
+                // Fallback to a different version if needed
+                'https://cdn.jsdelivr.net/npm/stockfish@15.0.0/stockfish.min.js'
+            ];
             
-            script.onload = () => {
-                if (typeof Stockfish !== 'undefined') {
-                    try {
-                        this.stockfish = new Stockfish();
-                        resolve();
-                    } catch (e) {
-                        reject(new Error('Failed to create Stockfish instance'));
-                    }
-                } else {
-                    reject(new Error('Stockfish not available after loading'));
+            let attempts = 0;
+            const tryNext = () => {
+                if (attempts >= sources.length) {
+                    reject(new Error('All Stockfish sources failed'));
+                    return;
                 }
+                
+                const script = document.createElement('script');
+                script.src = sources[attempts];
+                console.log(`📥 Trying to load Stockfish from: ${sources[attempts]}`);
+                
+                script.onload = () => {
+                    console.log('📦 Script loaded, checking for Stockfish...');
+                    if (typeof Stockfish !== 'undefined') {
+                        try {
+                            this.stockfish = new Stockfish();
+                            console.log('✅ Stockfish instance created successfully');
+                            resolve();
+                        } catch (e) {
+                            console.warn(`❌ Failed to create Stockfish instance: ${e.message}`);
+                            attempts++;
+                            tryNext();
+                        }
+                    } else {
+                        console.warn('❌ Stockfish not available after loading script');
+                        attempts++;
+                        tryNext();
+                    }
+                };
+                
+                script.onerror = (error) => {
+                    console.warn(`❌ Failed to load from ${sources[attempts]}: ${error.message || 'Network error'}`);
+                    attempts++;
+                    tryNext();
+                };
+                
+                document.head.appendChild(script);
             };
             
-            script.onerror = () => {
-                reject(new Error('Failed to load Stockfish script'));
-            };
-            
-            // Set timeout for loading
+            // Set overall timeout
             setTimeout(() => {
                 if (!this.stockfish) {
                     reject(new Error('Stockfish loading timeout'));
                 }
-            }, 10000);
+            }, 15000);
             
-            document.head.appendChild(script);
+            tryNext();
+        });
+    }
+
+    async loadStockfishWorker() {
+        return new Promise((resolve, reject) => {
+            try {
+                // Try to create a Web Worker with inline Stockfish loading
+                const workerScript = `
+                    importScripts('https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js');
+                    let stockfish = null;
+                    try {
+                        stockfish = new Stockfish();
+                        stockfish.onmessage = function(event) {
+                            self.postMessage(event.data);
+                        };
+                        self.onmessage = function(event) {
+                            if (stockfish) {
+                                stockfish.postMessage(event.data);
+                            }
+                        };
+                        self.postMessage('worker-ready');
+                    } catch (e) {
+                        self.postMessage('worker-error: ' + e.message);
+                    }
+                `;
+                
+                const blob = new Blob([workerScript], { type: 'application/javascript' });
+                const workerUrl = URL.createObjectURL(blob);
+                
+                this.stockfish = new Worker(workerUrl);
+                
+                this.stockfish.onmessage = (event) => {
+                    const message = event.data;
+                    if (message === 'worker-ready') {
+                        console.log('✅ Stockfish Web Worker ready');
+                        resolve();
+                    } else if (message.startsWith('worker-error:')) {
+                        reject(new Error(message));
+                    } else {
+                        this.handleMessage(message);
+                    }
+                };
+                
+                this.stockfish.onerror = (error) => {
+                    reject(new Error('Web Worker error: ' + error.message));
+                };
+                
+                // Initialize UCI
+                setTimeout(() => {
+                    if (this.stockfish) {
+                        this.stockfish.postMessage('uci');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                reject(new Error('Failed to create Web Worker: ' + error.message));
+            }
         });
     }
 
