@@ -17,55 +17,68 @@
 
     <!-- Controls -->
     <div class="analysis-controls">
-      <div class="control-group">
-        <label for="pgn-input">Paste your game (PGN format):</label>
-        <textarea id="pgn-input" class="pgn-input" placeholder="1. e4 e5 2. Nf3 Nc6 3. Bb5 a6..."></textarea>
+      <div class="pgn-section">
+        <div class="control-group">
+          <label for="pgn-input">Paste PGN for Analysis:</label>
+          <textarea id="pgn-input" class="pgn-input" placeholder="Paste your PGN here and click 'Analyze Game' for detailed breakdown..."></textarea>
+        </div>
+        <div class="button-group">
+          <button id="load-pgn-btn" class="btn btn-primary">Analyze Game</button>
+          <button id="analyze-position-btn" class="btn btn-secondary">Analyze Position</button>
+        </div>
       </div>
-      <div class="control-group">
-        <label for="engine-depth">Analysis Depth:</label>
-        <select id="engine-depth" class="setting-select">
-          <option value="8">Very Fast (Depth 8)</option>
-          <option value="12">Fast (Depth 12)</option>
-          <option value="15" selected>Standard (Depth 15)</option>
-          <option value="18">Deep (Depth 18)</option>
-          <option value="20">Very Deep (Depth 20)</option>
-        </select>
+      
+      <div class="engine-settings">
+        <h3>Engine Settings</h3>
+        <div class="settings-grid">
+          <div class="control-group">
+            <label for="engine-depth">Analysis Depth:</label>
+            <select id="engine-depth" class="setting-select">
+              <option value="8">Very Fast (Depth 8)</option>
+              <option value="12">Fast (Depth 12)</option>
+              <option value="15" selected>Standard (Depth 15)</option>
+              <option value="18">Deep (Depth 18)</option>
+              <option value="20">Very Deep (Depth 20)</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="engine-lines">Analysis Lines:</label>
+            <select id="engine-lines" class="setting-select">
+              <option value="1">1 Line</option>
+              <option value="3" selected>3 Lines</option>
+              <option value="5">5 Lines</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="engine-skill">Engine Skill Level:</label>
+            <select id="engine-skill" class="setting-select">
+              <option value="0">Beginner (0)</option>
+              <option value="5">Novice (5)</option>
+              <option value="10">Intermediate (10)</option>
+              <option value="15">Advanced (15)</option>
+              <option value="20" selected>Expert (20)</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="engine-hash">Hash Size (MB):</label>
+            <select id="engine-hash" class="setting-select">
+              <option value="1">1 MB</option>
+              <option value="4">4 MB</option>
+              <option value="16" selected>16 MB</option>
+              <option value="64">64 MB</option>
+              <option value="256">256 MB</option>
+            </select>
+          </div>
+        </div>
       </div>
-      <div class="control-group">
-        <label for="engine-lines">Analysis Lines:</label>
-        <select id="engine-lines" class="setting-select">
-          <option value="1">1 Line</option>
-          <option value="3" selected>3 Lines</option>
-          <option value="5">5 Lines</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label for="engine-skill">Engine Skill Level:</label>
-        <select id="engine-skill" class="setting-select">
-          <option value="0">Beginner (0)</option>
-          <option value="5">Novice (5)</option>
-          <option value="10">Intermediate (10)</option>
-          <option value="15">Advanced (15)</option>
-          <option value="20" selected>Expert (20)</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label for="engine-hash">Hash Size (MB):</label>
-        <select id="engine-hash" class="setting-select">
-          <option value="1">1 MB</option>
-          <option value="4">4 MB</option>
-          <option value="16" selected>16 MB</option>
-          <option value="64">64 MB</option>
-          <option value="256">256 MB</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <button id="load-pgn-btn" class="control-btn">Load Game</button>
-        <button id="analyze-position-btn" class="control-btn">Analyze Position</button>
-        <button id="clear-board-btn" class="control-btn">Clear Board</button>
-        <button id="reset-position-btn" class="control-btn">Reset</button>
-        <button id="flip-board-btn" class="control-btn">Flip Board</button>
-        <button id="back-btn" class="control-btn">← Back to Home</button>
+      
+      <div class="board-controls">
+        <div class="button-group">
+          <button id="clear-board-btn" class="control-btn">Clear Board</button>
+          <button id="reset-position-btn" class="control-btn">Reset</button>
+          <button id="flip-board-btn" class="control-btn">Flip Board</button>
+          <button id="back-btn" class="control-btn">← Back to Home</button>
+        </div>
       </div>
     </div>
 
