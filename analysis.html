@@ -84,7 +84,7 @@
         }
 
         .square.black {
-            background-color: #b58863;
+            background-color: var(--black-square-color, #b58863);
         }
 
         .square:hover {
@@ -103,10 +103,16 @@
         .piece {
             width: 90%;
             height: 90%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            position: relative;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            position: relative;
         }
 
         .move-icon {
@@ -308,6 +314,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.js"></script>
+    <script src="settings.js"></script>
     <script src="stockfish-engine.js"></script>
     <script src="analysis.js"></script>
 </body>
