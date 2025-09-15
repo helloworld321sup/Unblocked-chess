@@ -1,586 +1,305 @@
-// Chess Analysis with Stockfish Engine - Chess.com Style
-const chess = new Chess();
-let selectedSquare = null;
-let boardFlipped = false;
-let stockfish = null;
-let moveHistory = [];
-let currentMoveIndex = -1;
-let analysisLines = [];
-let currentAnalysis = null;
-let isAnalyzing = false;
-let evaluationBar = null;
+// Chess Analysis with Move Evaluation Icons
+// Shows move quality icons on pieces after moves
 
-// Apply board color from settings
-function applyBoardColor() {
-  const boardColor = localStorage.getItem('boardColor') || '#d67959';
-  document.documentElement.style.setProperty('--black-square-color', boardColor);
-}
-
-// Load piece images
-function getPieceImages() {
-  const style = localStorage.getItem('pieceStyle') || 'classic';
-  
-  if (style === 'modern') {
-    return {
-      wP: "https://assets-themes.chess.com/image/ejgfv/150/wp.png",
-      wR: "https://assets-themes.chess.com/image/ejgfv/150/wr.png",
-      wN: "https://assets-themes.chess.com/image/ejgfv/150/wn.png",
-      wB: "https://assets-themes.chess.com/image/ejgfv/150/wb.png",
-      wQ: "https://assets-themes.chess.com/image/ejgfv/150/wq.png",
-      wK: "https://assets-themes.chess.com/image/ejgfv/150/wk.png",
-      bP: "https://assets-themes.chess.com/image/ejgfv/150/bp.png",
-      bR: "https://assets-themes.chess.com/image/ejgfv/150/br.png",
-      bN: "https://assets-themes.chess.com/image/ejgfv/150/bn.png",
-      bB: "https://assets-themes.chess.com/image/ejgfv/150/bb.png",
-      bQ: "https://assets-themes.chess.com/image/ejgfv/150/bq.png",
-      bK: "https://assets-themes.chess.com/image/ejgfv/150/bk.png",
-    };
-  } else {
-    return {
-      wP: "https://static.stands4.com/images/symbol/3409_white-pawn.png",
-      wR: "https://static.stands4.com/images/symbol/3406_white-rook.png",
-      wN: "https://static.stands4.com/images/symbol/3408_white-knight.png",
-      wB: "https://static.stands4.com/images/symbol/3407_white-bishop.png",
-      wQ: "https://static.stands4.com/images/symbol/3405_white-queen.png",
-      wK: "https://static.stands4.com/images/symbol/3404_white-king.png",
-      bP: "https://static.stands4.com/images/symbol/3403_black-pawn.png",
-      bR: "https://static.stands4.com/images/symbol/3400_black-rook.png",
-      bN: "https://static.stands4.com/images/symbol/3402_black-knight.png",
-      bB: "https://static.stands4.com/images/symbol/3401_black-bishop.png",
-      bQ: "https://static.stands4.com/images/symbol/3399_black-queen.png",
-      bK: "https://static.stands4.com/images/symbol/3398_black-king.png",
-    };
-  }
-}
-
-const pieceImages = getPieceImages();
-
-document.addEventListener('DOMContentLoaded', function() {
-  applyBoardColor();
-  initializeStockfish();
-  createBoard();
-  setupEventListeners();
-  updateMoveHistory();
-});
-
-// Initialize Stockfish engine with Chess.com-style features
-function initializeStockfish() {
-  console.log('🤖 Initializing Stockfish engine...');
-  updateEngineStatus('Loading Stockfish...', 'loading');
-  
-  try {
-    // Use local worker with enhanced implementation
-    stockfish = new Worker('stockfish-worker.js');
-    
-    stockfish.onmessage = function(event) {
-      const message = event.data;
-      console.log('🤖 Stockfish:', message);
-      
-      if (message.includes('uciok')) {
-        updateEngineStatus('Stockfish ready!', 'ready');
-        stockfish.postMessage('isready');
-      } else if (message.includes('readyok')) {
-        updateEngineStatus('Stockfish ready!', 'ready');
-        initializeEvaluationBar();
-        analyzeCurrentPosition();
-      } else if (message.includes('bestmove')) {
-        handleBestMove(message);
-      } else if (message.includes('info depth')) {
-        handleAnalysisInfo(message);
-      } else if (message.includes('error')) {
-        updateEngineStatus('Engine error', 'error');
-      }
-    };
-    
-    stockfish.onerror = function(error) {
-      console.error('❌ Stockfish error:', error);
-      updateEngineStatus('Stockfish error', 'error');
-    };
-    
-    // Initialize UCI
-    stockfish.postMessage('uci');
-    stockfish.postMessage('isready');
-    
-  } catch (error) {
-    console.error('❌ Failed to initialize Stockfish:', error);
-    updateEngineStatus('Failed to load Stockfish', 'error');
-  }
-}
-
-// Piece values for basic evaluation
-function getPieceValue(piece) {
-  const values = {
-    'p': 1,   // Pawn
-    'n': 3,   // Knight
-    'b': 3,   // Bishop
-    'r': 5,   // Rook
-    'q': 9,   // Queen
-    'k': 0    // King (not counted in material)
-  };
-  return values[piece.type] || 0;
-}
-
-// Update engine status display
-function updateEngineStatus(message, type = 'ready') {
-  const statusEl = document.getElementById('engine-status');
-  statusEl.textContent = `Engine: ${message}`;
-  statusEl.className = `engine-status ${type}`;
-}
-
-// Create the chess board
-function createBoard() {
-  const board = document.getElementById('chess-board');
-  board.innerHTML = '';
-  
-  // Create 8 rows
-  for (let row = 0; row < 8; row++) {
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'row';
-    
-    // Create 8 squares per row
-    for (let col = 0; col < 8; col++) {
-      const square = document.createElement('div');
-      square.className = 'square';
-      square.dataset.square = String.fromCharCode(97 + col) + (8 - row);
-      
-      // Alternate colors
-      if ((row + col) % 2 === 0) {
-        square.classList.add('white');
-      } else {
-        square.classList.add('black');
-      }
-      
-      square.addEventListener('click', () => handleSquareClick(square));
-      rowDiv.appendChild(square);
-    }
-    
-    board.appendChild(rowDiv);
-  }
-  
-  renderBoard();
-}
-
-// Render the board
-function renderBoard() {
-  const positions = chess.board();
-  
-  // Clear all highlights and pieces
-  document.querySelectorAll('.square').forEach(square => {
-    square.classList.remove('selected', 'highlight', 'recent-move');
-    square.innerHTML = '';
-  });
-  
-  // Render pieces
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const piece = positions[row][col];
-      const squareNotation = String.fromCharCode(97 + col) + (8 - row);
-      const square = document.querySelector(`[data-square="${squareNotation}"]`);
-      
-      if (piece && square) {
-        const pieceImg = document.createElement('img');
-        pieceImg.src = pieceImages[piece.color + piece.type.toUpperCase()];
-        pieceImg.alt = `${piece.color} ${piece.type}`;
+class ChessAnalysis {
+    constructor() {
+        this.chess = new Chess();
+        this.stockfish = new StockfishEngine();
+        this.moveHistory = [];
+        this.evaluations = [];
+        this.currentMove = 0;
+        this.isAnalyzing = false;
         
-        // Apply rotation to keep pieces upright when board is flipped
-        if (boardFlipped) {
-          pieceImg.style.transform = 'rotate(180deg)';
-        } else {
-          pieceImg.style.transform = 'rotate(0deg)';
+        this.initializeBoard();
+        this.setupEventListeners();
+        this.updateDisplay();
+    }
+
+    initializeBoard() {
+        const board = document.getElementById('chess-board');
+        board.innerHTML = '';
+        
+        // Create 64 squares
+        for (let rank = 0; rank < 8; rank++) {
+            for (let file = 0; file < 8; file++) {
+                const square = document.createElement('div');
+                square.className = `square ${(rank + file) % 2 === 0 ? 'white' : 'black'}`;
+                square.dataset.square = String.fromCharCode(97 + file) + (8 - rank);
+                square.addEventListener('click', () => this.handleSquareClick(square));
+                board.appendChild(square);
+            }
         }
         
-        square.appendChild(pieceImg);
-      }
+        this.updateBoard();
     }
-  }
-  
-  // Add move dots for legal moves if a piece is selected
-  if (selectedSquare) {
-    const legalMoves = chess.moves({ square: selectedSquare, verbose: true });
-    
-    legalMoves.forEach(move => {
-      const targetSquare = document.querySelector(`[data-square="${move.to}"]`);
-      if (targetSquare && !targetSquare.querySelector('.move-dot')) {
-        const dot = document.createElement('div');
-        dot.classList.add('move-dot');
-        targetSquare.appendChild(dot);
-      }
-    });
-  }
-  
-  // Add selection highlight
-  if (selectedSquare) {
-    const selectedEl = document.querySelector(`[data-square="${selectedSquare}"]`);
-    if (selectedEl) selectedEl.classList.add('selected');
-  }
-}
 
-// Handle square clicks
-function handleSquareClick(square) {
-  const squareNotation = square.dataset.square;
-  
-  if (selectedSquare) {
-    // Try to make a move
-    const move = chess.move({ from: selectedSquare, to: squareNotation, promotion: 'q' });
-    
-    if (move) {
-      // Move was successful
-      moveHistory.push(move);
-      currentMoveIndex = moveHistory.length - 1;
-      updateMoveHistory();
-      renderBoard();
-      analyzeCurrentPosition();
-      selectedSquare = null;
-    } else {
-      // Invalid move, select new square
-      const piece = chess.get(squareNotation);
-      if (piece && piece.color === chess.turn()) {
-        selectedSquare = squareNotation;
-      } else {
-        selectedSquare = squareNotation;
-      }
-      renderBoard();
+    setupEventListeners() {
+        document.getElementById('load-pgn-btn').addEventListener('click', () => this.loadPGN());
+        document.getElementById('analyze-btn').addEventListener('click', () => this.analyzePosition());
+        document.getElementById('reset-btn').addEventListener('click', () => this.resetBoard());
     }
-  } else {
-    // Select square
-    const piece = chess.get(squareNotation);
-    if (piece && piece.color === chess.turn()) {
-      selectedSquare = squareNotation;
-    } else {
-      selectedSquare = squareNotation;
+
+    loadPGN() {
+        const pgnInput = document.getElementById('pgn-input').value.trim();
+        if (!pgnInput) return;
+        
+        try {
+            this.chess.loadPgn(pgnInput);
+            this.moveHistory = this.chess.history({ verbose: true });
+            this.evaluations = [];
+            this.currentMove = this.moveHistory.length;
+            this.updateDisplay();
+            this.updateBoard();
+            this.analyzePosition();
+        } catch (error) {
+            alert('Invalid PGN format');
+        }
     }
-    renderBoard();
-  }
-}
 
-// Analyze current position with Chess.com-style features
-function analyzeCurrentPosition() {
-  if (!stockfish) return;
-  
-  const fen = chess.fen();
-  const depth = document.getElementById('engine-depth').value;
-  const multiPV = document.getElementById('engine-lines').value;
-  const skill = document.getElementById('engine-skill').value;
-  const hash = document.getElementById('engine-hash').value;
-  
-  console.log('🔍 Analyzing position:', fen);
-  console.log('⚙️ Engine settings:', { depth, multiPV, skill, hash });
-  updateEngineStatus('Analyzing...', 'loading');
-  
-  // Clear previous analysis
-  analysisLines = [];
-  updateAnalysisLines();
-  
-  // Set position and configure engine
-  stockfish.postMessage(`position fen ${fen}`);
-  stockfish.postMessage(`setoption name MultiPV value ${multiPV}`);
-  stockfish.postMessage(`setoption name Skill Level value ${skill}`);
-  stockfish.postMessage(`setoption name Hash value ${hash}`);
-  stockfish.postMessage(`go depth ${depth}`);
-  
-  isAnalyzing = true;
-}
-
-// Handle best move from Stockfish
-function handleBestMove(message) {
-  const parts = message.split(' ');
-  const bestMove = parts[1];
-  
-  if (bestMove && bestMove !== '(none)') {
-    console.log('🎯 Best move:', bestMove);
-    displayBestMove(bestMove);
-  }
-  
-  updateEngineStatus('Analysis complete!', 'ready');
-}
-
-// Handle analysis info from Stockfish with Chess.com-style features
-function handleAnalysisInfo(message) {
-  // Parse evaluation from info string
-  const evalMatch = message.match(/score (cp|mate) (-?\d+)/);
-  const multipvMatch = message.match(/multipv (\d+)/);
-  const depthMatch = message.match(/depth (\d+)/);
-  const pvMatch = message.match(/pv ([a-h1-8]+)/);
-  
-  if (evalMatch) {
-    let evaluation = 0;
-    let isMate = false;
-    
-    if (evalMatch[1] === 'mate') {
-      evaluation = parseInt(evalMatch[2]);
-      isMate = true;
-    } else {
-      evaluation = parseInt(evalMatch[2]) / 100;
+    async analyzePosition() {
+        if (this.isAnalyzing) return;
+        
+        this.isAnalyzing = true;
+        this.updateStatus('Analyzing position...', 'analyzing');
+        
+        try {
+            const fen = this.chess.fen();
+            const evaluation = await this.stockfish.evaluate(fen, 15);
+            
+            // Store evaluation for current position
+            this.evaluations[this.currentMove] = evaluation.evaluation;
+            
+            // Update evaluation bar
+            this.updateEvaluationBar(evaluation.evaluation);
+            
+            // If we have a previous move, classify it
+            if (this.currentMove > 0) {
+                const moveClassification = this.classifyMove(this.evaluations[this.currentMove - 1], evaluation.evaluation);
+                this.addMoveIcon(this.currentMove - 1, moveClassification);
+            }
+            
+            this.updateStatus('Analysis complete', 'ready');
+        } catch (error) {
+            console.error('Analysis error:', error);
+            this.updateStatus('Analysis failed', 'ready');
+        } finally {
+            this.isAnalyzing = false;
+        }
     }
-    
-    const multipv = multipvMatch ? parseInt(multipvMatch[1]) : 1;
-    const depth = depthMatch ? parseInt(depthMatch[1]) : 0;
-    const pv = pvMatch ? pvMatch[1] : '';
-    
-    // Update evaluation display
-    updateEvaluationDisplay(evaluation, isMate);
-    
-    // Update evaluation bar
-    updateEvaluationBar(evaluation, isMate);
-    
-    // Store analysis line
-    if (multipv <= 5) { // Show up to 5 lines
-      analysisLines[multipv - 1] = {
-        evaluation,
-        isMate,
-        depth,
-        pv: pv,
-        multipv
-      };
-      updateAnalysisLines();
+
+    classifyMove(prevEval, currentEval) {
+        const evalChange = Math.abs(currentEval - prevEval);
+        
+        // Determine if it's a book move (opening)
+        if (this.isBookMove()) {
+            return { type: 'book', emoji: '📖' };
+        }
+        
+        // Determine if it's a brilliant move (sacrifice)
+        if (this.isBrilliantMove(prevEval, currentEval)) {
+            return { type: 'brilliant', emoji: '‼️' };
+        }
+        
+        // Classify based on evaluation change
+        if (evalChange <= 0.1) {
+            return { type: 'best', emoji: '⭐' };
+        } else if (evalChange <= 0.2) {
+            return { type: 'excellent', emoji: '👍' };
+        } else if (evalChange <= 0.5) {
+            return { type: 'good', emoji: '✅' };
+        } else if (evalChange <= 1.2) {
+            return { type: 'inaccuracy', emoji: '!?' };
+        } else if (evalChange <= 2.0) {
+            return { type: 'mistake', emoji: '?' };
+        } else {
+            return { type: 'blunder', emoji: '??' };
+        }
     }
-  }
-}
 
-// Initialize evaluation bar
-function initializeEvaluationBar() {
-  const evaluationEl = document.getElementById('evaluation');
-  evaluationEl.innerHTML = `
-    <div class="evaluation-bar-container">
-      <div class="evaluation-bar">
-        <div class="evaluation-fill" id="evaluation-fill"></div>
-        <div class="evaluation-text" id="evaluation-text">+0.0</div>
-      </div>
-    </div>
-  `;
-  evaluationBar = document.getElementById('evaluation-fill');
-}
-
-// Update evaluation display
-function updateEvaluationDisplay(evaluation, isMate) {
-  const evaluationText = document.getElementById('evaluation-text');
-  if (!evaluationText) return;
-  
-  let displayText = '';
-  if (isMate) {
-    displayText = evaluation > 0 ? `+M${Math.abs(evaluation)}` : `-M${Math.abs(evaluation)}`;
-  } else {
-    displayText = evaluation > 0 ? `+${evaluation.toFixed(1)}` : evaluation.toFixed(1);
-  }
-  
-  evaluationText.textContent = displayText;
-}
-
-// Update evaluation bar (Chess.com style)
-function updateEvaluationBar(evaluation, isMate) {
-  if (!evaluationBar) return;
-  
-  let percentage = 50; // Neutral position
-  
-  if (isMate) {
-    // Mate positions
-    if (evaluation > 0) {
-      percentage = 100; // White winning
-    } else {
-      percentage = 0; // Black winning
+    isBookMove() {
+        // Simple book move detection - first 10 moves are often book
+        return this.currentMove < 10;
     }
-  } else {
-    // Convert centipawns to percentage
-    const maxEval = 5.0; // Maximum evaluation to show
-    const clampedEval = Math.max(-maxEval, Math.min(maxEval, evaluation));
-    percentage = 50 + (clampedEval / maxEval) * 50;
-  }
-  
-  evaluationBar.style.width = `${percentage}%`;
-  evaluationBar.style.backgroundColor = percentage > 50 ? '#4a90e2' : '#e74c3c';
-}
 
-// Update analysis lines display
-function updateAnalysisLines() {
-  const analysisContainer = document.getElementById('move-arrows');
-  if (!analysisContainer) return;
-  
-  analysisContainer.innerHTML = '';
-  
-  analysisLines.forEach((line, index) => {
-    if (!line) return;
-    
-    const lineEl = document.createElement('div');
-    lineEl.className = `analysis-line line-${index + 1}`;
-    
-    const evaluationText = line.isMate 
-      ? (line.evaluation > 0 ? `+M${Math.abs(line.evaluation)}` : `-M${Math.abs(line.evaluation)}`)
-      : (line.evaluation > 0 ? `+${line.evaluation.toFixed(1)}` : line.evaluation.toFixed(1));
-    
-    const lineColors = ['#4a90e2', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c'];
-    const lineColor = lineColors[index] || '#4a90e2';
-    
-    lineEl.innerHTML = `
-      <div class="line-number" style="background-color: ${lineColor}">${index + 1}</div>
-      <div class="line-evaluation">${evaluationText}</div>
-      <div class="line-depth">d${line.depth}</div>
-      <div class="line-moves">${formatPV(line.pv)}</div>
-    `;
-    
-    analysisContainer.appendChild(lineEl);
-  });
-}
-
-// Format principal variation moves
-function formatPV(pv) {
-  if (!pv) return '';
-  
-  const moves = [];
-  for (let i = 0; i < pv.length; i += 4) {
-    if (i + 4 <= pv.length) {
-      const move = pv.substring(i, i + 4);
-      moves.push(move);
+    isBrilliantMove(prevEval, currentEval) {
+        // Check if a piece was sacrificed but it's actually good
+        const evalChange = currentEval - prevEval;
+        const isWhiteToMove = this.chess.turn() === 'w';
+        
+        // If evaluation improved significantly after a capture, it might be brilliant
+        if (Math.abs(evalChange) > 1.0) {
+            const lastMove = this.moveHistory[this.currentMove - 1];
+            if (lastMove && lastMove.captured) {
+                // Check if we captured a lower value piece with a higher value piece
+                const pieceValues = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0 };
+                const capturedValue = pieceValues[lastMove.captured] || 0;
+                const capturingValue = pieceValues[lastMove.piece] || 0;
+                
+                if (capturingValue > capturedValue && evalChange > 0) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
-  }
-  
-  return moves.slice(0, 3).join(' '); // Show first 3 moves
-}
 
-// Display best move as an arrow
-function displayBestMove(bestMove) {
-  // This is now handled by updateAnalysisLines
-  if (analysisLines.length > 0) {
-    updateAnalysisLines();
-  }
-}
-
-// Load PGN
-function loadPGN() {
-  const pgnInput = document.getElementById('pgn-input').value.trim();
-  if (!pgnInput) {
-    alert('Please enter a PGN');
-    return;
-  }
-  
-  try {
-    chess.load_pgn(pgnInput);
-    moveHistory = chess.history({ verbose: true });
-    currentMoveIndex = moveHistory.length - 1;
-    updateMoveHistory();
-    renderBoard();
-    analyzeCurrentPosition();
-    console.log('✅ PGN loaded successfully');
-  } catch (error) {
-    console.error('❌ Error loading PGN:', error);
-    alert('Invalid PGN format. Please check your input.');
-  }
-}
-
-// Update move history display
-function updateMoveHistory() {
-  const movesListEl = document.getElementById('moves-list');
-  movesListEl.innerHTML = '';
-  
-  for (let i = 0; i < moveHistory.length; i += 2) {
-    const moveNumber = Math.floor(i / 2) + 1;
-    const whiteMove = moveHistory[i];
-    const blackMove = moveHistory[i + 1];
-    
-    const moveRow = document.createElement('div');
-    moveRow.style.display = 'flex';
-    moveRow.style.gap = '10px';
-    moveRow.style.marginBottom = '5px';
-    
-    const moveNumberEl = document.createElement('span');
-    moveNumberEl.textContent = `${moveNumber}.`;
-    moveNumberEl.style.minWidth = '30px';
-    moveNumberEl.style.color = '#ccc';
-    moveRow.appendChild(moveNumberEl);
-    
-    if (whiteMove) {
-      const whiteMoveEl = document.createElement('span');
-      whiteMoveEl.textContent = whiteMove.san;
-      whiteMoveEl.className = 'move-arrow';
-      whiteMoveEl.style.cursor = 'pointer';
-      whiteMoveEl.addEventListener('click', () => goToMove(i));
-      moveRow.appendChild(whiteMoveEl);
+    addMoveIcon(moveIndex, classification) {
+        const move = this.moveHistory[moveIndex];
+        if (!move) return;
+        
+        const square = document.querySelector(`[data-square="${move.to}"]`);
+        if (!square) return;
+        
+        // Remove existing icon
+        const existingIcon = square.querySelector('.move-icon');
+        if (existingIcon) {
+            existingIcon.remove();
+        }
+        
+        // Add new icon
+        const icon = document.createElement('div');
+        icon.className = `move-icon ${classification.type}`;
+        icon.textContent = classification.emoji;
+        square.appendChild(icon);
     }
-    
-    if (blackMove) {
-      const blackMoveEl = document.createElement('span');
-      blackMoveEl.textContent = blackMove.san;
-      blackMoveEl.className = 'move-arrow';
-      blackMoveEl.style.cursor = 'pointer';
-      blackMoveEl.addEventListener('click', () => goToMove(i + 1));
-      moveRow.appendChild(blackMoveEl);
+
+    updateEvaluationBar(evaluation) {
+        const fill = document.getElementById('evaluation-fill');
+        const text = document.getElementById('evaluation-text');
+        
+        // Convert evaluation to percentage (0-100)
+        let percentage = 50; // Neutral position
+        
+        if (evaluation > 0) {
+            // White advantage
+            percentage = Math.min(50 + (evaluation * 10), 100);
+        } else if (evaluation < 0) {
+            // Black advantage
+            percentage = Math.max(50 + (evaluation * 10), 0);
+        }
+        
+        fill.style.width = percentage + '%';
+        text.textContent = evaluation > 0 ? '+' + evaluation.toFixed(1) : evaluation.toFixed(1);
     }
-    
-    movesListEl.appendChild(moveRow);
-  }
-}
 
-// Go to specific move
-function goToMove(moveIndex) {
-  chess.reset();
-  
-  for (let i = 0; i <= moveIndex; i++) {
-    if (moveHistory[i]) {
-      chess.move(moveHistory[i]);
+    handleSquareClick(square) {
+        const squareName = square.dataset.square;
+        
+        if (this.selectedSquare) {
+            // Try to make a move
+            const move = this.chess.move({
+                from: this.selectedSquare,
+                to: squareName,
+                promotion: 'q' // Always promote to queen for simplicity
+            });
+            
+            if (move) {
+                this.moveHistory = this.chess.history({ verbose: true });
+                this.currentMove = this.moveHistory.length;
+                this.updateDisplay();
+                this.updateBoard();
+                this.analyzePosition();
+            }
+            
+            this.clearSelection();
+        } else {
+            // Select square
+            this.clearSelection();
+            square.classList.add('selected');
+            this.selectedSquare = squareName;
+        }
     }
-  }
-  
-  currentMoveIndex = moveIndex;
-  renderBoard();
-  analyzeCurrentPosition();
+
+    clearSelection() {
+        document.querySelectorAll('.square.selected').forEach(sq => {
+            sq.classList.remove('selected');
+        });
+        this.selectedSquare = null;
+    }
+
+    updateBoard() {
+        const board = this.chess.board();
+        
+        for (let rank = 0; rank < 8; rank++) {
+            for (let file = 0; file < 8; file++) {
+                const square = document.querySelector(`[data-square="${String.fromCharCode(97 + file) + (8 - rank)}"]`);
+                const piece = board[rank][file];
+                
+                // Clear existing piece
+                square.innerHTML = '';
+                
+                if (piece) {
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = 'piece';
+                    pieceElement.style.backgroundImage = `url('pieces/${piece.color}${piece.type.toUpperCase()}.png')`;
+                    square.appendChild(pieceElement);
+                }
+            }
+        }
+    }
+
+    updateDisplay() {
+        this.updateMoveList();
+    }
+
+    updateMoveList() {
+        const moveList = document.getElementById('move-list');
+        moveList.innerHTML = '';
+        
+        for (let i = 0; i < this.moveHistory.length; i++) {
+            const move = this.moveHistory[i];
+            const moveItem = document.createElement('div');
+            moveItem.className = `move-item ${i === this.currentMove - 1 ? 'current' : ''}`;
+            
+            const moveNumber = Math.floor(i / 2) + 1;
+            const isWhiteMove = i % 2 === 0;
+            
+            moveItem.innerHTML = `
+                <span class="move-number">${isWhiteMove ? moveNumber + '.' : ''}</span>
+                <span class="move-text">${move.san}</span>
+                <span class="move-evaluation">${this.evaluations[i] ? (this.evaluations[i] > 0 ? '+' + this.evaluations[i].toFixed(1) : this.evaluations[i].toFixed(1)) : ''}</span>
+            `;
+            
+            moveItem.addEventListener('click', () => this.goToMove(i));
+            moveList.appendChild(moveItem);
+        }
+    }
+
+    goToMove(moveIndex) {
+        // Reset to start
+        this.chess.reset();
+        
+        // Replay moves up to the selected one
+        for (let i = 0; i <= moveIndex; i++) {
+            this.chess.move(this.moveHistory[i].san);
+        }
+        
+        this.currentMove = moveIndex + 1;
+        this.updateDisplay();
+        this.updateBoard();
+    }
+
+    resetBoard() {
+        this.chess.reset();
+        this.moveHistory = [];
+        this.evaluations = [];
+        this.currentMove = 0;
+        this.clearSelection();
+        this.updateDisplay();
+        this.updateBoard();
+        this.updateEvaluationBar(0);
+        this.updateStatus('Ready to analyze', 'ready');
+    }
+
+    updateStatus(message, type) {
+        const status = document.getElementById('status');
+        status.textContent = message;
+        status.className = `status ${type}`;
+    }
 }
 
-// Clear board
-function clearBoard() {
-  chess.reset();
-  moveHistory = [];
-  currentMoveIndex = -1;
-  updateMoveHistory();
-  renderBoard();
-  document.getElementById('pgn-input').value = '';
-  document.getElementById('move-arrows').innerHTML = '';
-  document.getElementById('evaluation').textContent = 'Evaluation: +0.0';
-}
-
-// Reset to starting position
-function resetPosition() {
-  chess.reset();
-  moveHistory = [];
-  currentMoveIndex = -1;
-  updateMoveHistory();
-  renderBoard();
-  analyzeCurrentPosition();
-}
-
-// Flip board
-function flipBoard() {
-  boardFlipped = !boardFlipped;
-  
-  if (boardFlipped) {
-    document.getElementById('chess-board').style.transform = 'rotate(180deg)';
-    document.querySelectorAll('#chess-board img').forEach(img => {
-      img.style.transform = 'rotate(180deg)';
-    });
-  } else {
-    document.getElementById('chess-board').style.transform = 'rotate(0deg)';
-    document.querySelectorAll('#chess-board img').forEach(img => {
-      img.style.transform = 'rotate(0deg)';
-    });
-  }
-   
-  // Re-render to update piece positions
-  renderBoard();
-}
-
-// Setup event listeners
-function setupEventListeners() {
-  document.getElementById('load-pgn-btn').addEventListener('click', loadPGN);
-  document.getElementById('analyze-position-btn').addEventListener('click', analyzeCurrentPosition);
-  document.getElementById('clear-board-btn').addEventListener('click', clearBoard);
-  document.getElementById('reset-position-btn').addEventListener('click', resetPosition);
-  document.getElementById('flip-board-btn').addEventListener('click', flipBoard);
-  document.getElementById('back-btn').addEventListener('click', () => {
-    window.location.href = 'index.html';
-  });
-}
-
-// Clean up on page unload
-window.addEventListener('beforeunload', function() {
-  if (stockfish) {
-    stockfish.terminate();
-  }
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new ChessAnalysis();
 });
