@@ -23,9 +23,8 @@ class StockfishEngine {
                 this.setupMockEngine();
             };
             
-            // Initialize UCI
-            this.worker.postMessage('uci');
-            this.worker.postMessage('setoption name MultiPV value 2');
+            // Wait for worker to be ready
+            await this.waitForReady();
             
         } catch (error) {
             console.error('Failed to initialize Stockfish:', error);
@@ -41,6 +40,8 @@ class StockfishEngine {
     handleMessage(message) {
         if (message.includes('uciok')) {
             this.isReady = true;
+            // Initialize MultiPV after UCI is ready
+            this.worker.postMessage('setoption name MultiPV value 2');
         }
     }
 
