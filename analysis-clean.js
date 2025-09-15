@@ -20,19 +20,7 @@ class ChessAnalysis {
         this.updateBoard();
         this.setupEventListeners();
         this.applySettings();
-        this.updateStatus('Loading Stockfish engine...', 'analyzing');
-        
-        // Wait for Stockfish to be ready
-        this.waitForStockfish();
-    }
-
-    async waitForStockfish() {
-        try {
-            await this.stockfish.waitForReady();
-            this.updateStatus('Stockfish ready - you can now analyze!', 'ready');
-        } catch (error) {
-            this.updateStatus('Stockfish failed - using fallback engine', 'error');
-        }
+        this.updateStatus('Stockfish engine loaded!', 'ready');
     }
 
     createBoard() {
@@ -164,14 +152,14 @@ class ChessAnalysis {
                         this.stockfish.removeEventListener("message", messageHandler);
                         
                         // Extract evaluation from previous messages
-                        let eval = 0;
+                        let evaluation = 0;
                         if (this.lastInfoMessage && this.lastInfoMessage.includes(" cp ")) {
                             let value = parseInt(this.lastInfoMessage.match(/cp ([\d-]+)/)?.[1] || "0");
                             if (fen.includes(" b ")) value *= -1;
-                            eval = value / 100;
+                            evaluation = value / 100;
                         }
                         
-                        resolve(eval);
+                        resolve(evaluation);
                     } else if (message.startsWith("info") && message.includes(" cp ")) {
                         this.lastInfoMessage = message;
                     }
