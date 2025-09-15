@@ -22,22 +22,40 @@ class StockfishEngine {
 
     async loadStockfishFromCDN() {
         return new Promise((resolve, reject) => {
-            // Try to load Stockfish from CDN
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js';
-            script.onload = () => {
-                if (typeof Stockfish !== 'undefined') {
-                    this.stockfish = new Stockfish();
-                    this.setupRealStockfish();
-                    resolve();
-                } else {
-                    reject(new Error('Stockfish not available'));
+            // Try multiple CDN sources
+            const sources = [
+                'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js',
+                'https://unpkg.com/stockfish@16.0.0/stockfish.min.js',
+                'https://cdn.skypack.dev/stockfish@16.0.0'
+            ];
+            
+            let attempts = 0;
+            const tryNext = () => {
+                if (attempts >= sources.length) {
+                    reject(new Error('All Stockfish sources failed'));
+                    return;
                 }
+                
+                const script = document.createElement('script');
+                script.src = sources[attempts];
+                script.onload = () => {
+                    if (typeof Stockfish !== 'undefined') {
+                        this.stockfish = new Stockfish();
+                        this.setupRealStockfish();
+                        resolve();
+                    } else {
+                        attempts++;
+                        tryNext();
+                    }
+                };
+                script.onerror = () => {
+                    attempts++;
+                    tryNext();
+                };
+                document.head.appendChild(script);
             };
-            script.onerror = () => {
-                reject(new Error('Failed to load Stockfish from CDN'));
-            };
-            document.head.appendChild(script);
+            
+            tryNext();
         });
     }
 
