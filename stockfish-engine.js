@@ -138,7 +138,23 @@ class StockfishEngine {
                         });
                     }
 
-                    resolve(lines);
+                    // Return the best evaluation as a simple number
+                    const bestLine = lines.find(line => line.id === 1) || lines[0];
+                    if (bestLine) {
+                        resolve({
+                            evaluation: bestLine.evaluation.type === 'cp' ? bestLine.evaluation.value / 100 : (bestLine.evaluation.value > 0 ? 10 : -10),
+                            bestMove: bestLine.moveUCI,
+                            depth: bestLine.depth,
+                            lines: lines
+                        });
+                    } else {
+                        resolve({
+                            evaluation: 0,
+                            bestMove: '',
+                            depth: targetDepth,
+                            lines: []
+                        });
+                    }
                 }
             };
 
@@ -165,12 +181,12 @@ class StockfishEngine {
         const moves = chess.moves({ verbose: true });
         
         if (moves.length === 0) {
-            return [{
-                id: 1,
+            return {
+                evaluation: 0,
+                bestMove: "",
                 depth: targetDepth,
-                evaluation: { type: "mate", value: 0 },
-                moveUCI: ""
-            }];
+                lines: []
+            };
         }
 
         // Simple evaluation based on material
@@ -188,24 +204,17 @@ class StockfishEngine {
             }
         }
 
-        // Add some randomness for different lines
-        const lines = [];
-        for (let i = 0; i < Math.min(2, moves.length); i++) {
-            const move = moves[i];
-            const moveUCI = move.from + move.to + (move.promotion || '');
-            
-            lines.push({
-                id: i + 1,
-                depth: targetDepth,
-                evaluation: {
-                    type: "cp",
-                    value: evaluation + (Math.random() - 0.5) * 200
-                },
-                moveUCI: moveUCI
-            });
-        }
+        // Add some randomness
+        evaluation += (Math.random() - 0.5) * 2;
+        
+        const bestMove = moves[0] ? moves[0].from + moves[0].to + (moves[0].promotion || '') : '';
 
-        return lines;
+        return {
+            evaluation: evaluation,
+            bestMove: bestMove,
+            depth: targetDepth,
+            lines: []
+        };
     }
 }
 
