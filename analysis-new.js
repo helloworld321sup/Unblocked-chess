@@ -3,6 +3,9 @@
 
 let analysis = null;
 let currentReport = null;
+let currentGame = null;
+let currentPosition = 0;
+let gamePositions = [];
 
 // Classification colors
 const classificationColors = {
@@ -55,6 +58,13 @@ function setupEventListeners() {
     // Analyze button
     const analyzeBtn = document.getElementById('analyze-btn');
     analyzeBtn.addEventListener('click', analyzeGame);
+    
+    // Board navigation
+    const prevMoveBtn = document.getElementById('prev-move');
+    const nextMoveBtn = document.getElementById('next-move');
+    
+    prevMoveBtn.addEventListener('click', () => navigateMove(-1));
+    nextMoveBtn.addEventListener('click', () => navigateMove(1));
 }
 
 function updateDepthDisplay() {
@@ -95,9 +105,13 @@ async function analyzeGame() {
         // Show results
         displayResults(currentReport);
         
+        // Setup chess board
+        setupChessBoard();
+        
         // Hide progress and show results
         progressSection.style.display = 'none';
         resultsSection.style.display = 'block';
+        document.getElementById('board-section').style.display = 'block';
         
     } catch (error) {
         console.error('Analysis error:', error);
@@ -191,3 +205,102 @@ function addSampleButton() {
 document.addEventListener('DOMContentLoaded', function() {
     addSampleButton();
 });
+
+// Chess Board Functions
+function setupChessBoard() {
+    if (!currentReport || !currentReport.positions) return;
+    
+    gamePositions = currentReport.positions;
+    currentPosition = 0;
+    currentGame = new Chess();
+    
+    createBoard();
+    updateBoard();
+    updateNavigation();
+}
+
+function createBoard() {
+    const board = document.getElementById('chess-board');
+    board.innerHTML = '';
+    
+    // Create 64 squares
+    for (let rank = 7; rank >= 0; rank--) {
+        for (let file = 0; file < 8; file++) {
+            const square = document.createElement('div');
+            const squareName = String.fromCharCode(97 + file) + (rank + 1);
+            square.id = squareName;
+            square.className = `square ${(rank + file) % 2 === 0 ? 'white' : 'black'}`;
+            square.dataset.square = squareName;
+            board.appendChild(square);
+        }
+    }
+}
+
+function updateBoard() {
+    if (!currentGame) return;
+    
+    const board = currentGame.board();
+    
+    // Clear all pieces
+    document.querySelectorAll('.piece').forEach(piece => piece.remove());
+    
+    // Place pieces
+    for (let rank = 0; rank < 8; rank++) {
+        for (let file = 0; file < 8; file++) {
+            const piece = board[rank][file];
+            if (piece) {
+                const squareName = String.fromCharCode(97 + file) + (8 - rank);
+                const square = document.getElementById(squareName);
+                
+                const pieceElement = document.createElement('div');
+                pieceElement.className = 'piece';
+                pieceElement.style.backgroundImage = `url('https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/${piece.color}${piece.type.toUpperCase()}.svg')`;
+                square.appendChild(pieceElement);
+            }
+        }
+    }
+    
+    // Update position info
+    const positionInfo = document.getElementById('current-position');
+    if (currentPosition === 0) {
+        positionInfo.textContent = 'Starting Position';
+    } else if (gamePositions[currentPosition] && gamePositions[currentPosition].move) {
+        const move = gamePositions[currentPosition].move;
+        const classification = gamePositions[currentPosition].classification;
+        const classificationIcon = classificationIcons[classification] || '📋';
+        positionInfo.textContent = `Move ${currentPosition}: ${move.san} ${classificationIcon}`;
+    }
+}
+
+function navigateMove(direction) {
+    if (!gamePositions.length) return;
+    
+    const newPosition = currentPosition + direction;
+    
+    if (newPosition < 0 || newPosition >= gamePositions.length) return;
+    
+    currentPosition = newPosition;
+    
+    // Update game state
+    if (currentPosition === 0) {
+        currentGame = new Chess();
+    } else {
+        currentGame = new Chess();
+        for (let i = 1; i <= currentPosition; i++) {
+            if (gamePositions[i] && gamePositions[i].move) {
+                currentGame.move(gamePositions[i].move.san);
+            }
+        }
+    }
+    
+    updateBoard();
+    updateNavigation();
+}
+
+function updateNavigation() {
+    const prevBtn = document.getElementById('prev-move');
+    const nextBtn = document.getElementById('next-move');
+    
+    prevBtn.disabled = currentPosition <= 0;
+    nextBtn.disabled = currentPosition >= gamePositions.length - 1;
+}
