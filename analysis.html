@@ -3,279 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Game Analysis - WintrChess Style</title>
+    <title>Chess Analysis - Move Evaluation</title>
     <link rel="icon" href="Unblocked-Chess Favicon.png" type="image/png">
     <link rel="stylesheet" href="style.css">
     <style>
-        .analysis-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 10px;
-            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
-            min-height: 100vh;
-            color: #ffffff;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-
-        .analysis-header {
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
-        .analysis-header h1 {
-            font-size: 1.8rem;
-            margin-bottom: 5px;
-            background: linear-gradient(45deg, #4a90e2, #357abd);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .analysis-header p {
-            font-size: 0.9rem;
-            color: #ccc;
+        body {
             margin: 0;
-        }
-
-        .input-section {
-            background: linear-gradient(145deg, #252525, #353535);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid #444;
-        }
-
-        .input-group {
-            margin-bottom: 15px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 6px;
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .pgn-input {
-            width: 100%;
-            height: 80px;
-            padding: 10px;
-            background: #1a1a1a;
-            border: 2px solid #444;
-            border-radius: 6px;
-            color: #fff;
-            font-family: monospace;
-            font-size: 12px;
-            resize: vertical;
-        }
-
-        .pgn-input:focus {
-            outline: none;
-            border-color: #4a90e2;
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .depth-control {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .depth-slider {
-            width: 120px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-transform: none;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(145deg, #4a90e2, #357abd);
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
             color: white;
-            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
         }
 
-        .btn-primary:hover {
-            background: linear-gradient(145deg, #5ba0f2, #4a8acd);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(74, 144, 226, 0.4);
+        .analysis-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
         }
 
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
+        .main-board {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        .progress-section {
-            background: linear-gradient(145deg, #252525, #353535);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid #444;
-            display: none;
-        }
-
-        .progress-bar {
+        .evaluation-bar {
             width: 100%;
-            height: 16px;
-            background: #1a1a1a;
-            border-radius: 8px;
+            height: 30px;
+            background: linear-gradient(90deg, #f0f0f0 0%, #f0f0f0 50%, #2d2d2d 50%, #2d2d2d 100%);
+            border: 2px solid #444;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            position: relative;
             overflow: hidden;
-            margin-bottom: 10px;
         }
 
-        .progress-fill {
+        .evaluation-fill {
             height: 100%;
             background: linear-gradient(90deg, #4a90e2, #357abd);
-            width: 0%;
             transition: width 0.3s ease;
+            position: relative;
         }
 
-        .status-message {
-            text-align: center;
-            color: #fff;
-            font-size: 0.9rem;
-        }
-
-        .results-section {
-            background: linear-gradient(145deg, #252525, #353535);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid #444;
-            display: none;
-        }
-
-        .accuracy-display {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .accuracy-card {
-            background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
-            border-radius: 6px;
-            padding: 12px;
-            text-align: center;
-            border: 1px solid #333;
-        }
-
-        .accuracy-card h3 {
-            margin: 0 0 8px 0;
-            color: #4a90e2;
-            font-size: 0.9rem;
-        }
-
-        .accuracy-value {
-            font-size: 1.5rem;
+        .evaluation-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             font-weight: bold;
-            color: #fff;
-        }
-
-        .classification-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-        }
-
-        .classification-item {
-            background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
-            border-radius: 6px;
-            padding: 10px;
-            text-align: center;
-            border: 1px solid #333;
-        }
-
-        .classification-name {
-            font-weight: bold;
-            margin-bottom: 8px;
-            font-size: 0.8rem;
-        }
-
-        .classification-counts {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .count-white {
-            color: #fff;
-        }
-
-        .count-black {
-            color: #ccc;
-        }
-
-        .back-btn {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .back-btn:hover {
-            background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-        }
-
-        /* Chess Board Styles */
-        .board-section {
-            background: linear-gradient(145deg, #252525, #353535);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid #444;
-        }
-
-        .board-container {
-            display: flex;
-            gap: 20px;
-            align-items: flex-start;
+            color: #333;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
         }
 
         .chess-board {
-            width: 320px;
-            height: 320px;
+            width: 480px;
+            height: 480px;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            border: 2px solid #444;
-            border-radius: 6px;
+            border: 3px solid #444;
+            border-radius: 8px;
             overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
         }
 
         .square {
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
             cursor: pointer;
             transition: all 0.2s ease;
         }
@@ -302,128 +101,214 @@
         }
 
         .piece {
-            width: 80%;
-            height: 80%;
+            width: 90%;
+            height: 90%;
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
+            position: relative;
         }
 
-        .board-info {
-            flex: 1;
-            padding: 15px;
-        }
-
-        .current-position {
-            background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
-            border-radius: 6px;
-            padding: 10px;
-            margin-bottom: 15px;
-            color: #fff;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-
-        .move-navigation {
+        .move-icon {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
             display: flex;
-            gap: 10px;
+            align-items: center;
             justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
-        .move-navigation .btn {
+        .move-icon.book { background-color: #d4a574; }
+        .move-icon.blunder { background-color: #e74c3c; }
+        .move-icon.mistake { background-color: #f39c12; }
+        .move-icon.inaccuracy { background-color: #f1c40f; }
+        .move-icon.good { background-color: #2ecc71; }
+        .move-icon.excellent { background-color: #27ae60; }
+        .move-icon.best { background-color: #27ae60; }
+        .move-icon.brilliant { background-color: #9b59b6; }
+
+        .controls {
+            background: linear-gradient(145deg, #252525, #353535);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #444;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .pgn-input {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            font-family: monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(145deg, #4a90e2, #357abd);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(145deg, #5ba0f2, #4a8acd);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
             background: linear-gradient(145deg, #6c757d, #5a6268);
             color: white;
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
         }
 
-        .move-navigation .btn:hover {
+        .btn-secondary:hover {
             background: linear-gradient(145deg, #7c858d, #6a7278);
         }
 
-        .move-navigation .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .move-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 20px;
+        }
+
+        .move-item {
+            padding: 8px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .move-item:hover {
+            background-color: #2a2a2a;
+        }
+
+        .move-item.current {
+            background-color: #4a90e2;
+        }
+
+        .move-number {
+            font-weight: bold;
+            color: #4a90e2;
+        }
+
+        .move-text {
+            margin-left: 10px;
+        }
+
+        .move-evaluation {
+            float: right;
+            font-size: 0.8rem;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-btn:hover {
+            background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
+            transform: translateY(-2px);
+        }
+
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .status.analyzing {
+            color: #f39c12;
+        }
+
+        .status.ready {
+            color: #2ecc71;
         }
     </style>
 </head>
 <body>
+    <a href="index.html" class="back-btn">← Back to Home</a>
+    
     <div class="analysis-container">
-        <a href="index.html" class="back-btn">← Back to Home</a>
+        <div class="main-board">
+            <div class="evaluation-bar">
+                <div class="evaluation-fill" id="evaluation-fill" style="width: 50%;"></div>
+                <div class="evaluation-text" id="evaluation-text">0.0</div>
+            </div>
+            
+            <div class="chess-board" id="chess-board">
+                <!-- Board will be generated by JavaScript -->
+            </div>
+            
+            <div class="status" id="status">Ready to analyze</div>
+        </div>
         
-        <div class="analysis-header">
-            <h1>🔍 Chess Game Analysis</h1>
-            <p>Analyze your games with advanced move classification and evaluation</p>
-        </div>
-
-        <div class="input-section">
-            <div class="input-group">
-                <label for="pgn-input">Paste your game (PGN format):</label>
-                <textarea id="pgn-input" class="pgn-input" placeholder="1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 11. c4 c6 12. cxb5 axb5 13. Nc3 Bb7 14. Bg5 b4 15. Nb1 h6 16. Bh4 c5 17. dxc5 Nxc5 18. Bxf6 Qxf6 19. Nbd2 Nxd3 20. cxd3 Bc5 21. Nc4 Bb6 22. a3 bxa3 23. Rxa3 Rxa3 24. bxa3 Qe6 25. Qd2 Qxa2 26. Nxd6 Qa1+ 27. Kh2 Qxe1 28. Qxd8+ Rxd8 29. Nxd8 Qxe4 30. Nc6 Qxf3 31. Nxb8 Qxf2+ 32. Kh1 Qf1+ 33. Kh2 Qf2+ 34. Kh1 Qf1+ 35. Kh2 Qf2+ 36. Kh1 1/2-1/2"></textarea>
+        <div class="controls">
+            <div class="control-group">
+                <label for="pgn-input">Paste PGN:</label>
+                <textarea id="pgn-input" class="pgn-input" placeholder="1. e4 e5 2. Nf3 Nc6 3. Bb5 a6..."></textarea>
             </div>
             
-            <div class="controls">
-                <div class="depth-control">
-                    <label for="depth-slider">Analysis Depth:</label>
-                    <input type="range" id="depth-slider" class="depth-slider" min="8" max="20" value="15">
-                    <span id="depth-value">15</span>
-                </div>
-                
-                <button id="analyze-btn" class="btn btn-primary">Analyze Game</button>
-            </div>
-        </div>
-
-        <div class="progress-section" id="progress-section">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-            </div>
-            <div class="status-message" id="status-message">Preparing analysis...</div>
-        </div>
-
-        <div class="results-section" id="results-section">
-            <h2>Analysis Results</h2>
+            <button id="load-pgn-btn" class="btn btn-primary">Load PGN</button>
+            <button id="analyze-btn" class="btn btn-primary">Analyze Position</button>
+            <button id="reset-btn" class="btn btn-secondary">Reset Board</button>
             
-            <div class="accuracy-display">
-                <div class="accuracy-card">
-                    <h3>White Accuracy</h3>
-                    <div class="accuracy-value" id="white-accuracy">0%</div>
-                </div>
-                <div class="accuracy-card">
-                    <h3>Black Accuracy</h3>
-                    <div class="accuracy-value" id="black-accuracy">0%</div>
-                </div>
-            </div>
-
-            <div class="classification-stats" id="classification-stats">
-                <!-- Classification stats will be populated here -->
-            </div>
-        </div>
-
-        <!-- Chess Board Section -->
-        <div class="board-section" id="board-section" style="display: none;">
-            <h2>Game Board</h2>
-            <div class="board-container">
-                <div class="chess-board" id="chess-board">
-                    <!-- Board will be generated by JavaScript -->
-                </div>
-                <div class="board-info">
-                    <div class="current-position" id="current-position">Starting Position</div>
-                    <div class="move-navigation">
-                        <button id="prev-move" class="btn">← Previous</button>
-                        <button id="next-move" class="btn">Next →</button>
-                    </div>
-                </div>
+            <div class="move-list" id="move-list">
+                <!-- Move list will be generated by JavaScript -->
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.js"></script>
     <script src="stockfish-engine.js"></script>
-    <script src="chess-analysis.js"></script>
-    <script src="analysis-new.js"></script>
+    <script src="analysis.js"></script>
 </body>
 </html>
