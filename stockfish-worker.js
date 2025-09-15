@@ -837,6 +837,25 @@ function isPathClear(board, fromRank, fromFile, toRank, toFile) {
   return true;
 }
 
+function evaluateDevelopment(board) {
+  let development = 0;
+  
+  // Bonus for developed pieces (not on starting ranks)
+  for (let rank = 0; rank < 8; rank++) {
+    for (let file = 0; file < 8; file++) {
+      const piece = board[rank][file];
+      if (piece && piece.type !== 'p' && piece.type !== 'k') {
+        const homeRank = piece.color === 'w' ? 7 : 0;
+        if (rank !== homeRank) {
+          development += piece.color === 'w' ? 0.1 : -0.1;
+        }
+      }
+    }
+  }
+  
+  return development;
+}
+
 function getMobilityImprovement(board, move) {
   // Calculate mobility improvement from this move
   return 0.1; // Simplified for now
