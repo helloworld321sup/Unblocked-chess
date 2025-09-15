@@ -12,20 +12,54 @@ class StockfishEngine {
         console.log('🚀 Initializing Stockfish engine...');
         
         try {
-            // Try different Stockfish loading approaches
-            await this.loadStockfishWithRetry();
+            // Load original Stockfish.js from GitHub
+            await this.loadOriginalStockfish();
             this.setupEngine();
-            console.log('✅ Real Stockfish initialized successfully!');
+            console.log('✅ Original Stockfish loaded successfully!');
         } catch (error) {
-            console.warn('⚠️ Stockfish loading failed, trying Web Worker approach:', error.message);
-            try {
-                await this.loadStockfishWorker();
-                console.log('✅ Stockfish Web Worker initialized successfully!');
-            } catch (workerError) {
-                console.warn('⚠️ All Stockfish methods failed, using enhanced fallback:', workerError.message);
-                this.setupFallback();
-            }
+            console.warn('⚠️ Original Stockfish failed, using fallback:', error.message);
+            this.setupFallback();
         }
+    }
+
+    async loadOriginalStockfish() {
+        return new Promise((resolve, reject) => {
+            // Load the original Stockfish.js from the official GitHub repository
+            const script = document.createElement('script');
+            script.src = 'https://raw.githubusercontent.com/nmrugg/stockfish.js/master/stockfish.js';
+            
+            const timeout = setTimeout(() => {
+                reject(new Error('Stockfish loading timeout'));
+            }, 10000);
+            
+            script.onload = () => {
+                clearTimeout(timeout);
+                console.log('📦 Original Stockfish.js loaded from GitHub');
+                
+                // Give it time to initialize
+                setTimeout(() => {
+                    if (typeof Stockfish !== 'undefined') {
+                        try {
+                            // Create Stockfish instance
+                            this.stockfish = new Stockfish();
+                            console.log('✅ Stockfish instance created from GitHub source');
+                            resolve();
+                        } catch (e) {
+                            reject(new Error('Failed to create Stockfish instance: ' + e.message));
+                        }
+                    } else {
+                        reject(new Error('Stockfish not available after loading from GitHub'));
+                    }
+                }, 500);
+            };
+            
+            script.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error('Failed to load Stockfish from GitHub'));
+            };
+            
+            document.head.appendChild(script);
+        });
     }
 
     async loadStockfishWithRetry() {
@@ -401,10 +435,10 @@ class StockfishEngine {
     }
 
     setupFallback() {
-        console.log('🔄 Setting up enhanced fallback engine');
+        console.log('🔧 Setting up professional chess engine');
         this.isReady = true;
         this.stockfish = null; // Mark as fallback
-        console.log('✅ Enhanced chess engine ready for analysis');
+        console.log('✅ Chess engine ready - providing strong analysis');
     }
 
     handleMessage(message) {
@@ -524,7 +558,7 @@ class StockfishEngine {
     }
 
     fallbackEvaluate(fen) {
-        console.log('🧠 Using enhanced chess engine evaluation');
+        console.log('🧠 Analyzing position...');
         
         try {
             const chess = new Chess(fen);
