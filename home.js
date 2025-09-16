@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   analysisBtn.addEventListener('click', function() {
-    window.location.href = 'analysis.html';
+    window.location.href = 'analysis-clean.html';
   });
 
   settingsBtn.addEventListener('click', function() {
