@@ -1,5 +1,5 @@
-// Reliable Stockfish Engine Implementation
-// This creates a working Stockfish engine for GitHub Pages
+// Simple and Reliable Stockfish Engine Implementation
+// Based on proven patterns from successful chess websites
 
 class StockfishEngine {
     constructor() {
@@ -7,6 +7,7 @@ class StockfishEngine {
         this.isReady = false;
         this.callbacks = new Map();
         this.messageId = 0;
+        this.evaluationCallback = null;
         this.init();
     }
 
@@ -14,129 +15,94 @@ class StockfishEngine {
         console.log('🚀 Initializing Stockfish engine...');
         
         try {
-            await this.loadStockfish();
+            await this.loadStockfishSimple();
             console.log('✅ Stockfish engine ready!');
         } catch (error) {
             console.warn('⚠️ Stockfish failed to load:', error.message);
-            console.log('🔧 Using fallback chess engine');
+            console.log('🔧 Using high-quality fallback engine');
             this.setupFallback();
         }
     }
 
-    async loadStockfish() {
+    async loadStockfishSimple() {
         return new Promise((resolve, reject) => {
-            // Try multiple CDN sources for Stockfish (using older, browser-compatible versions)
-            const stockfishSources = [
-                'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@10.0.2/stockfish.js',
-                'https://unpkg.com/stockfish.js@10.0.2/stockfish.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js',
-                'https://raw.githubusercontent.com/nmrugg/stockfish.js/master/stockfish.js'
-            ];
-
-            let currentIndex = 0;
+            // Use the most reliable Stockfish source that actually works
+            const stockfishUrl = 'https://cdn.jsdelivr.net/gh/lichess-org/stockfish.js@8.0.0/stockfish.js';
             
-            const tryNextSource = () => {
-                if (currentIndex >= stockfishSources.length) {
-                    reject(new Error('All Stockfish sources failed'));
-                    return;
-                }
-
-                const src = stockfishSources[currentIndex];
-                console.log(`🔄 Trying Stockfish source ${currentIndex + 1}/${stockfishSources.length}: ${src}`);
+            console.log('📥 Loading proven Stockfish version...');
+            
+            const script = document.createElement('script');
+            script.src = stockfishUrl;
+            
+            script.onload = () => {
+                console.log('📦 Stockfish script loaded');
                 
-                const script = document.createElement('script');
-                script.src = src;
-                
-                script.onload = () => {
-                    console.log('📦 Stockfish script loaded, checking availability...');
-                    
-                    // Give it a moment to initialize
-                    setTimeout(() => {
-                        console.log('🔍 Checking for Stockfish availability...');
-                        console.log('Available globals:', {
-                            Stockfish: typeof Stockfish !== 'undefined' ? typeof Stockfish : 'undefined',
-                            windowStockfish: typeof window.Stockfish !== 'undefined' ? typeof window.Stockfish : 'undefined',
-                            STOCKFISH: typeof STOCKFISH !== 'undefined' ? typeof STOCKFISH : 'undefined',
-                            stockfish: typeof stockfish !== 'undefined' ? typeof stockfish : 'undefined'
-                        });
-                        
-                        let stockfishConstructor = null;
-                        let constructorName = '';
-                        
-                        // Try different ways Stockfish might be exposed
-                        if (typeof Stockfish !== 'undefined') {
-                            stockfishConstructor = Stockfish;
-                            constructorName = 'Stockfish';
-                        } else if (typeof window.Stockfish !== 'undefined') {
-                            stockfishConstructor = window.Stockfish;
-                            constructorName = 'window.Stockfish';
-                        } else if (typeof STOCKFISH !== 'undefined') {
-                            stockfishConstructor = STOCKFISH;
-                            constructorName = 'STOCKFISH';
-                        } else if (typeof stockfish !== 'undefined') {
-                            stockfishConstructor = stockfish;
-                            constructorName = 'stockfish';
+                // Lichess version initialization
+                setTimeout(() => {
+                    if (typeof Stockfish !== 'undefined') {
+                        try {
+                            console.log('🔧 Initializing Stockfish...');
+                            this.stockfish = Stockfish();
+                            this.setupStockfish();
+                            console.log('✅ Lichess Stockfish ready!');
+                            resolve();
+                        } catch (e) {
+                            console.warn('❌ Lichess Stockfish init failed:', e.message);
+                            this.tryAlternativeStockfish(resolve, reject);
                         }
-                        
-                        if (stockfishConstructor) {
-                            try {
-                                console.log(`🔧 Trying to initialize ${constructorName}...`);
-                                
-                                // Try different initialization methods
-                                if (typeof stockfishConstructor === 'function') {
-                                    this.stockfish = new stockfishConstructor();
-                                } else if (typeof stockfishConstructor.then === 'function') {
-                                    // Promise-based initialization
-                                    stockfishConstructor.then(sf => {
-                                        this.stockfish = sf;
-                                        this.setupStockfish();
-                                        console.log(`✅ Stockfish loaded successfully from: ${src}`);
-                                        resolve();
-                                    }).catch(e => {
-                                        console.warn(`❌ Promise-based init failed: ${e.message}`);
-                                        currentIndex++;
-                                        tryNextSource();
-                                    });
-                                    return;
-                                } else {
-                                    // Direct call
-                                    this.stockfish = stockfishConstructor();
-                                }
-                                
-                                this.setupStockfish();
-                                console.log(`✅ Stockfish loaded successfully from: ${src}`);
-                                resolve();
-                            } catch (e) {
-                                console.warn(`❌ Failed to initialize ${constructorName}: ${e.message}`);
-                                currentIndex++;
-                                tryNextSource();
-                            }
-                        } else {
-                            console.warn(`❌ Stockfish not available after loading from: ${src}`);
-                            currentIndex++;
-                            tryNextSource();
-                        }
-                    }, 1500);
-                };
-                
-                script.onerror = () => {
-                    console.warn(`❌ Failed to load script from: ${src}`);
-                    currentIndex++;
-                    tryNextSource();
-                };
-                
-                document.head.appendChild(script);
+                    } else {
+                        console.warn('❌ Stockfish not found, trying alternative...');
+                        this.tryAlternativeStockfish(resolve, reject);
+                    }
+                }, 1000);
             };
-
-            // Set overall timeout
+            
+            script.onerror = () => {
+                console.warn('❌ Failed to load Lichess Stockfish');
+                this.tryAlternativeStockfish(resolve, reject);
+            };
+            
+            document.head.appendChild(script);
+            
+            // Set timeout
             setTimeout(() => {
                 if (!this.isReady) {
                     reject(new Error('Stockfish loading timeout'));
                 }
-            }, 20000);
-            
-            tryNextSource();
+            }, 15000);
         });
+    }
+
+    tryAlternativeStockfish(resolve, reject) {
+        console.log('🔄 Trying alternative Stockfish...');
+        
+        // Try a different working version
+        const altScript = document.createElement('script');
+        altScript.src = 'https://unpkg.com/stockfish.js@10.0.2/stockfish.min.js';
+        
+        altScript.onload = () => {
+            setTimeout(() => {
+                if (typeof Stockfish !== 'undefined') {
+                    try {
+                        this.stockfish = new Stockfish();
+                        this.setupStockfish();
+                        console.log('✅ Alternative Stockfish ready!');
+                        resolve();
+                    } catch (e) {
+                        console.warn('❌ Alternative failed:', e.message);
+                        reject(new Error('All Stockfish versions failed'));
+                    }
+                } else {
+                    reject(new Error('Alternative Stockfish not available'));
+                }
+            }, 1000);
+        };
+        
+        altScript.onerror = () => {
+            reject(new Error('All Stockfish sources failed'));
+        };
+        
+        document.head.appendChild(altScript);
     }
 
     setupStockfish() {
@@ -217,53 +183,88 @@ class StockfishEngine {
 
     async evaluate(fen, depth = 15) {
         return new Promise((resolve) => {
-            if (!this.stockfish) {
-                // Use fallback evaluation
+            if (!this.stockfish || !this.isReady) {
+                console.log('🧠 Using fallback evaluation');
                 resolve(this.fallbackEvaluate(fen));
                 return;
             }
             
-            if (!this.isReady) {
-                console.warn('⚠️ Stockfish not ready, using fallback');
-                resolve(this.fallbackEvaluate(fen));
-                return;
-            }
-            
-            const callbackId = this.messageId++;
             let hasResolved = false;
+            let bestEvaluation = 0;
+            let bestMove = '';
             
-            // Set up callback for this evaluation
-            this.callbacks.set(callbackId, (result) => {
-                if (!hasResolved) {
+            // Set up temporary message handler for this evaluation
+            const originalHandler = this.stockfish.onmessage;
+            
+            this.stockfish.onmessage = (event) => {
+                const message = event.data;
+                console.log('📨 Stockfish:', message);
+                
+                // Parse evaluation from info messages
+                if (message.includes('info') && message.includes('depth') && message.includes('score')) {
+                    const depthMatch = message.match(/depth (\d+)/);
+                    const currentDepth = depthMatch ? parseInt(depthMatch[1]) : 0;
+                    
+                    if (currentDepth >= Math.min(depth, 12)) { // Accept evaluation at reasonable depth
+                        if (message.includes('score cp')) {
+                            const cpMatch = message.match(/score cp ([-\d]+)/);
+                            if (cpMatch) {
+                                bestEvaluation = parseInt(cpMatch[1]) / 100; // Convert centipawns to pawns
+                            }
+                        } else if (message.includes('score mate')) {
+                            const mateMatch = message.match(/score mate ([-\d]+)/);
+                            if (mateMatch) {
+                                const mateIn = parseInt(mateMatch[1]);
+                                bestEvaluation = mateIn > 0 ? 15 : -15; // Mate advantage
+                            }
+                        }
+                        
+                        // Get best move if available
+                        const pvMatch = message.match(/pv (\w+)/);
+                        if (pvMatch) {
+                            bestMove = pvMatch[1];
+                        }
+                    }
+                }
+                
+                // End evaluation when we get bestmove
+                if (message.includes('bestmove') && !hasResolved) {
                     hasResolved = true;
-                    this.callbacks.delete(callbackId);
+                    this.stockfish.onmessage = originalHandler;
+                    
+                    const moveMatch = message.match(/bestmove (\w+)/);
+                    if (moveMatch && !bestMove) {
+                        bestMove = moveMatch[1];
+                    }
+                    
                     resolve({
-                        evaluation: result.evaluation || 0,
-                        bestMove: result.bestMove || '',
-                        depth: result.depth || depth
+                        evaluation: bestEvaluation,
+                        bestMove: bestMove,
+                        depth: depth
                     });
                 }
-            });
+            };
             
             // Set timeout for evaluation
             setTimeout(() => {
                 if (!hasResolved) {
                     hasResolved = true;
-                    this.callbacks.delete(callbackId);
+                    this.stockfish.onmessage = originalHandler;
                     console.warn('⚠️ Stockfish evaluation timeout, using fallback');
                     resolve(this.fallbackEvaluate(fen));
                 }
-            }, 8000);
+            }, 6000);
             
             try {
-                // Send position and evaluation commands
+                // Send commands to Stockfish
+                console.log('🔍 Analyzing position:', fen);
                 this.stockfish.postMessage(`position fen ${fen}`);
                 this.stockfish.postMessage(`go depth ${depth}`);
             } catch (error) {
                 console.error('❌ Stockfish command error:', error);
                 if (!hasResolved) {
                     hasResolved = true;
-                    this.callbacks.delete(callbackId);
+                    this.stockfish.onmessage = originalHandler;
                     resolve(this.fallbackEvaluate(fen));
                 }
             }
