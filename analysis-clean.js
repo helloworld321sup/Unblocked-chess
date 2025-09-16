@@ -22,18 +22,23 @@ class ChessAnalysis {
     }
 
     initStockfish() {
-        // Wait for Stockfish to be available from CDN
-        if (typeof Stockfish !== 'undefined') {
-            this.stockfish = Stockfish();
+        try {
+            // Create Stockfish worker directly from CDN
+            this.stockfish = new Worker('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js');
+            
             // Set up message handler
             this.stockfish.onmessage = (event) => {
                 console.log('Stockfish:', event.data);
             };
+            
+            // Initialize UCI
             this.stockfish.postMessage("uci");
             this.stockfish.postMessage("setoption name MultiPV value 2");
-        } else {
-            // Fallback: wait a bit for CDN to load
-            setTimeout(() => this.initStockfish(), 100);
+            
+            console.log('Stockfish worker created successfully');
+        } catch (error) {
+            console.error('Failed to create Stockfish worker:', error);
+            this.updateStatus('Stockfish failed to load', 'error');
         }
     }
 
@@ -152,6 +157,11 @@ class ChessAnalysis {
         this.updateStatus('Analyzing with Stockfish...', 'analyzing');
         
         try {
+            // Check if Stockfish is loaded
+            if (!this.stockfish) {
+                throw new Error('Stockfish not loaded');
+            }
+            
             const fen = this.chess.fen();
             
             // Use WintrCat's Stockfish approach
