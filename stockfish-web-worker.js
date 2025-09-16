@@ -1,9 +1,9 @@
-// Reliable Stockfish Web Worker Implementation
+// Reliable Stockfish Engine Implementation
 // This creates a working Stockfish engine for GitHub Pages
 
 class StockfishEngine {
     constructor() {
-        this.worker = null;
+        this.stockfish = null;
         this.isReady = false;
         this.callbacks = new Map();
         this.messageId = 0;
@@ -14,7 +14,7 @@ class StockfishEngine {
         console.log('🚀 Initializing Stockfish engine...');
         
         try {
-            await this.loadStockfishWorker();
+            await this.loadStockfish();
             console.log('✅ Stockfish engine ready!');
         } catch (error) {
             console.warn('⚠️ Stockfish failed to load:', error.message);
@@ -23,121 +23,108 @@ class StockfishEngine {
         }
     }
 
-    async loadStockfishWorker() {
+    async loadStockfish() {
         return new Promise((resolve, reject) => {
-            try {
-                // Create a Web Worker with embedded Stockfish
-                const workerScript = `
-                    // Import Stockfish from CDN
-                    let stockfish = null;
-                    let isReady = false;
+            // Try multiple CDN sources for Stockfish
+            const stockfishSources = [
+                'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js',
+                'https://unpkg.com/stockfish@16.0.0/stockfish.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js',
+                'https://cdn.skypack.dev/stockfish@16.0.0'
+            ];
 
-                    // Try multiple CDN sources for Stockfish
-                    const stockfishSources = [
-                        'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js',
-                        'https://unpkg.com/stockfish@16.0.0/stockfish.min.js',
-                        'https://cdn.skypack.dev/stockfish@16.0.0'
-                    ];
+            let currentIndex = 0;
+            
+            const tryNextSource = () => {
+                if (currentIndex >= stockfishSources.length) {
+                    reject(new Error('All Stockfish sources failed'));
+                    return;
+                }
 
-                    async function loadStockfish() {
-                        for (const src of stockfishSources) {
-                            try {
-                                console.log('Trying to load Stockfish from:', src);
-                                await new Promise((resolve, reject) => {
-                                    const script = document.createElement('script');
-                                    script.src = src;
-                                    script.onload = resolve;
-                                    script.onerror = reject;
-                                    document.head.appendChild(script);
-                                });
-
-                                if (typeof Stockfish !== 'undefined') {
-                                    stockfish = new Stockfish();
-                                    console.log('Stockfish loaded successfully from:', src);
-                                    break;
-                                } else {
-                                    console.warn('Stockfish not available after loading from:', src);
-                                }
-                            } catch (error) {
-                                console.warn('Failed to load from:', src, error);
-                                continue;
-                            }
-                        }
-
-                        if (!stockfish) {
-                            throw new Error('All Stockfish sources failed');
-                        }
-
-                        stockfish.onmessage = function(event) {
-                            const message = event.data;
-                            if (message.includes('uciok')) {
-                                isReady = true;
-                                self.postMessage({ type: 'ready' });
-                            } else if (message.includes('bestmove') || message.includes('info')) {
-                                self.postMessage({ type: 'message', data: message });
-                            }
-                        };
-
-                        stockfish.postMessage('uci');
-                    }
-
-                    // Handle messages from main thread
-                    self.onmessage = function(event) {
-                        const { type, command } = event.data;
-                        
-                        if (type === 'init') {
-                            loadStockfish().catch(error => {
-                                self.postMessage({ type: 'error', error: error.message });
-                            });
-                        } else if (type === 'command' && stockfish && isReady) {
-                            stockfish.postMessage(command);
-                        }
-                    };
-                `;
-
-                const blob = new Blob([workerScript], { type: 'application/javascript' });
-                const workerUrl = URL.createObjectURL(blob);
+                const src = stockfishSources[currentIndex];
+                console.log(`🔄 Trying Stockfish source ${currentIndex + 1}/${stockfishSources.length}: ${src}`);
                 
-                this.worker = new Worker(workerUrl);
+                const script = document.createElement('script');
+                script.src = src;
                 
-                this.worker.onmessage = (event) => {
-                    const { type, data, error } = event.data;
+                script.onload = () => {
+                    console.log('📦 Stockfish script loaded, checking availability...');
                     
-                    if (type === 'ready') {
-                        this.isReady = true;
-                        console.log('✅ Stockfish Web Worker is ready');
-                        resolve();
-                    } else if (type === 'error') {
-                        reject(new Error(error));
-                    } else if (type === 'message') {
-                        this.handleMessage(data);
-                    }
+                    // Give it a moment to initialize
+                    setTimeout(() => {
+                        if (typeof Stockfish !== 'undefined') {
+                            try {
+                                this.stockfish = new Stockfish();
+                                this.setupStockfish();
+                                console.log(`✅ Stockfish loaded successfully from: ${src}`);
+                                resolve();
+                            } catch (e) {
+                                console.warn(`❌ Failed to initialize Stockfish: ${e.message}`);
+                                currentIndex++;
+                                tryNextSource();
+                            }
+                        } else if (typeof window.Stockfish !== 'undefined') {
+                            try {
+                                this.stockfish = new window.Stockfish();
+                                this.setupStockfish();
+                                console.log(`✅ Stockfish loaded successfully from: ${src}`);
+                                resolve();
+                            } catch (e) {
+                                console.warn(`❌ Failed to initialize window.Stockfish: ${e.message}`);
+                                currentIndex++;
+                                tryNextSource();
+                            }
+                        } else {
+                            console.warn(`❌ Stockfish not available after loading from: ${src}`);
+                            currentIndex++;
+                            tryNextSource();
+                        }
+                    }, 1000);
                 };
                 
-                this.worker.onerror = (error) => {
-                    reject(new Error('Web Worker error: ' + error.message));
+                script.onerror = () => {
+                    console.warn(`❌ Failed to load script from: ${src}`);
+                    currentIndex++;
+                    tryNextSource();
                 };
                 
-                // Initialize the worker
-                this.worker.postMessage({ type: 'init' });
-                
-                // Set timeout
-                setTimeout(() => {
-                    if (!this.isReady) {
-                        reject(new Error('Stockfish loading timeout'));
-                    }
-                }, 15000);
-                
-            } catch (error) {
-                reject(new Error('Failed to create Web Worker: ' + error.message));
-            }
+                document.head.appendChild(script);
+            };
+
+            // Set overall timeout
+            setTimeout(() => {
+                if (!this.isReady) {
+                    reject(new Error('Stockfish loading timeout'));
+                }
+            }, 20000);
+            
+            tryNextSource();
         });
+    }
+
+    setupStockfish() {
+        if (!this.stockfish) return;
+        
+        this.stockfish.onmessage = (event) => {
+            const message = event.data;
+            console.log('📨 Stockfish:', message);
+            
+            if (message.includes('uciok')) {
+                this.isReady = true;
+                console.log('✅ Stockfish UCI ready');
+            }
+            
+            this.handleMessage(message);
+        };
+        
+        // Initialize UCI
+        this.stockfish.postMessage('uci');
     }
 
     setupFallback() {
         console.log('🧠 Setting up fallback chess engine');
         this.isReady = true;
-        this.worker = null; // Mark as fallback mode
+        this.stockfish = null; // Mark as fallback mode
     }
 
     handleMessage(message) {
@@ -193,7 +180,7 @@ class StockfishEngine {
 
     async evaluate(fen, depth = 15) {
         return new Promise((resolve) => {
-            if (!this.worker) {
+            if (!this.stockfish) {
                 // Use fallback evaluation
                 resolve(this.fallbackEvaluate(fen));
                 return;
@@ -233,8 +220,8 @@ class StockfishEngine {
             
             try {
                 // Send position and evaluation commands
-                this.worker.postMessage({ type: 'command', command: `position fen ${fen}` });
-                this.worker.postMessage({ type: 'command', command: `go depth ${depth}` });
+                this.stockfish.postMessage(`position fen ${fen}`);
+                this.stockfish.postMessage(`go depth ${depth}`);
             } catch (error) {
                 console.error('❌ Stockfish command error:', error);
                 if (!hasResolved) {
@@ -355,9 +342,9 @@ class StockfishEngine {
     }
 
     stop() {
-        if (this.worker) {
+        if (this.stockfish) {
             try {
-                this.worker.postMessage({ type: 'command', command: 'stop' });
+                this.stockfish.postMessage('stop');
             } catch (error) {
                 console.warn('⚠️ Error stopping Stockfish:', error);
             }
@@ -365,10 +352,9 @@ class StockfishEngine {
     }
 
     quit() {
-        if (this.worker) {
+        if (this.stockfish) {
             try {
-                this.worker.postMessage({ type: 'command', command: 'quit' });
-                this.worker.terminate();
+                this.stockfish.postMessage('quit');
             } catch (error) {
                 console.warn('⚠️ Error quitting Stockfish:', error);
             }
