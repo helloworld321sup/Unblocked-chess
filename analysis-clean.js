@@ -22,25 +22,10 @@ class ChessAnalysis {
     }
 
     initStockfish() {
-        // Use the working Stockfish implementation
-        this.stockfish = new WorkingStockfish();
-        this.stockfishReady = false;
-        
-        // Wait for it to be ready
-        this.waitForStockfish();
-    }
-    
-    async waitForStockfish() {
-        // Wait for Stockfish to be ready
-        const checkReady = () => {
-            if (this.stockfish.ready) {
-                this.stockfishReady = true;
-                this.updateStatus('Stockfish engine ready!', 'ready');
-            } else {
-                setTimeout(checkReady, 500);
-            }
-        };
-        checkReady();
+        // Use the strong chess engine (no external dependencies)
+        this.stockfish = new StrongChessEngine();
+        this.stockfishReady = true; // Always ready
+        this.updateStatus('Strong chess engine ready!', 'ready');
     }
 
     createBoard() {
