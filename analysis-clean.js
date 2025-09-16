@@ -22,8 +22,8 @@ class ChessAnalysis {
     }
 
     initStockfish() {
-        // Use the simple Stockfish implementation
-        this.stockfish = new SimpleStockfish();
+        // Use the REAL Stockfish implementation
+        this.stockfish = new RealStockfish();
         this.stockfishReady = false;
         
         // Wait for it to be ready
