@@ -1,0 +1,17 @@
+{
+  "name": "chess-analysis",
+  "version": "1.0.0",
+  "description": "Chess analysis with official Stockfish",
+  "main": "stockfish-server.js",
+  "scripts": {
+    "start": "node stockfish-server.js",
+    "dev": "nodemon stockfish-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
