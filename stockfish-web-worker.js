@@ -25,12 +25,12 @@ class StockfishEngine {
 
     async loadStockfish() {
         return new Promise((resolve, reject) => {
-            // Try multiple CDN sources for Stockfish
+            // Try multiple CDN sources for Stockfish (using older, browser-compatible versions)
             const stockfishSources = [
-                'https://cdn.jsdelivr.net/npm/stockfish@16.0.0/stockfish.min.js',
-                'https://unpkg.com/stockfish@16.0.0/stockfish.min.js',
+                'https://cdn.jsdelivr.net/gh/nmrugg/stockfish.js@10.0.2/stockfish.js',
+                'https://unpkg.com/stockfish.js@10.0.2/stockfish.js',
                 'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js',
-                'https://cdn.skypack.dev/stockfish@16.0.0'
+                'https://raw.githubusercontent.com/nmrugg/stockfish.js/master/stockfish.js'
             ];
 
             let currentIndex = 0;
@@ -52,25 +52,62 @@ class StockfishEngine {
                     
                     // Give it a moment to initialize
                     setTimeout(() => {
+                        console.log('🔍 Checking for Stockfish availability...');
+                        console.log('Available globals:', {
+                            Stockfish: typeof Stockfish !== 'undefined' ? typeof Stockfish : 'undefined',
+                            windowStockfish: typeof window.Stockfish !== 'undefined' ? typeof window.Stockfish : 'undefined',
+                            STOCKFISH: typeof STOCKFISH !== 'undefined' ? typeof STOCKFISH : 'undefined',
+                            stockfish: typeof stockfish !== 'undefined' ? typeof stockfish : 'undefined'
+                        });
+                        
+                        let stockfishConstructor = null;
+                        let constructorName = '';
+                        
+                        // Try different ways Stockfish might be exposed
                         if (typeof Stockfish !== 'undefined') {
-                            try {
-                                this.stockfish = new Stockfish();
-                                this.setupStockfish();
-                                console.log(`✅ Stockfish loaded successfully from: ${src}`);
-                                resolve();
-                            } catch (e) {
-                                console.warn(`❌ Failed to initialize Stockfish: ${e.message}`);
-                                currentIndex++;
-                                tryNextSource();
-                            }
+                            stockfishConstructor = Stockfish;
+                            constructorName = 'Stockfish';
                         } else if (typeof window.Stockfish !== 'undefined') {
+                            stockfishConstructor = window.Stockfish;
+                            constructorName = 'window.Stockfish';
+                        } else if (typeof STOCKFISH !== 'undefined') {
+                            stockfishConstructor = STOCKFISH;
+                            constructorName = 'STOCKFISH';
+                        } else if (typeof stockfish !== 'undefined') {
+                            stockfishConstructor = stockfish;
+                            constructorName = 'stockfish';
+                        }
+                        
+                        if (stockfishConstructor) {
                             try {
-                                this.stockfish = new window.Stockfish();
+                                console.log(`🔧 Trying to initialize ${constructorName}...`);
+                                
+                                // Try different initialization methods
+                                if (typeof stockfishConstructor === 'function') {
+                                    this.stockfish = new stockfishConstructor();
+                                } else if (typeof stockfishConstructor.then === 'function') {
+                                    // Promise-based initialization
+                                    stockfishConstructor.then(sf => {
+                                        this.stockfish = sf;
+                                        this.setupStockfish();
+                                        console.log(`✅ Stockfish loaded successfully from: ${src}`);
+                                        resolve();
+                                    }).catch(e => {
+                                        console.warn(`❌ Promise-based init failed: ${e.message}`);
+                                        currentIndex++;
+                                        tryNextSource();
+                                    });
+                                    return;
+                                } else {
+                                    // Direct call
+                                    this.stockfish = stockfishConstructor();
+                                }
+                                
                                 this.setupStockfish();
                                 console.log(`✅ Stockfish loaded successfully from: ${src}`);
                                 resolve();
                             } catch (e) {
-                                console.warn(`❌ Failed to initialize window.Stockfish: ${e.message}`);
+                                console.warn(`❌ Failed to initialize ${constructorName}: ${e.message}`);
                                 currentIndex++;
                                 tryNextSource();
                             }
@@ -79,7 +116,7 @@ class StockfishEngine {
                             currentIndex++;
                             tryNextSource();
                         }
-                    }, 1000);
+                    }, 1500);
                 };
                 
                 script.onerror = () => {
