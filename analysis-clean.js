@@ -22,24 +22,9 @@ class ChessAnalysis {
     }
 
     initStockfish() {
-        try {
-            // Create Stockfish worker directly from CDN
-            this.stockfish = new Worker('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js');
-            
-            // Set up message handler
-            this.stockfish.onmessage = (event) => {
-                console.log('Stockfish:', event.data);
-            };
-            
-            // Initialize UCI
-            this.stockfish.postMessage("uci");
-            this.stockfish.postMessage("setoption name MultiPV value 2");
-            
-            console.log('Stockfish worker created successfully');
-        } catch (error) {
-            console.error('Failed to create Stockfish worker:', error);
-            this.updateStatus('Stockfish failed to load', 'error');
-        }
+        // Using Node.js Stockfish server instead of Web Worker
+        console.log('Using Node.js Stockfish server at http://localhost:3001');
+        this.stockfishReady = true;
     }
 
     createBoard() {
@@ -157,41 +142,19 @@ class ChessAnalysis {
         this.updateStatus('Analyzing with Stockfish...', 'analyzing');
         
         try {
-            // Check if Stockfish is loaded
-            if (!this.stockfish) {
-                throw new Error('Stockfish not loaded');
-            }
-            
             const fen = this.chess.fen();
             
-            // Use WintrCat's Stockfish approach
-            this.stockfish.postMessage("position fen " + fen);
-            this.stockfish.postMessage("go depth 15");
-
-            const evaluation = await new Promise(resolve => {
-                const messageHandler = (event) => {
-                    const message = event.data;
-                    
-                    if (message.startsWith("bestmove")) {
-                        this.stockfish.onmessage = originalHandler;
-                        
-                        // Extract evaluation from previous messages
-                        let evaluation = 0;
-                        if (this.lastInfoMessage && this.lastInfoMessage.includes(" cp ")) {
-                            let value = parseInt(this.lastInfoMessage.match(/cp ([\d-]+)/)?.[1] || "0");
-                            if (fen.includes(" b ")) value *= -1;
-                            evaluation = value / 100;
-                        }
-                        
-                        resolve(evaluation);
-                    } else if (message.startsWith("info") && message.includes(" cp ")) {
-                        this.lastInfoMessage = message;
-                    }
-                };
-
-                const originalHandler = this.stockfish.onmessage;
-                this.stockfish.onmessage = messageHandler;
+            // Use Node.js Stockfish server
+            const response = await fetch('http://localhost:3001/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ fen, depth: 15 })
             });
+            
+            const data = await response.json();
+            const evaluation = data.evaluation;
             
             this.evaluations[this.currentMove] = evaluation;
             this.updateEvaluationBar(evaluation);
