@@ -23,10 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.location.href = 'multiplayer.html';
   });
 
-  analysisBtn.addEventListener('click', function() {
-    window.location.href = 'analysis-clean.html';
-  });
-
   settingsBtn.addEventListener('click', function() {
     window.location.href = 'settings.html';
   });
