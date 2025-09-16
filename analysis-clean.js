@@ -2,10 +2,8 @@
 class ChessAnalysis {
     constructor() {
         this.chess = new Chess();
-        // Use WintrCat's working Stockfish
-        this.stockfish = new Worker('stockfish.js');
-        this.stockfish.postMessage("uci");
-        this.stockfish.postMessage("setoption name MultiPV value 2");
+        // Initialize Stockfish from CDN
+        this.initStockfish();
         this.moveHistory = [];
         this.evaluations = [];
         this.currentMove = 0;
@@ -21,6 +19,18 @@ class ChessAnalysis {
         this.setupEventListeners();
         this.applySettings();
         this.updateStatus('Stockfish engine loaded!', 'ready');
+    }
+
+    initStockfish() {
+        // Wait for Stockfish to be available from CDN
+        if (typeof Stockfish !== 'undefined') {
+            this.stockfish = Stockfish();
+            this.stockfish.postMessage("uci");
+            this.stockfish.postMessage("setoption name MultiPV value 2");
+        } else {
+            // Fallback: wait a bit for CDN to load
+            setTimeout(() => this.initStockfish(), 100);
+        }
     }
 
     createBoard() {
