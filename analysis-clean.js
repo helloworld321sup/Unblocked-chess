@@ -25,6 +25,10 @@ class ChessAnalysis {
         // Wait for Stockfish to be available from CDN
         if (typeof Stockfish !== 'undefined') {
             this.stockfish = Stockfish();
+            // Set up message handler
+            this.stockfish.onmessage = (event) => {
+                console.log('Stockfish:', event.data);
+            };
             this.stockfish.postMessage("uci");
             this.stockfish.postMessage("setoption name MultiPV value 2");
         } else {
@@ -159,7 +163,7 @@ class ChessAnalysis {
                     const message = event.data;
                     
                     if (message.startsWith("bestmove")) {
-                        this.stockfish.removeEventListener("message", messageHandler);
+                        this.stockfish.onmessage = originalHandler;
                         
                         // Extract evaluation from previous messages
                         let evaluation = 0;
@@ -175,7 +179,8 @@ class ChessAnalysis {
                     }
                 };
 
-                this.stockfish.addEventListener("message", messageHandler);
+                const originalHandler = this.stockfish.onmessage;
+                this.stockfish.onmessage = messageHandler;
             });
             
             this.evaluations[this.currentMove] = evaluation;
