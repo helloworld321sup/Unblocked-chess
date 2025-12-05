@@ -1,117 +1,99 @@
-// ChessBot.java
-import java.util.ArrayList;
-import java.util.List;
+/**
+ * A simple depth 1 chess bot translated to JavaScript,
+ * using the globally available Chess object from chess.js library.
+ */
 
-public class ChessBot {
+// We assume a 'game' object is initialized in home.js or similar script.
+// For the bot to work, you will need an active instance of the game.
+// If you don't have one, you can create one like this:
+// let game = new Chess(); 
 
-    // Simplified Board representation (for demonstration)
-    // 'p' for pawn, 'r' for rook, 'n' for knight, 'b' for bishop, 'q' for queen, 'k' for king
-    // Uppercase for White, Lowercase for Black
-    // '_' for empty square
-    private char[][] board;
+// The function to find the best move for the current turn (depth 1 search)
+function findBestMove(game) {
+    // Exit if the game is over
+    if (game.game_over() || game.in_draw()) return null;
 
-    public ChessBot() {
-        // Initialize a standard starting board
-        board = new char[][]{
-                {'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'},
-                {'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'},
-                {'_', '_', '_', '_', '_', '_', '_', '_'},
-                {'_', '_', '_', '_', '_', '_', '_', '_'},
-                {'_', '_', '_', '_', '_', '_', '_', '_'},
-                {'_', '_', '_', '_', '_', '_', '_', '_'},
-                {'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'},
-                {'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}
-        };
-    }
+    const possibleMoves = game.moves();
+    let bestMove = null;
+    let bestScore = game.turn() === 'w' ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
 
-    public String findBestMove(boolean isWhiteTurn) {
-        int bestScore = isWhiteTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-        String bestMove = null;
+    // Iterate through all possible moves (depth 1)
+    for (const move of possibleMoves) {
+        // Apply the move temporarily
+        game.move(move);
 
-        // In a real bot, you'd generate all legal moves.
-        // For this depth 1 example, we'll just simulate a few simple moves.
-        // This is a highly simplified example and does not represent a full move generation.
-        List<String> possibleMoves = generateSimpleMoves(isWhiteTurn);
+        // Evaluate the board position after the move
+        const score = evaluateBoard(game);
 
-        for (String move : possibleMoves) {
-            char[][] tempBoard = deepCopyBoard(board);
-            // Apply the move to tempBoard (simplified for this example)
-            // e.g., "e2e4" -> move pawn from e2 to e4
-            applySimplifiedMove(tempBoard, move);
+        // Undo the move to return to the original state for the next iteration
+        game.undo();
 
-            int score = evaluateBoard(tempBoard, isWhiteTurn);
-
-            if (isWhiteTurn) {
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestMove = move;
-                }
-            } else {
-                if (score < bestScore) {
-                    bestScore = score;
-                    bestMove = move;
-                }
+        // Check if this is the best move found so far
+        if (game.turn() === 'w') {
+            // White is maximizing player
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = move;
             }
-        }
-        return bestMove;
-    }
-
-    private List<String> generateSimpleMoves(boolean isWhiteTurn) {
-        List<String> moves = new ArrayList<>();
-        // This is a placeholder. A real bot needs a comprehensive move generator.
-        // For depth 1, we'll just add a few dummy moves for demonstration.
-        if (isWhiteTurn) {
-            moves.add("e2e4"); // Example White pawn move
-            moves.add("g1f3"); // Example White knight move
         } else {
-            moves.add("e7e5"); // Example Black pawn move
-            moves.add("g8f6"); // Example Black knight move
+            // Black is minimizing player
+            if (score < bestScore) {
+                bestScore = score;
+                bestMove = move;
+            }
         }
-        return moves;
     }
 
-    private void applySimplifiedMove(char[][] tempBoard, String move) {
-        // This is a very basic move application for demonstration.
-        // A real chess engine requires detailed move parsing and application.
-        // Example: "e2e4"
-        int startRank = 8 - (move.charAt(1) - '0');
-        int startFile = move.charAt(0) - 'a';
-        int endRank = 8 - (move.charAt(3) - '0');
-        int endFile = move.charAt(2) - 'a';
+    return bestMove;
+}
 
-        tempBoard[endRank][endFile] = tempBoard[startRank][startFile];
-        tempBoard[startRank][startFile] = '_';
-    }
+// Simple evaluation function based on material count (from your Java code)
+function evaluateBoard(game) {
+    let score = 0;
+    // The game.board() method returns an 8x8 array with piece objects or null
+    const board = game.board();
 
-    private int evaluateBoard(char[][] currentBoard, boolean isWhiteTurn) {
-        int score = 0;
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                char piece = currentBoard[r][c];
-                switch (piece) {
-                    case 'P': score += 10; break;
-                    case 'N': score += 30; break;
-                    case 'B': score += 30; break;
-                    case 'R': score += 50; break;
-                    case 'Q': score += 90; break;
-                    case 'K': score += 900; break;
-                    case 'p': score -= 10; break;
-                    case 'n': score -= 30; break;
-                    case 'b': score -= 30; break;
-                    case 'r': score -= 50; break;
-                    case 'q': score -= 90; break;
-                    case 'k': score -= 900; break;
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = board[r][c];
+            if (piece) {
+                const value = getPieceValue(piece.type);
+                if (piece.color === 'w') {
+                    score += value;
+                } else {
+                    score -= value;
                 }
             }
         }
-        return score;
     }
+    return score;
+}
 
-    private char[][] deepCopyBoard(char[][] original) {
-        char[][] copy = new char[original.length][];
-        for (int i = 0; i < original.length; i++) {
-            copy[i] = original[i].clone();
-        }
-        return copy;
+// Helper function to map piece type to value
+function getPieceValue(type) {
+    switch (type) {
+        case 'p': return 10;
+        case 'n': return 30;
+        case 'b': return 30;
+        case 'r': return 50;
+        case 'q': return 90;
+        case 'k': return 900;
+        default: return 0;
     }
 }
+
+// --- Integration Example (requires a 'game' instance) ---
+// This part demonstrates how you might call the bot function when a button is clicked.
+document.addEventListener('DOMContentLoaded', () => {
+    const botPlayBtn = document.getElementById('bot-play-btn');
+
+    if (botPlayBtn) {
+        botPlayBtn.addEventListener('click', () => {
+            alert("Bot logic is ready. You need to manage game state (e.g., in home.js) to use it.");
+            // Example of how to call it IF 'game' is available globally or passed:
+            // const bestMoveUCI = findBestMove(game); 
+            // console.log("Bot chose move:", bestMoveUCI);
+            // game.move(bestMoveUCI); // Apply the move
+        });
+    }
+});
